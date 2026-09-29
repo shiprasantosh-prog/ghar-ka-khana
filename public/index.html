@@ -59,7 +59,42 @@ function add(id){
     updateCart()
 }
 function change(id,n){cart[id]=(cart[id]||0)+n;if(cart[id]<=0)delete cart[id];updateCart()}
-function updateCart(){let count=Object.values(cart).reduce((a,b)=>a+b,0);document.getElementById("cartCount").textContent=count;document.getElementById("fabCount").textContent=count;let entries=Object.entries(cart);document.getElementById("cartItems").innerHTML=entries.length?entries.map(([id,q])=>{let d=dishes.find(x=>x.id===Number(id));if(!d)return "";return `<div class="cart-line"><div><strong>${escapeHTML(d.name)}</strong><small>${money(d.price)} each</small></div><div class="qty"><button onclick="change(${d.id},-1)">−</button>${q}<button onclick="change(${d.id},1)">+</button></div><strong>${money(d.price*q)}</strong></div>`}).join(""):'<div class="empty">Your basket is waiting for something delicious.</div>';document.getElementById("checkout").style.display=entries.length?"block":"none";document.getElementById("total").textContent=money(entries.reduce((s,[id,q])=>s+(dishes.find(d=>d.id===Number(id))?.price||0)*q,0))}
+function updateCart(){
+    let count=Object.values(cart).reduce((a,b)=>a+b,0);
+    document.getElementById("cartCount").textContent=count;
+    document.getElementById("fabCount").textContent=count;
+
+    let entries=Object.entries(cart);
+
+    document.getElementById("cartItems").innerHTML=entries.length
+        ?entries.map(([id,q])=>{
+            let d=dishes.find(x=>String(x.id)===String(id));
+            if(!d)return "";
+
+            return `<div class="cart-line">
+                <div>
+                    <strong>${escapeHTML(d.name)}</strong>
+                    <small>${money(d.price)} each</small>
+                </div>
+                <div class="qty">
+                    <button onclick="change(${d.id},-1)">−</button>
+                    ${q}
+                    <button onclick="change(${d.id},1)">+</button>
+                </div>
+                <strong>${money(d.price*q)}</strong>
+            </div>`;
+        }).join("")
+        :'<div class="empty">Your basket is waiting for something delicious.</div>';
+
+    document.getElementById("checkout").style.display=entries.length?"block":"none";
+
+    document.getElementById("total").textContent=money(
+        entries.reduce((s,[id,q])=>{
+            let d=dishes.find(x=>String(x.id)===String(id));
+            return s+(d?.price||0)*q;
+        },0)
+    );
+}
 function openCart(){document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";f.elements.address.value=currentUser.address||""}}
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
 document.getElementById("orderForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser){closeCart();document.getElementById("account").scrollIntoView({behavior:"smooth"});document.getElementById("authMessage").textContent="Please sign in or create an account before placing your order.";return}const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity})),button=e.target.querySelector('button[type="submit"]');button.disabled=true;button.textContent="Placing order…";try{const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||""})});const success=document.getElementById("success");success.textContent=`Thank you, ${currentUser.name}! Your order #${order.id} has been sent to the kitchen.`;success.classList.add("show");cart={};updateCart();e.target.reset();await loadMyOrders()}catch(err){const success=document.getElementById("success");success.textContent=err.message;success.classList.add("show")}finally{button.disabled=false;button.textContent="Place order"}});
