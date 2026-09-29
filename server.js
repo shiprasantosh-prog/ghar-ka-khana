@@ -535,7 +535,7 @@ async function notifyWhatsApp(order) {
     return;
   }
 
-  const orderId = `GH${order.id}`;
+  const orderId = `GKK-${String(order.id).padStart(4, "0")}`;
   const customerName = order.customer_name || "Customer";
   const customerPhone = order.customer_phone || "Not available";
   const totalAmount = `₹${order.total}`;
