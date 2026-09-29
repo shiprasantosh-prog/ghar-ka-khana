@@ -92,7 +92,7 @@ function renderProfile(){
  if(p){let f=document.getElementById("accountForm");f.elements.name.value=p.name;f.elements.phone.value=p.phone;f.elements.address.value=p.address||""}
 }
 document.getElementById("accountForm").addEventListener("submit",e=>{e.preventDefault();let profile=Object.fromEntries(new FormData(e.target));localStorage.setItem("gkk_customer_profile",JSON.stringify(profile));renderProfile()});
-\nfunction removeDish(i){dishes.splice(i,1);localStorage.setItem("gkk_menu",JSON.stringify(dishes));renderCats();renderMenu();renderOwner()}
+function removeDish(i){dishes.splice(i,1);localStorage.setItem("gkk_menu",JSON.stringify(dishes));renderCats();renderMenu();renderOwner()}
 document.getElementById("menuForm").addEventListener("submit",e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));dishes.push({name:f.name,price:Number(f.price),cat:f.cat,desc:f.desc,img:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80",tag:"Kitchen special"});localStorage.setItem("gkk_menu",JSON.stringify(dishes));e.target.reset();renderCats();renderMenu();renderOwner()});
 function getOrders(){return JSON.parse(localStorage.getItem("gkk_demo_orders")||"[]")}
 function saveOrders(orders){localStorage.setItem("gkk_demo_orders",JSON.stringify(orders))}
