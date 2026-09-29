@@ -58,7 +58,33 @@ function renderCats(){
         `<button class="chip ${category===c?'active':''}" onclick='category=${JSON.stringify(c)};renderCats();renderMenu()'>${escapeHTML(c)}</button>`
     ).join("");
 }
-function renderMenu(){let list=dishes.filter(d=>category==="All"||d.cat===category);document.getElementById("menuGrid").innerHTML=list.length?list.map(d=>`<article class="card"><div class="food-img"><img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'"></div><div class="card-body"><div class="tag">${d.tag}</div><div class="card-title"><h3>${escapeHTML(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><button class="add" onclick="add(${Number(d.id)})">+ Add</button></div></div></article>`).join(""):'<p class="empty">No dishes are currently available. Please check back soon.</p>'}
+function renderMenu(){
+    let list=dishes.filter(d=>category==="All"||d.cat===category);
+
+    document.getElementById("menuGrid").innerHTML=list.length
+        ?list.map(d=>{
+            let qty=cart[d.id]||0;
+
+            return `<article class="card">
+                <div class="food-img">
+                    <img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'">
+                </div>
+                <div class="card-body">
+                    <div class="tag">${d.tag}</div>
+                    <div class="card-title">
+                        <h3>${escapeHTML(d.name)}</h3>
+                        <span class="price">${money(d.price)}</span>
+                    </div>
+                    <p>${escapeHTML(d.desc)}</p>
+                    <div class="card-foot">
+                        <span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span>
+                        <button class="add" onclick="add(${Number(d.id)})">${qty>0?qty+" Added":"+ Add"}</button>
+                    </div>
+                </div>
+            </article>`;
+        }).join("")
+        :'<p class="empty">No dishes are currently available. Please check back soon.</p>';
+}
 function add(id){
     if(!dishes.some(d=>String(d.id)===String(id)))return;
     cart[id]=(cart[id]||0)+1;
@@ -99,7 +125,8 @@ function updateCart(){
             let d=dishes.find(x=>String(x.id)===String(id));
             return s+(d?.price||0)*q;
         },0)
-    );
+    )
+    renderMenu();
 }
 function openCart(){document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";f.elements.address.value=currentUser.address||""}}
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
