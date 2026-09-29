@@ -14,25 +14,13 @@ footer{border-top:1px solid #332b1d;padding:30px 24px;color:var(--muted);text-al
 </style>
 </head>
 <body>
-<header><div class="nav"><div class="brand">Ghar ka Khana<small>Homemade with Love</small></div><nav class="navlinks"><a href="#menu">Our Menu</a><a href="#story">Our Story</a><a href="#owner">Owner</a><button class="btn ghost" onclick="openCart()">Cart <span id="cartCount">0</span></button></nav><button class="btn" onclick="openCart()">Order Now</button></div></header>
+<header><div class="nav"><div class="brand">Ghar ka Khana<small>Homemade with Love</small></div><nav class="navlinks"><a href="#menu">Our Menu</a><a href="#story">Our Story</a><a href="/admin.html">Owner Login</a><button class="btn ghost" onclick="openCart()">Cart <span id="cartCount">0</span></button></nav><button class="btn" onclick="openCart()">Order Now</button></div></header>
 <main>
 <section class="hero" id="story"><div><div class="eyebrow">A taste of home</div><h1>Good food.<br><em>Made with love.</em></h1><p>Comforting, freshly prepared meals inspired by the warmth of a home kitchen. Thoughtful ingredients, familiar flavours, and a little love in every bite.</p><div class="hero-actions"><a class="btn" href="#menu" style="text-decoration:none">Explore the Menu</a><button class="btn ghost" onclick="openCart()">Your Basket</button></div></div><div class="hero-image"><img src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85" alt="A freshly prepared home-style meal"><div class="image-tag">A little warmth in every meal.</div></div></section>
 <section class="wrap" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div><p>Simple ingredients. Memorable meals.</p></div><div class="categories" id="categories"></div><div class="grid" id="menuGrid"></div></section>
-<section class="wrap" id="owner" style="border-top:1px solid #332b1d;padding-top:35px">
-<div class="section-head"><div><div class="eyebrow">For the kitchen</div><h2>Owner menu desk</h2></div><p>Manage sample menu items in this browser</p></div>
-<div class="card" style="padding:20px">
-<p style="color:var(--muted);font-size:13px;line-height:1.6">Demo owner tools only. This is not a secure admin login and changes are saved in this browser. A production dashboard will use authenticated server-side access.</p>
-<form id="menuForm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end">
-<div class="field"><label>Dish name</label><input name="name" required placeholder="Dish name"></div>
-<div class="field"><label>Price (₹)</label><input name="price" type="number" min="1" required placeholder="Price"></div>
-<div class="field"><label>Category</label><input name="cat" required placeholder="e.g. Main Course"></div>
-<div class="field"><label>Short description</label><input name="desc" required placeholder="Description"></div>
-<button class="btn" type="submit">Add menu item</button>
-</form><div id="ownerItems" style="margin-top:14px"></div>
-</div>
-</section>
+
 <section class="wrap" id="orders" style="border-top:1px solid #332b1d;padding-top:35px">
-<div class="section-head"><div><div class="eyebrow">Kitchen operations</div><h2>Order desk</h2></div><p>View demo orders placed in this browser</p></div>
+<div class="section-head"><div><div class="eyebrow">Kitchen operations</div><h2>Order desk</h2></div><p>Demo orders saved in this browser</p></div>
 <div class="card" style="padding:20px">
 <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between"><p style="color:var(--muted);font-size:13px">Demo dashboard. In the live version, this will be protected by owner authentication and shared across devices.</p><button class="btn ghost" onclick="exportOrders()">Export orders (CSV)</button></div>
 <div id="orderDesk"></div>
@@ -59,32 +47,20 @@ footer{border-top:1px solid #332b1d;padding:30px 24px;color:var(--muted);text-al
 <button class="btn cart-fab" onclick="openCart()">🛒 Basket <span id="fabCount">0</span></button>
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeCart()"><aside class="drawer"><div class="drawer-head"><h2>Your Basket</h2><button class="close" onclick="closeCart()">×</button></div><div id="cartItems"></div><div id="checkout" style="display:none"><div class="total"><span>Total</span><strong id="total">₹0</strong></div><h3 style="font:22px Georgia,serif;color:var(--gold2)">Delivery details</h3><form id="orderForm"><div class="field"><label>Full name</label><input name="name" required placeholder="Your name"></div><div class="field"><label>Phone number</label><input name="phone" required type="tel" pattern="[0-9 +()-]{10,}" placeholder="Mobile number"></div><div class="field"><label>Delivery address</label><textarea name="address" required placeholder="House number, street, area"></textarea></div><div class="field"><label>Delivery instructions (optional)</label><input name="notes" placeholder="Any special instructions"></div><button class="btn" style="width:100%">Place order</button></form><p class="notice">Demo checkout: this prototype saves the order in this browser only. Live order submission and automatic WhatsApp notifications require a secure backend and WhatsApp Business API setup.</p><div class="success" id="success"></div></div></aside></div>
 <script>
-const dishes=[
-{name:"Paneer Makhani",price:160,cat:"Main Course",desc:"Soft paneer in a rich, gently spiced tomato gravy.",img:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80",tag:"House favourite"},
-{name:"Matar Paneer",price:150,cat:"Main Course",desc:"A comforting classic with paneer, peas and homestyle masala.",img:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80",tag:"Freshly made"},
-{name:"Aloo Do Pyaza",price:150,cat:"Main Course",desc:"Potatoes tossed with onions and aromatic Indian spices.",img:"https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80",tag:"Homestyle"},
-{name:"Daal Fry",price:120,cat:"Main Course",desc:"Comforting lentils finished with a fragrant tadka.",img:"https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",tag:"Everyday comfort"},
-{name:"Aloo Paratha",price:60,cat:"Parathas",desc:"Golden, flaky paratha stuffed with spiced potato.",img:"https://images.unsplash.com/photo-_tN9vQxK2Q?auto=format&fit=crop&w=800&q=80",tag:"Made to order"},
-{name:"Paneer Paratha",price:80,cat:"Parathas",desc:"Warm, crisp paratha with a savoury paneer filling.",img:"https://images.unsplash.com/photo-_tN9vQxK2Q?auto=format&fit=crop&w=800&q=80",tag:"Made to order"},
-{name:"Pav Bhaji",price:120,cat:"Snacks",desc:"Mumbai-style spiced vegetable mash with buttery pav.",img:"https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=800&q=80",tag:"Crowd pleaser"},
-{name:"Samosa",price:25,cat:"Snacks",desc:"Crisp pastry filled with warmly spiced potatoes.",img:"https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",tag:"Tea-time classic"},
-{name:"Poha",price:90,cat:"Breakfast",desc:"Light and fluffy flattened rice with peanuts and herbs.",img:"https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=800&q=80",tag:"Breakfast favourite"}
-];
+let dishes=[];
 let cart={};let category="All";
-const baseDishes=[...dishes];
-try{const saved=JSON.parse(localStorage.getItem("gkk_menu"));if(Array.isArray(saved)&&saved.length)dishes.splice(0,dishes.length,...saved)}catch(e){}
-const money=n=>"₹"+n;
-function renderOwner(){document.getElementById("ownerItems").innerHTML=dishes.map((d,i)=>`<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #393123"><span>${d.name} · ${money(d.price)} <small style="color:var(--muted)">(${d.cat})</small></span><button class="add" onclick="editDish(${i})">Edit</button><button class="add" onclick="removeDish(${i})">Remove</button></div>`).join("")}
-
-function editDish(i){
- let d=dishes[i], name=prompt("Dish name",d.name); if(name===null)return;
- let price=prompt("Price in INR",d.price); if(price===null)return;
- let desc=prompt("Description",d.desc); if(desc===null)return;
- let cat=prompt("Category",d.cat); if(cat===null)return;
- if(!name.trim()||!Number(price)||Number(price)<1){alert("Please enter a valid name and price.");return}
- dishes[i]={...d,name:name.trim(),price:Number(price),desc:desc.trim(),cat:cat.trim()||d.cat};
- localStorage.setItem("gkk_menu",JSON.stringify(dishes));renderCats();renderMenu();renderOwner();
+const fallbackFoodImage="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80";
+async function loadCustomerMenu(){
+ const response=await fetch('/api/menu');
+ if(!response.ok)throw new Error('Could not load menu');
+ const rows=await response.json();
+ dishes=rows.filter(d=>d.available!==false && d.available!==0).map(d=>({
+  id:d.id,name:d.name,price:Number(d.price),cat:d.category||'Other',
+  desc:d.description||'',img:d.image||fallbackFoodImage,tag:'Kitchen special'
+ }));
+ renderCats();renderMenu();updateCart();
 }
+const money=n=>"₹"+n;
 function clearProfile(){localStorage.removeItem("gkk_customer_profile");renderProfile();document.getElementById("accountForm").reset()}
 function renderProfile(){
  let p=JSON.parse(localStorage.getItem("gkk_customer_profile")||"null");
@@ -92,8 +68,6 @@ function renderProfile(){
  if(p){let f=document.getElementById("accountForm");f.elements.name.value=p.name;f.elements.phone.value=p.phone;f.elements.address.value=p.address||""}
 }
 document.getElementById("accountForm").addEventListener("submit",e=>{e.preventDefault();let profile=Object.fromEntries(new FormData(e.target));localStorage.setItem("gkk_customer_profile",JSON.stringify(profile));renderProfile()});
-function removeDish(i){dishes.splice(i,1);localStorage.setItem("gkk_menu",JSON.stringify(dishes));renderCats();renderMenu();renderOwner()}
-document.getElementById("menuForm").addEventListener("submit",e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));dishes.push({name:f.name,price:Number(f.price),cat:f.cat,desc:f.desc,img:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80",tag:"Kitchen special"});localStorage.setItem("gkk_menu",JSON.stringify(dishes));e.target.reset();renderCats();renderMenu();renderOwner()});
 function getOrders(){return JSON.parse(localStorage.getItem("gkk_demo_orders")||"[]")}
 function saveOrders(orders){localStorage.setItem("gkk_demo_orders",JSON.stringify(orders))}
 function renderOrderDesk(){const orders=getOrders().slice().reverse();const host=document.getElementById("orderDesk");if(!orders.length){host.innerHTML='<p class="empty">No demo orders yet. Place an order through checkout to see it here.</p>';return}host.innerHTML=orders.map(o=>`<div style="padding:15px 0;border-top:1px solid #393123"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>${o.id} · ${o.customer.name}</strong><span style="color:var(--gold2);font-weight:700">${money(o.total)}</span></div><p style="color:var(--muted);font-size:13px;line-height:1.6">${o.customer.phone}<br>${o.customer.address}<br>${Object.entries(o.items).map(([n,q])=>`${n} × ${q}`).join(" · ")}</p><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label style="font-size:12px;color:var(--muted)">Status</label><select onchange="setOrderStatus('${o.id}',this.value)" style="background:#25221c;color:var(--cream);border:1px solid #4a3d26;padding:8px;border-radius:5px">${["Received","Preparing","Ready","Out for delivery","Delivered","Cancelled"].map(st=>`<option ${o.status===st?'selected':''}>${st}</option>`).join("")}</select><small style="color:var(--muted)">${new Date(o.date).toLocaleString()}</small></div></div>`).join("")}
@@ -101,11 +75,19 @@ function setOrderStatus(id,status){let orders=getOrders();let o=orders.find(x=>x
 function exportOrders(){let rows=[["Order ID","Date","Name","Phone","Address","Items","Total","Status"],...getOrders().map(o=>[o.id,o.date,o.customer.name,o.customer.phone,o.customer.address,Object.entries(o.items).map(([n,q])=>`${n} x ${q}`).join("; "),o.total,o.status||"Received"])];let csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="ghar-ka-khana-demo-orders.csv";a.click();URL.revokeObjectURL(a.href)}
 document.getElementById("historyForm").addEventListener("submit",e=>{e.preventDefault();let phone=new FormData(e.target).get("phone").replace(/\\D/g,"");let found=getOrders().filter(o=>o.customer.phone.replace(/\\D/g,"")===phone).reverse();document.getElementById("historyResults").innerHTML=found.length?found.map(o=>`<div style="border-top:1px solid #393123;padding:14px 0"><strong>${o.id}</strong> · ${money(o.total)}<br><small style="color:var(--muted)">${new Date(o.date).toLocaleString()} · ${o.status||"Received"}</small></div>`).join(""):'<p class="empty">No orders found for this phone number in this browser.</p>'});
 function renderCats(){let cats=["All",...new Set(dishes.map(d=>d.cat))];document.getElementById("categories").innerHTML=cats.map(c=>`<button class="chip ${category===c?'active':''}" onclick="category='${c}';renderCats();renderMenu()">${c}</button>`).join("")}
-function renderMenu(){let list=dishes.filter(d=>category==="All"||d.cat===category);document.getElementById("menuGrid").innerHTML=list.map(d=>`<article class="card"><div class="food-img"><img loading="lazy" src="${d.img}" alt="${d.name}" onerror="this.style.display='none'"></div><div class="card-body"><div class="tag">${d.tag}</div><div class="card-title"><h3>${d.name}</h3><span class="price">${money(d.price)}</span></div><p>${d.desc}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${d.cat}</span><button class="add" onclick="add('${d.name}')">+ Add</button></div></div></article>`).join("")}
+function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderMenu(){
+ let list=dishes.filter(d=>category==="All"||d.cat===category);
+ document.getElementById("menuGrid").innerHTML=list.length?list.map(d=>`<article class="card"><div class="food-img"><img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'"></div><div class="card-body"><div class="tag">${d.tag}</div><div class="card-title"><h3>${escapeHTML(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><button class="add" onclick="add(${JSON.stringify(d.name).replace(/</g,'\\u003c')})">+ Add</button></div></div></article>`).join(""):'<p class="empty">No dishes are currently available. Please check back soon.</p>';
+}
 function add(name){cart[name]=(cart[name]||0)+1;updateCart()}
 function change(name,n){cart[name]+=n;if(cart[name]<=0)delete cart[name];updateCart()}
 function updateCart(){let count=Object.values(cart).reduce((a,b)=>a+b,0);document.getElementById("cartCount").textContent=count;document.getElementById("fabCount").textContent=count;let entries=Object.entries(cart);document.getElementById("cartItems").innerHTML=entries.length?entries.map(([name,q])=>{let d=dishes.find(x=>x.name===name);return `<div class="cart-line"><div><strong>${name}</strong><small>${money(d.price)} each</small></div><div class="qty"><button onclick="change('${name}',-1)">−</button>${q}<button onclick="change('${name}',1)">+</button></div><strong>${money(d.price*q)}</strong></div>`}).join(""):'<div class="empty">Your basket is waiting for something delicious.</div>';document.getElementById("checkout").style.display=entries.length?"block":"none";document.getElementById("total").textContent=money(entries.reduce((s,[n,q])=>s+dishes.find(d=>d.name===n).price*q,0))}
 function openCart(){document.getElementById("overlay").classList.add("show");updateCart();let p=JSON.parse(localStorage.getItem("gkk_customer_profile")||"null");if(p){let f=document.getElementById("orderForm");f.elements.name.value=p.name;f.elements.phone.value=p.phone;f.elements.address.value=p.address||""}}function closeCart(){document.getElementById("overlay").classList.remove("show")}
 document.getElementById("orderForm").addEventListener("submit",e=>{e.preventDefault();let data=Object.fromEntries(new FormData(e.target));let order={id:"GKK-"+Date.now().toString().slice(-6),date:new Date().toISOString(),customer:data,items:cart,status:"Received",total:Object.entries(cart).reduce((s,[n,q])=>s+dishes.find(d=>d.name===n).price*q,0)};let orders=JSON.parse(localStorage.getItem("gkk_demo_orders")||"[]");orders.push(order);localStorage.setItem("gkk_demo_orders",JSON.stringify(orders));renderOrderDesk();document.getElementById("success").innerHTML=`Thank you, ${data.name}! Your demo order <strong>${order.id}</strong> has been saved in this browser. This is not yet sent to the kitchen.`;document.getElementById("success").classList.add("show");cart={};updateCart();e.target.reset()});
-renderCats();renderMenu();renderOwner();renderOrderDesk();renderProfile();updateCart();
+renderOrderDesk();renderProfile();updateCart();
+loadCustomerMenu().catch(err=>{
+ document.getElementById("menuGrid").innerHTML='<p class="empty">We could not load the menu right now. Please refresh the page.</p>';
+ console.error(err);
+});
 </script></body></html>
