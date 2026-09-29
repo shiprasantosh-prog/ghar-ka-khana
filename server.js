@@ -521,6 +521,7 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
 }));
 
 // WhatsApp notification
+
 async function notifyWhatsApp(order) {
   const {
     WHATSAPP_TOKEN,
@@ -530,15 +531,14 @@ async function notifyWhatsApp(order) {
   } = process.env;
 
   if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_TO_NUMBER) {
+    console.log("WhatsApp credentials are missing. Notification skipped.");
     return;
   }
 
-  const body =
-    `New Ghar ka Khana order #${order.id}\n` +
-    `Customer: ${order.customer_name} (${order.customer_phone})\n` +
-    `Items: ${order.items.map((i) => `${i.name} x${i.quantity}`).join(", ")}\n` +
-    `Total: ₹${order.total}\n` +
-    `Address: ${order.address}`;
+  const orderId = `GH${order.id}`;
+  const customerName = order.customer_name || "Customer";
+  const customerPhone = order.customer_phone || "Not available";
+  const totalAmount = `₹${order.total}`;
 
   const response = await fetch(
     `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -550,16 +550,50 @@ async function notifyWhatsApp(order) {
       },
       body: JSON.stringify({
         messaging_product: "whatsapp",
+        recipient_type: "individual",
         to: WHATSAPP_TO_NUMBER,
-        type: "text",
-        text: { body }
+        type: "template",
+        template: {
+          name: "ghar_ka_khana_new_order",
+          language: {
+            code: "en"
+          },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                {
+                  type: "text",
+                  text: orderId
+                },
+                {
+                  type: "text",
+                  text: customerName
+                },
+                {
+                  type: "text",
+                  text: customerPhone
+                },
+                {
+                  type: "text",
+                  text: totalAmount
+                }
+              ]
+            }
+          ]
+        }
       })
     }
   );
 
+  const result = await response.json();
+
   if (!response.ok) {
-    throw Error(await response.text());
+    console.error("WhatsApp template notification failed:", result);
+    throw new Error("WhatsApp notification failed.");
   }
+
+  console.log("WhatsApp order notification sent successfully.");
 }
 
 // Serve the customer website
