@@ -34,6 +34,7 @@ const pool = new Pool({
 pool.on("error", (err) => {
   console.error("Unexpected PostgreSQL error:", err);
 });
+app.set("trust proxy", 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "200kb" }));
