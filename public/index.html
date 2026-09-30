@@ -20,7 +20,7 @@ body{padding-left:76px;transition:padding-left .25s ease}
 .sidebar{position:fixed;z-index:25;left:0;top:0;bottom:0;width:76px;background:#171511;border-right:1px solid #514126;padding:18px 10px;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;transition:width .25s ease;box-shadow:8px 0 24px #0002}
 .sidebar-toggle{display:flex;align-items:center;justify-content:center;width:54px;height:48px;margin:0 auto 12px;background:#292319;border:1px solid #514126;border-radius:9px;color:var(--gold2);font-size:25px;cursor:pointer;flex-shrink:0}
 .sidebar-toggle:hover{background:#3c2e16}
-.logo{display:none;flex-direction:column;align-items:center;text-decoration:none;color:var(--cream);padding:0 5px 25px;border-bottom:1px solid #514126}
+.logo{display:none!important;flex-direction:column;align-items:center;text-decoration:none;color:var(--cream);padding:0 5px 25px;border-bottom:1px solid #514126}
 .logo svg{width:150px;height:125px}.logo-name{font:bold 27px Georgia,serif;white-space:nowrap;color:var(--cream);margin-top:-3px}.logo-tag{font-size:10px;letter-spacing:2.5px;color:var(--gold2);margin-top:7px}
 .side-links{display:flex;flex-direction:column;gap:9px;margin-top:8px}
 .side-links a,.side-links button{position:relative;display:flex;align-items:center;gap:15px;text-decoration:none;color:var(--cream);background:transparent;border:0;border-radius:8px;padding:13px 12px;text-align:left;font-size:15px;min-height:48px;white-space:nowrap}
@@ -35,7 +35,7 @@ body{padding-left:76px;transition:padding-left .25s ease}
 body.sidebar-expanded{padding-left:270px}
 body.sidebar-expanded .sidebar{width:270px;padding:18px}
 body.sidebar-expanded .sidebar-toggle{margin-left:0}
-body.sidebar-expanded .logo{display:flex}
+body.sidebar-expanded .logo{display:none!important}
 body.sidebar-expanded .side-links .nav-label{display:inline}
 body.sidebar-expanded .side-links button b{position:static;margin-left:auto;padding:3px 9px;font-size:12px}
 body.sidebar-expanded .sidebar-bottom{display:block}
@@ -137,7 +137,7 @@ function shapeDish(d,tag='Kitchen special'){return {id:d.id,name:d.name,price:Nu
 async function loadCustomerMenu(){const [rows,specialRows]=await Promise.all([api('/api/menu'),api('/api/specials')]);dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(d=>shapeDish(d));specialDishes=specialRows.map(d=>shapeDish(d,'Today’s special'));renderCats();renderMenu();renderSpecials();updateCart()}
 function setMenuView(view){menuView=view;document.getElementById('catalogueView').style.display=view==='catalogue'?'block':'none';document.getElementById('specialsView').style.display=view==='specials'?'block':'none';document.getElementById('catalogueTab').classList.toggle('active',view==='catalogue');document.getElementById('specialsTab').classList.toggle('active',view==='specials')}
 function renderSpecials(){const host=document.getElementById('specialsGrid');host.innerHTML=specialDishes.length?specialDishes.map(d=>dishCardHTML(d)).join(''):'<p class="empty">Today’s specials will be announced soon. Please explore our full menu.</p>'}
-function dishCardHTML(d){return `<article class="card"><div class="food-img"><img src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" loading="lazy"></div><div class="card-body"><div class="tag">${escapeHTML(d.tag)}</div><div class="card-title"><h3>${escapeHTML(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot">${quantityControlHTML(d)}</div></div></article>`}
+function dishCardHTML(d){return `<article class="card" data-menu-card="${d.id}"><div class="food-img"><img src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" loading="lazy"></div><div class="card-body"><div class="tag">${escapeHTML(d.tag)}</div><div class="card-title"><h3>${escapeHTML(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><div data-quantity-control>${quantityControlHTML(d)}</div></div></div></article>`}
 
 function setAuthMode(mode){authMode=mode;const f=document.getElementById("authForm"),reg=mode==="register";f.elements.name.parentElement.style.display=reg?"block":"none";f.elements.email.parentElement.style.display=reg?"block":"none";f.elements.address.parentElement.style.display=reg?"block":"none";document.getElementById("authSubmit").textContent=reg?"Create account":"Sign in";document.getElementById("toggleAuth").textContent=reg?"I already have an account":"Create account";document.getElementById("accountTitle").textContent=reg?"Create your account":"Sign in to your account";f.elements.password.autocomplete=reg?"new-password":"current-password"}
 document.getElementById("toggleAuth").addEventListener("click",()=>setAuthMode(authMode==="login"?"register":"login"));
