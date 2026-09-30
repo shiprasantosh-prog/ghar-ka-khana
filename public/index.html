@@ -143,13 +143,17 @@ function change(id,n){
 }
 function updateCart(){
     let count=Object.values(cart).reduce((a,b)=>a+b,0);
-    document.getElementById("cartCount").textContent=count;
-    document.getElementById("fabCount").textContent=count;
-    document.getElementById("sideCartCount").textContent=count;
+    // The old header cart counter is not present in the sidebar layout.
+    // Update whichever counters exist without interrupting the rest of the cart refresh.
+    ["cartCount","fabCount","sideCartCount"].forEach(id=>{
+        const counter=document.getElementById(id);
+        if(counter)counter.textContent=count;
+    });
 
     let entries=Object.entries(cart);
 
-    document.getElementById("cartItems").innerHTML=entries.length
+    const cartItemsHost=document.getElementById("cartItems");
+    if(cartItemsHost)cartItemsHost.innerHTML=entries.length
         ?entries.map(([id,q])=>{
             let d=dishes.find(x=>String(x.id)===String(id));
             if(!d)return "";
