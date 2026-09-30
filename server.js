@@ -308,6 +308,117 @@ app.get("/api/admin/menu", auth, admin, asyncRoute(async (req, res) => {
   res.json(result.rows);
 }));
 
+
+// Get daily specials for customers
+app.get("/api/specials", asyncRoute(async (req, res) => {
+  const requestedDate = req.query.date;
+
+  if (requestedDate && !/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+    return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD." });
+  }
+
+  const result = await pool.query(
+    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available
+     FROM daily_specials ds
+     JOIN menu m ON m.id = ds.menu_id
+     WHERE ds.special_date = COALESCE(
+       $1::date,
+       (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+     )
+     AND m.available = TRUE
+     ORDER BY m.category, m.name`,
+    [requestedDate || null]
+  );
+
+  res.json(result.rows);
+}));
+
+// Get saved specials for the owner
+app.get("/api/admin/specials", auth, admin, asyncRoute(async (req, res) => {
+  const requestedDate = req.query.date;
+
+  if (requestedDate && !/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+    return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD." });
+  }
+
+  const result = await pool.query(
+    `SELECT menu_id
+     FROM daily_specials
+     WHERE special_date = COALESCE(
+       $1::date,
+       (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+     )
+     ORDER BY menu_id`,
+    [requestedDate || null]
+  );
+
+  res.json(result.rows.map(row => row.menu_id));
+}));
+
+// Save daily specials (owner only)
+app.put("/api/admin/specials", auth, admin, asyncRoute(async (req, res) => {
+  const { date, menuIds } = req.body || {};
+
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(menuIds)) {
+    return res.status(400).json({
+      error: "A valid date and list of menu item IDs are required."
+    });
+  }
+
+  const ids = [...new Set(menuIds.map(Number))];
+
+  if (ids.some(id => !Number.isInteger(id) || id < 1)) {
+    return res.status(400).json({ error: "Invalid menu item ID." });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    if (ids.length > 0) {
+      const check = await client.query(
+        `SELECT id FROM menu WHERE id = ANY($1::int[]) AND available = TRUE`,
+        [ids]
+      );
+
+      if (check.rowCount !== ids.length) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          error: "One or more selected dishes are unavailable or do not exist."
+        });
+      }
+    }
+
+    await client.query(
+      "DELETE FROM daily_specials WHERE special_date = $1::date",
+      [date]
+    );
+
+    for (const id of ids) {
+      await client.query(
+        `INSERT INTO daily_specials (special_date, menu_id)
+         VALUES ($1::date, $2)`,
+        [date, id]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    res.json({
+      ok: true,
+      date,
+      menuIds: ids,
+      message: "Daily specials saved successfully."
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}));
+
 // Add menu item
 app.post("/api/menu", auth, admin, asyncRoute(async (req, res) => {
   const { name, description = "", category, price, image = "" } = req.body || {};
