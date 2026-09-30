@@ -419,6 +419,129 @@ app.put("/api/admin/specials", auth, admin, asyncRoute(async (req, res) => {
   }
 }));
 
+
+// Bulk import menu from owner-uploaded CSV
+app.post("/api/admin/menu/import", auth, admin, asyncRoute(async (req, res) => {
+  const { items } = req.body || {};
+
+  if (!Array.isArray(items) || items.length < 1 || items.length > 1000) {
+    return res.status(400).json({
+      error: "Upload a CSV containing between 1 and 1,000 menu rows."
+    });
+  }
+
+  const clean = [];
+  const seen = new Set();
+
+  for (let i = 0; i < items.length; i++) {
+    const row = items[i] || {};
+    const name = String(row.name || "").trim();
+    const category = String(row.category || "").trim();
+    const price = Number(row.price);
+
+    if (!name || !category || !Number.isInteger(price) || price < 1) {
+      return res.status(400).json({
+        error: `Row ${i + 1}: name, category and a positive whole-number price are required.`
+      });
+    }
+
+    if (name.length > 100 || category.length > 60) {
+      return res.status(400).json({
+        error: `Row ${i + 1}: name or category is too long.`
+      });
+    }
+
+    const key = `${category.toLowerCase()}::${name.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    clean.push({
+      name,
+      category,
+      price,
+      description: String(row.description || "").trim().slice(0, 500),
+      image: String(row.image || "").trim().slice(0, 1000),
+      available:
+        row.available === false ||
+        String(row.available).toLowerCase() === "false" ||
+        String(row.available) === "0"
+          ? false
+          : true
+    });
+  }
+
+  const client = await pool.connect();
+  let inserted = 0;
+  let updated = 0;
+
+  try {
+    await client.query("BEGIN");
+
+    for (const item of clean) {
+      const existing = await client.query(
+        `SELECT id FROM menu
+         WHERE LOWER(name) = LOWER($1)
+         AND LOWER(category) = LOWER($2)
+         ORDER BY id LIMIT 1`,
+        [item.name, item.category]
+      );
+
+      if (existing.rowCount) {
+        await client.query(
+          `UPDATE menu
+           SET name = $1,
+               category = $2,
+               price = $3,
+               description = CASE WHEN $4 <> '' THEN $4 ELSE description END,
+               image = CASE WHEN $5 <> '' THEN $5 ELSE image END,
+               available = $6
+           WHERE id = $7`,
+          [
+            item.name,
+            item.category,
+            item.price,
+            item.description,
+            item.image,
+            item.available,
+            existing.rows[0].id
+          ]
+        );
+        updated++;
+      } else {
+        await client.query(
+          `INSERT INTO menu
+           (name, category, price, description, image, available)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            item.name,
+            item.category,
+            item.price,
+            item.description,
+            item.image,
+            item.available
+          ]
+        );
+        inserted++;
+      }
+    }
+
+    await client.query("COMMIT");
+
+    res.json({
+      ok: true,
+      imported: clean.length,
+      inserted,
+      updated,
+      message: `Imported ${clean.length} menu rows: ${inserted} new and ${updated} updated.`
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}));
+
 // Add menu item
 app.post("/api/menu", auth, admin, asyncRoute(async (req, res) => {
   const { name, description = "", category, price, image = "" } = req.body || {};
