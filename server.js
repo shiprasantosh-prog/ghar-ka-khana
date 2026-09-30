@@ -87,6 +87,14 @@ async function initializeDatabase() {
       unit_price INTEGER NOT NULL,
       quantity INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS daily_specials (
+      id SERIAL PRIMARY KEY,
+      special_date DATE NOT NULL,
+      menu_id INTEGER NOT NULL REFERENCES menu(id),
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (special_date, menu_id)
+    );
   `);
 
   // Create owner account if it does not exist
