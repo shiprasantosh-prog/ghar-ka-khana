@@ -87,47 +87,60 @@ function renderCats(){
         `<button class="chip ${category===c?'active':''}" onclick='category=${JSON.stringify(c)};renderCats();renderMenu()'>${escapeHTML(c)}</button>`
     ).join("");
 }
+function quantityControlHTML(d){
+    const qty=cart[d.id]||0;
+    const id=JSON.stringify(d.id);
+    return qty>0
+        ? `<span style="display:flex;align-items:center;gap:10px">
+               <button class="add" type="button" onclick='change(${id},-1)'>−</button>
+               <strong>${qty}</strong>
+               <button class="add" type="button" onclick='change(${id},1)'>+</button>
+           </span>`
+        : `<button class="add" type="button" onclick='add(${id})'>+ Add</button>`;
+}
 function renderMenu(){
-    let list=dishes.filter(d=>category==="All"||d.cat===category);
-
+    const list=dishes.filter(d=>category==="All"||d.cat===category);
     document.getElementById("menuGrid").innerHTML=list.length
-        ?list.map(d=>{
-            let qty=cart[d.id]||0;
-
-            let quantityButton=qty>0
-                ? `<span style="display:flex;align-items:center;gap:10px">
-                       <button class="add" onclick="change(${Number(d.id)},-1)">−</button>
-                       <strong>${qty}</strong>
-                       <button class="add" onclick="change(${Number(d.id)},1)">+</button>
-                   </span>`
-                : `<button class="add" onclick="add(${Number(d.id)})">+ Add</button>`;
-
-            return `<article class="card">
-                <div class="food-img">
-                    <img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'">
+        ?list.map(d=>`<article class="card" data-menu-card="${escapeHTML(d.id)}">
+            <div class="food-img">
+                <img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'">
+            </div>
+            <div class="card-body">
+                <div class="tag">${escapeHTML(d.tag)}</div>
+                <div class="card-title">
+                    <h3>${escapeHTML(d.name)}</h3>
+                    <span class="price">${money(d.price)}</span>
                 </div>
-                <div class="card-body">
-                    <div class="tag">${d.tag}</div>
-                    <div class="card-title">
-                        <h3>${escapeHTML(d.name)}</h3>
-                        <span class="price">${money(d.price)}</span>
-                    </div>
-                    <p>${escapeHTML(d.desc)}</p>
-                    <div class="card-foot">
-                        <span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span>
-                        ${quantityButton}
-                    </div>
+                <p>${escapeHTML(d.desc)}</p>
+                <div class="card-foot">
+                    <span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span>
+                    <span data-quantity-control>${quantityControlHTML(d)}</span>
                 </div>
-            </article>`;
-        }).join("")
+            </div>
+        </article>`).join("")
         :'<p class="empty">No dishes are currently available. Please check back soon.</p>';
 }
-function add(id){
-    if(!dishes.some(d=>String(d.id)===String(id)))return;
-    cart[id]=(cart[id]||0)+1;
-    updateCart()
+function updateMenuItem(id){
+    const card=[...document.querySelectorAll("[data-menu-card]")].find(el=>String(el.dataset.menuCard)===String(id));
+    const dish=dishes.find(d=>String(d.id)===String(id));
+    const host=card?.querySelector("[data-quantity-control]");
+    if(card&&dish&&host)host.innerHTML=quantityControlHTML(dish);
 }
-function change(id,n){cart[id]=(cart[id]||0)+n;if(cart[id]<=0)delete cart[id];updateCart()}
+function add(id){
+    const dish=dishes.find(d=>String(d.id)===String(id));
+    if(!dish)return;
+    cart[dish.id]=(cart[dish.id]||0)+1;
+    updateCart();
+    updateMenuItem(dish.id);
+}
+function change(id,n){
+    const dish=dishes.find(d=>String(d.id)===String(id));
+    if(!dish)return;
+    cart[dish.id]=(cart[dish.id]||0)+n;
+    if(cart[dish.id]<=0)delete cart[dish.id];
+    updateCart();
+    updateMenuItem(dish.id);
+}
 function updateCart(){
     let count=Object.values(cart).reduce((a,b)=>a+b,0);
     document.getElementById("cartCount").textContent=count;
@@ -164,7 +177,6 @@ function updateCart(){
             return s+(d?.price||0)*q;
         },0)
     )
-    renderMenu();
 }
 function openCart(){document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";f.elements.address.value=currentUser.address||""}}
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
