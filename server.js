@@ -778,22 +778,28 @@ async function notifyWhatsApp(order) {
   }
 
   const orderId = `GKK-${String(order.id).padStart(4, "0")}`;
-  const customerName = order.customer_name || "Customer";
-  const customerPhone = order.customer_phone || "Not available";
+
+  // Remove line breaks, tabs and repeated spaces from WhatsApp template values.
+  const cleanWhatsAppText = (value, fallback = "Not provided") =>
+    String(value ?? fallback)
+      .replace(/[\r\n\t]+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim() || fallback;
+  
+  const customerName = cleanWhatsAppText(order.customer_name, "Customer");
+  const customerPhone = cleanWhatsAppText(order.customer_phone, "Not available");
 
   const itemList = (order.items || [])
-    .map(item => {
-      const quantity = Number(item.quantity);
-      const price = Number(item.price);
-      const subtotal = quantity * price;
-
-      return `${item.name} x ${quantity} - Rs. ${subtotal}`;
+    .map((item) => {
+      const quantity = Number(item.quantity) || 0;
+      const lineTotal = Number(item.price) * quantity;
+      const name = cleanWhatsAppText(item.name, "Dish");
+      return `${name} x ${quantity} - Rs. ${lineTotal}`;
     })
-    .join("\n");
+    .join("; ") || "No items found";
 
-  const formattedItems = itemList || "No items found";
-  const totalAmount = `Rs. ${order.total}`;
-  const deliveryAddress = order.address || "Not provided";
+  const totalAmount = `Rs. ${Number(order.total) || 0}`;
+  const deliveryAddress = cleanWhatsAppText(order.address);
 
   const response = await fetch(
     `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -831,7 +837,7 @@ async function notifyWhatsApp(order) {
                 },
                 {
                   type: "text",
-                  text: formattedItems
+                  text: itemList
                 },
                 {
                   type: "text",
