@@ -125,7 +125,7 @@ document.addEventListener("keydown",event=>{
 });
 const fallbackFoodImage="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80";
 const money=n=>"₹"+n;
-function titleCase(value){return String(value??"").toLowerCase().replace(/\\b([a-z])/g,letter=>letter.toUpperCase()).replace(/\\b(\\d+)(pcs|ml|kg)\\b/gi,(_,n,u)=>n+u.toUpperCase());}
+function titleCase(value){return String(value??"").toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g,(_,sep,letter)=>sep+letter.toUpperCase()).replace(/(\d+)(pcs|ml|kg)\b/gi,(_,n,u)=>n+u.toUpperCase());}
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
 async function loadCustomerMenu(){const [rows,specialRows]=await Promise.all([api('/api/menu'),api('/api/specials')]);const mapDish=d=>({id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:d.description||'',img:d.image||fallbackFoodImage,tag:'Kitchen special'});dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);todaySpecials=specialRows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);renderCats();renderMenu();updateCart()}
