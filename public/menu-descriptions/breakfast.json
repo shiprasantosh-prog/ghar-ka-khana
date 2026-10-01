@@ -1,0 +1,155 @@
+{
+  "category": "Breakfast",
+  "items": [
+    {
+      "name": "Chia Seeds Pudding",
+      "price": "₹120",
+      "description": "Chia seeds soaked to a creamy consistency, served as a refreshing and nourishing breakfast.",
+      "image": null
+    },
+    {
+      "name": "Moong Dal Chilla",
+      "price": "₹60",
+      "description": "A savoury Indian pancake made with ground moong dal, lightly seasoned and cooked until golden.",
+      "image": null
+    },
+    {
+      "name": "Masala Oats",
+      "price": "₹120",
+      "description": "Warm, comforting oats cooked with a blend of Indian spices for a wholesome start to the day.",
+      "image": null
+    },
+    {
+      "name": "Poha",
+      "price": "₹90",
+      "description": "Soft flattened rice tossed with mild spices and traditional seasonings for a light, satisfying breakfast.",
+      "image": null
+    },
+    {
+      "name": "Upma",
+      "price": "₹80",
+      "description": "A comforting South Indian breakfast made with roasted semolina, tempered spices and a delicate savoury flavour.",
+      "image": null
+    },
+    {
+      "name": "Besan Ka Chilla (1 Pc)",
+      "price": "₹60",
+      "description": "A golden savoury pancake prepared with gram flour and spices, cooked fresh for a wholesome bite.",
+      "image": null
+    },
+    {
+      "name": "Bread Upma",
+      "price": "₹80",
+      "description": "Bread pieces tossed with aromatic spices and a flavourful tempering for a quick, comforting meal.",
+      "image": null
+    },
+    {
+      "name": "Aloo Sandwich",
+      "price": "₹60",
+      "description": "Bread filled with a flavourful potato mixture, toasted until crisp and golden.",
+      "image": null
+    },
+    {
+      "name": "Suji Toast (2 Pcs)",
+      "price": "₹100",
+      "description": "Crisp bread topped with a savoury semolina mixture and toasted to a golden finish.",
+      "image": null
+    },
+    {
+      "name": "Paneer Sandwich",
+      "price": "₹80",
+      "description": "Soft paneer filling layered between bread slices, prepared fresh for a delicious and satisfying snack.",
+      "image": null
+    },
+    {
+      "name": "Chocolate Sandwich",
+      "price": "₹100",
+      "description": "A sweet, comforting sandwich with a rich chocolate filling, perfect for a little breakfast indulgence.",
+      "image": null
+    },
+    {
+      "name": "Cheese Corn Sandwich",
+      "price": "₹120",
+      "description": "A delicious combination of sweet corn and melted cheese tucked between toasted bread slices.",
+      "image": null
+    },
+    {
+      "name": "Franky",
+      "price": "₹50",
+      "description": "A soft wrap filled with a tasty, seasoned stuffing, making it a convenient bite on the go.",
+      "image": null
+    },
+    {
+      "name": "Bread Pudla",
+      "price": "₹100",
+      "description": "Bread coated in a savoury gram-flour mixture, seasoned with spices and cooked until golden.",
+      "image": null
+    },
+    {
+      "name": "Bread Pudla With Cheese",
+      "price": "₹120",
+      "description": "A savoury bread pudla enhanced with cheese for a rich, satisfying twist on a classic favourite.",
+      "image": null
+    },
+    {
+      "name": "Palak Puri With Sabji",
+      "price": "₹120",
+      "description": "Fresh puris infused with spinach, served with a flavourful vegetable curry for a hearty Indian breakfast.",
+      "image": null
+    },
+    {
+      "name": "Palak Paneer Puri With Sabji",
+      "price": "₹130",
+      "description": "Spinach-infused puris paired with a comforting vegetable curry, bringing together traditional flavours.",
+      "image": null
+    },
+    {
+      "name": "Puri Sabji (3 Pcs)",
+      "price": "₹120",
+      "description": "Three fluffy, freshly prepared puris served with a delicious homestyle vegetable curry.",
+      "image": null
+    },
+    {
+      "name": "Kolkata Club Kachori",
+      "price": "₹100",
+      "description": "A Bengali-style kachori with a crisp exterior and a flavourful filling, served as a satisfying breakfast treat.",
+      "image": null
+    },
+    {
+      "name": "Dhokla (2 Pcs)",
+      "price": "₹60",
+      "description": "Soft, fluffy and savoury steamed dhokla, offering a light and delicious Gujarati-style bite.",
+      "image": null
+    },
+    {
+      "name": "Idli Fry",
+      "price": "₹90",
+      "description": "Idli pieces tossed with a flavourful seasoning and lightly fried for a delicious twist on the South Indian classic.",
+      "image": null
+    },
+    {
+      "name": "Idli Sambhar (3 Pcs)",
+      "price": "₹60",
+      "description": "Three soft, steamed idlis served with comforting sambhar for a traditional South Indian breakfast.",
+      "image": null
+    },
+    {
+      "name": "Veg Uttapam (2 Pcs)",
+      "price": "₹100",
+      "description": "Two soft, savoury rice-and-lentil pancakes topped with vegetables and cooked until lightly golden.",
+      "image": null
+    },
+    {
+      "name": "Thepla",
+      "price": "₹30",
+      "description": "A traditional Gujarati flatbread seasoned with aromatic spices, delicious on its own or with accompaniments.",
+      "image": null
+    },
+    {
+      "name": "Breakfast Meal (2 Pcs Idly and Half Aloo Paratha)",
+      "price": "₹65",
+      "description": "A satisfying breakfast combination featuring two soft idlis and half an aloo paratha.",
+      "image": null
+    }
+  ]
+}
