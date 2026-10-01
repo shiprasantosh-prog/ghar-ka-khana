@@ -286,6 +286,29 @@ app.get("/api/auth/me", auth, asyncRoute(async (req, res) => {
   res.json({ user: result.rows[0] || null });
 }));
 
+// Update the signed-in customer's profile. Phone numbers remain fixed because they identify the login account.
+app.patch("/api/auth/profile", auth, asyncRoute(async (req, res) => {
+  const { name, email, address } = req.body || {};
+  if (!String(name || "").trim()) {
+    return res.status(400).json({ error: "Name is required." });
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE users
+       SET name = $1, email = $2, address = $3
+       WHERE id = $4
+       RETURNING id, name, phone, email, address, role`,
+      [String(name).trim(), String(email || "").trim() || null, String(address || "").trim(), req.user.id]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (e) {
+    if (e.code === "23505") {
+      return res.status(409).json({ error: "That email address is already in use." });
+    }
+    throw e;
+  }
+}));
+
 // Public menu
 app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
