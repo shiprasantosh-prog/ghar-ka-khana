@@ -761,6 +761,7 @@ app.get("/api/admin/orders", auth, admin, asyncRoute(async (req, res) => {
 app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   const allowed = [
     "Received",
+    "Accepted",
     "Preparing",
     "Ready",
     "Out for delivery",
@@ -887,6 +888,78 @@ async function notifyWhatsApp(order) {
 
   console.log("WhatsApp order notification sent successfully.");
 }
+
+// Meta WhatsApp webhook verification (configure WHATSAPP_VERIFY_TOKEN in Render).
+app.get("/webhooks/whatsapp", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && process.env.WHATSAPP_VERIFY_TOKEN && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    return res.status(200).send(challenge);
+  }
+  return res.sendStatus(403);
+});
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "").replace(/^0+/, "");
+}
+
+async function sendWhatsAppText(to, body) {
+  const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
+  const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { body } })
+  });
+  if (!response.ok) {
+    const result = await response.text();
+    console.error("WhatsApp status reply failed:", result);
+  }
+}
+
+// Incoming owner WhatsApp replies update the order status shown in customer order history.
+app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
+  res.sendStatus(200);
+  try {
+    const expectedOwner = normalizePhone(process.env.WHATSAPP_TO_NUMBER);
+    const entry = req.body?.entry || [];
+    for (const item of entry) {
+      for (const change of item.changes || []) {
+        for (const message of change.value?.messages || []) {
+          if (!expectedOwner || normalizePhone(message.from) !== expectedOwner || message.type !== "text") continue;
+          const textBody = String(message.text?.body || "").trim().toUpperCase();
+          const match = textBody.match(/^(ACCEPT|ACCEPTED|CANCEL|CANCELLED|PREPARING|READY|PREPARED|OUT|OUT FOR DELIVERY|DELIVERED)\s+GKK-?(\d+)$/);
+          if (!match) {
+            await sendWhatsAppText(message.from, "Order update format: ACCEPT GKK-0001, PREPARING GKK-0001, READY GKK-0001, OUT GKK-0001, DELIVERED GKK-0001, or CANCEL GKK-0001.");
+            continue;
+          }
+          const command = match[1];
+          const orderId = Number(match[2]);
+          const statuses = {
+            ACCEPT: "Accepted", ACCEPTED: "Accepted",
+            CANCEL: "Cancelled", CANCELLED: "Cancelled",
+            PREPARING: "Preparing", READY: "Ready", PREPARED: "Ready",
+            OUT: "Out for delivery", "OUT FOR DELIVERY": "Out for delivery",
+            DELIVERED: "Delivered"
+          };
+          const status = statuses[command];
+          const result = await pool.query(
+            "UPDATE orders SET status = $1 WHERE id = $2 RETURNING id",
+            [status, orderId]
+          );
+          if (!result.rowCount) {
+            await sendWhatsAppText(message.from, `Order GKK-${String(orderId).padStart(4, "0")} was not found.`);
+          } else {
+            await sendWhatsAppText(message.from, `Order GKK-${String(orderId).padStart(4, "0")} updated to: ${status}.`);
+            console.log(`WhatsApp owner updated order ${orderId} to ${status}`);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("WhatsApp webhook processing error:", error);
+  }
+}));
 
 // Serve the customer website
 app.get("*", (req, res) =>
