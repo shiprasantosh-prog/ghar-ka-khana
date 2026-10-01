@@ -125,6 +125,7 @@ document.addEventListener("keydown",event=>{
 });
 const fallbackFoodImage="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80";
 const money=n=>"₹"+n;
+function titleCase(value){return String(value??"").toLowerCase().replace(/\\b([a-z])/g,letter=>letter.toUpperCase()).replace(/\\b(\\d+)(pcs|ml|kg)\\b/gi,(_,n,u)=>n+u.toUpperCase());}
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
 async function loadCustomerMenu(){const [rows,specialRows]=await Promise.all([api('/api/menu'),api('/api/specials')]);const mapDish=d=>({id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:d.description||'',img:d.image||fallbackFoodImage,tag:'Kitchen special'});dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);todaySpecials=specialRows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);renderCats();renderMenu();updateCart()}
@@ -139,7 +140,7 @@ function renderCats(){
     let cats=["All",...new Set(dishes.map(d=>d.cat))];
 
     document.getElementById("categories").innerHTML=cats.map(c=>
-        `<button class="chip ${category===c?'active':''}" onclick='category=${JSON.stringify(c)};renderCats();renderMenu()'>${escapeHTML(c)}</button>`
+        `<button class="chip ${category===c?'active':''}" onclick='category=${JSON.stringify(c)};renderCats();renderMenu()'>${escapeHTML(titleCase(c))}</button>`
     ).join("");
 }
 function quantityControlHTML(d){
@@ -153,7 +154,7 @@ function quantityControlHTML(d){
            </span>`
         : `<button class="add" type="button" onclick='add(${id})'>+ Add</button>`;
 }
-function dishCardHTML(d){return `<article class="card" data-menu-card="${escapeHTML(d.id)}"><div class="food-img"><img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'"></div><div class="card-body"><div class="tag">Kitchen special</div><div class="card-title"><h3>${escapeHTML(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><span data-quantity-control>${quantityControlHTML(d)}</span></div></div></article>`}
+function dishCardHTML(d){return `<article class="card" data-menu-card="${escapeHTML(d.id)}"><div class="food-img"><img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(titleCase(d.name))}" onerror="this.style.display='none'"></div><div class="card-body"><div class="tag">Kitchen special</div><div class="card-title"><h3>${escapeHTML(titleCase(d.name))}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><span data-quantity-control>${quantityControlHTML(d)}</span></div></div></article>`}
 function renderMenu(){
  const specialsHost=document.getElementById('specialsGrid');
  specialsHost.innerHTML=todaySpecials.length?`<div class="grid">${todaySpecials.map(dishCardHTML).join('')}</div>`:'<p class="empty">Today’s specials will be announced soon. Please explore our full menu below.</p>';
@@ -161,7 +162,7 @@ function renderMenu(){
  const list=dishes.filter(d=>(category==="All"||d.cat===category)&&(!q||`${d.name} ${d.cat} ${d.desc}`.toLowerCase().includes(q)));
  document.getElementById("menuSearchCount").textContent=q?`Found ${list.length} matching dish(es)`: `Showing ${list.length} dish(es)`;
  const grouped={};list.forEach(d=>(grouped[d.cat]??=[]).push(d));
- document.getElementById("menuGrid").innerHTML=list.length?Object.entries(grouped).map(([cat,items])=>`<section class="menu-category"><h3 style="font:26px Georgia,serif;color:var(--gold2);margin:24px 0 14px;border-bottom:1px solid #393123;padding-bottom:10px">${escapeHTML(cat)}</h3><div class="grid">${items.map(dishCardHTML).join('')}</div></section>`).join(''):'<p class="empty">No matching dishes found.</p>';
+ document.getElementById("menuGrid").innerHTML=list.length?Object.entries(grouped).map(([cat,items])=>`<section class="menu-category"><h3 style="font:26px Georgia,serif;color:var(--gold2);margin:24px 0 14px;border-bottom:1px solid #393123;padding-bottom:10px">${escapeHTML(titleCase(cat))}</h3><div class="grid">${items.map(dishCardHTML).join('')}</div></section>`).join(''):'<p class="empty">No matching dishes found.</p>';
 }
 function updateMenuItem(id){
     document.querySelectorAll("[data-menu-card]").forEach(card=>{
