@@ -78,8 +78,8 @@ body.sidebar-expanded .sidebar-bottom{display:block}
 <button type="button" onclick="openCart()" title="My Basket"><span class="nav-icon">🛒</span><span class="nav-label">My Basket</span><b id="sideCartCount">0</b></button>
 </nav><div class="sidebar-bottom"><p>Good Food<br>Brings People Together <span>♥</span></p><div class="follow-label">Follow us</div><a class="whatsapp-link" href="https://wa.me/918017503518" target="_blank" rel="noopener noreferrer">◉ &nbsp; Chat on WhatsApp</a></div></aside>
 <main>
-<section class="hero page-view active-view" id="story"><div><div class="eyebrow">A taste of home</div><h1>Good food.<br><em>Made with love.</em></h1><p>Comforting, freshly prepared meals inspired by the warmth of a home kitchen. Thoughtful ingredients, familiar flavours, and a little love in every bite.</p><div class="hero-actions"><a class="btn" href="#menu" onclick="showPage(&quot;menu&quot;);return false" style="text-decoration:none">Explore the Menu</a><button class="btn ghost" onclick="openCart()">Your Basket</button></div></div><div class="hero-image"><img src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85" alt="A freshly prepared home-style meal"><div class="image-tag">A little warmth in every meal.</div></div></section>
-<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div><p>Simple ingredients. Memorable meals.</p></div><div class="field" style="max-width:620px;margin:0 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#211e18;border:1px solid #665334;border-radius:8px;color:var(--cream);font:inherit"></div><div class="categories" id="categories"></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:-10px 0 18px"></div><div class="grid" id="menuGrid"></div></section>
+<section class="hero page-view active-view" id="story"><div><div class="eyebrow">A taste of home</div><h1>Good food.<br><em>Made with love.</em></h1><p>Comforting, freshly prepared meals inspired by the warmth of a home kitchen. Thoughtful ingredients, familiar flavours, and a little love in every bite.</p><div class="hero-actions"><a class="btn" href="#menu" onclick="showPage(&quot;menu&quot;);return false" style="text-decoration:none">Explore the Menu</a></div></div><div class="hero-image"><img src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85" alt="A freshly prepared home-style meal"><div class="image-tag">A little warmth in every meal.</div></div></section>
+<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div><p>Simple ingredients. Memorable meals.</p></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="field" style="max-width:620px;margin:0 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#211e18;border:1px solid #665334;border-radius:8px;color:var(--cream);font:inherit"></div><div class="categories" id="categories"></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
 
 <section class="wrap page-view" id="account" style="border-top:1px solid #332b1d;padding-top:35px">
 <div class="section-head"><div><div class="eyebrow">Customer account</div><h2 id="accountTitle">Sign in or create an account</h2></div><p>Secure access to your orders</p></div>
@@ -97,10 +97,10 @@ body.sidebar-expanded .sidebar-bottom{display:block}
 <div class="section-head"><div><div class="eyebrow">Your account</div><h2>My orders</h2></div><p>Order history linked to your account</p></div>
 <div class="card" style="padding:20px"><div id="historyResults"><p class="empty">Sign in to see your orders.</p></div></div></section>
 <section class="wrap page-view" id="contact" style="border-top:1px solid #332b1d;padding-top:35px"><div class="section-head"><div><div class="eyebrow">We’re happy to help</div><h2>Contact Us</h2></div><p>Questions about the menu or your order? Get in touch.</p></div><div class="card contact-card"><h3>Ghar ka Khana</h3><p>Freshly prepared, just for you.</p><p class="notice">For orders and enquiries, please contact us on WhatsApp.</p><a class="btn whatsapp-cta" href="https://wa.me/918017503518" target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a></div></section></main><footer>Ghar ka Khana · Homemade with Love<br><br>Freshly prepared, just for you.</footer>
-<button class="btn cart-fab" onclick="openCart()">🛒 Basket <span id="fabCount">0</span></button>
+<button class="btn cart-fab" style="display:none" onclick="openCart()">🛒 Basket <span id="fabCount">0</span></button>
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeCart()"><aside class="drawer"><div class="drawer-head"><h2>Your Basket</h2><button class="close" onclick="closeCart()">×</button></div><div id="cartItems"></div><div id="checkout" style="display:none"><div class="total"><span>Total</span><strong id="total">₹0</strong></div><h3 style="font:22px Georgia,serif;color:var(--gold2)">Delivery details</h3><form id="orderForm"><div class="field"><label>Full name</label><input name="name" required placeholder="Your name"></div><div class="field"><label>Phone number</label><input name="phone" required type="tel" pattern="[0-9 +()-]{10,}" placeholder="Mobile number"></div><div class="field"><label>Delivery address</label><textarea name="address" required placeholder="House number, street, area"></textarea></div><div class="field"><label>Delivery instructions (optional)</label><input name="notes" placeholder="Any special instructions"></div><button class="btn" type="submit" style="width:100%">Place order</button></form><p class="notice">Your order will be saved securely and sent to the kitchen.</p><div class="success" id="success"></div></div></aside></div>
 <script>
-let dishes=[],cart={},category="All",currentUser=null,authMode="login",menuSearchQuery="";
+let dishes=[],todaySpecials=[],cart={},category="All",currentUser=null,authMode="login",menuSearchQuery="";
 function toggleSidebar(){
     const expanded=document.body.classList.toggle("sidebar-expanded");
     const toggle=document.getElementById("sidebarToggle");
@@ -114,6 +114,7 @@ function showPage(pageId){
         section.classList.toggle("active-view",section.id===pageId);
     });
     if(document.body.classList.contains("sidebar-expanded"))toggleSidebar();
+    document.querySelector(".cart-fab").style.display=pageId==="story"?"none":"block";
     window.scrollTo({top:0,behavior:"smooth"});
 }
 document.querySelectorAll(".side-links a").forEach(link=>link.addEventListener("click",()=>{
@@ -126,7 +127,7 @@ const fallbackFoodImage="https://images.unsplash.com/photo-1547592180-85f1739905
 const money=n=>"₹"+n;
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
-async function loadCustomerMenu(){const rows=await api('/api/menu');dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(d=>({id:d.id,name:d.name,price:Number(d.price),cat:d.category||'Other',desc:d.description||'',img:d.image||fallbackFoodImage,tag:'Kitchen special'}));renderCats();renderMenu();updateCart()}
+async function loadCustomerMenu(){const [rows,specialRows]=await Promise.all([api('/api/menu'),api('/api/specials')]);const mapDish=d=>({id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:d.description||'',img:d.image||fallbackFoodImage,tag:'Kitchen special'});dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);todaySpecials=specialRows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);renderCats();renderMenu();updateCart()}
 function setAuthMode(mode){authMode=mode;const f=document.getElementById("authForm"),reg=mode==="register";f.elements.name.parentElement.style.display=reg?"block":"none";f.elements.email.parentElement.style.display=reg?"block":"none";f.elements.address.parentElement.style.display=reg?"block":"none";document.getElementById("authSubmit").textContent=reg?"Create account":"Sign in";document.getElementById("toggleAuth").textContent=reg?"I already have an account":"Create account";document.getElementById("accountTitle").textContent=reg?"Create your account":"Sign in to your account";f.elements.password.autocomplete=reg?"new-password":"current-password"}
 document.getElementById("toggleAuth").addEventListener("click",()=>setAuthMode(authMode==="login"?"register":"login"));
 document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.target,data=Object.fromEntries(new FormData(f)),msg=document.getElementById("authMessage");msg.textContent="Please wait…";try{const payload=authMode==="register"?{name:data.name,phone:data.phone,email:data.email||null,password:data.password,address:data.address||""}:{phone:data.phone,password:data.password};const result=await api(authMode==="register"?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});currentUser=result.user;msg.textContent="";await renderAccount()}catch(err){msg.textContent=err.message}});
@@ -152,35 +153,15 @@ function quantityControlHTML(d){
            </span>`
         : `<button class="add" type="button" onclick='add(${id})'>+ Add</button>`;
 }
+function dishCardHTML(d){return `<article class="card" data-menu-card="${escapeHTML(d.id)}"><div class="food-img"><img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'"></div><div class="card-body"><div class="tag">Kitchen special</div><div class="card-title"><h3>${escapeHTML(d.name)}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><span data-quantity-control>${quantityControlHTML(d)}</span></div></div></article>`}
 function renderMenu(){
-    const q=menuSearchQuery.trim().toLowerCase();
-    const list=dishes.filter(d=>(category==="All"||d.cat===category)&&(!q||`${d.name} ${d.cat} ${d.desc}`.toLowerCase().includes(q)));
-    document.getElementById("menuSearchCount").textContent=q?`Found ${list.length} matching dish(es)`: `Showing ${list.length} dish(es)`;
-    document.getElementById("menuGrid").innerHTML=list.length
-        ?list.map(d=>`<article class="card" data-menu-card="${escapeHTML(d.id)}">
-            <div class="food-img">
-                <img loading="lazy" src="${escapeHTML(d.img)}" alt="${escapeHTML(d.name)}" onerror="this.style.display='none'">
-            </div>
-            <div class="card-body">
-                <div class="tag">${escapeHTML(d.tag)}</div>
-                <div class="card-title">
-                    <h3>${escapeHTML(d.name)}</h3>
-                    <span class="price">${money(d.price)}</span>
-                </div>
-                <p>${escapeHTML(d.desc)}</p>
-                <div class="card-foot">
-                    <span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span>
-                    <span data-quantity-control>${quantityControlHTML(d)}</span>
-                </div>
-            </div>
-        </article>`).join("")
-        :'<p class="empty">No dishes are currently available. Please check back soon.</p>';
-}
-function updateMenuItem(id){
-    const card=[...document.querySelectorAll("[data-menu-card]")].find(el=>String(el.dataset.menuCard)===String(id));
-    const dish=dishes.find(d=>String(d.id)===String(id));
-    const host=card?.querySelector("[data-quantity-control]");
-    if(card&&dish&&host)host.innerHTML=quantityControlHTML(dish);
+ const specialsHost=document.getElementById('specialsGrid');
+ specialsHost.innerHTML=todaySpecials.length?`<div class="grid">${todaySpecials.map(dishCardHTML).join('')}</div>`:'<p class="empty">Today’s specials will be announced soon. Please explore our full menu below.</p>';
+ const q=menuSearchQuery.trim().toLowerCase();
+ const list=dishes.filter(d=>(category==="All"||d.cat===category)&&(!q||`${d.name} ${d.cat} ${d.desc}`.toLowerCase().includes(q)));
+ document.getElementById("menuSearchCount").textContent=q?`Found ${list.length} matching dish(es)`: `Showing ${list.length} dish(es)`;
+ const grouped={};list.forEach(d=>(grouped[d.cat]??=[]).push(d));
+ document.getElementById("menuGrid").innerHTML=list.length?Object.entries(grouped).map(([cat,items])=>`<section class="menu-category"><h3 style="font:26px Georgia,serif;color:var(--gold2);margin:24px 0 14px;border-bottom:1px solid #393123;padding-bottom:10px">${escapeHTML(cat)}</h3><div class="grid">${items.map(dishCardHTML).join('')}</div></section>`).join(''):'<p class="empty">No matching dishes found.</p>';
 }
 function add(id){
     const dish=dishes.find(d=>String(d.id)===String(id));
