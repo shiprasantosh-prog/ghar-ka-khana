@@ -40,6 +40,22 @@ $('#specialDate').addEventListener('change',()=>loadSpecialChoices().catch(e=>ms
 async function showApp(){ $('#login').classList.add('hidden');$('#app').classList.remove('hidden');$('#logout').classList.remove('hidden');await loadMenu();await loadSpecialChoices()}
 $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();msg('#loginMsg','Signing in…');const f=new FormData(e.target);try{const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify(Object.fromEntries(f))});if(result.user.role!=='admin')throw Error('This account does not have owner access.');msg('#loginMsg','');await showApp()}catch(err){msg('#loginMsg',err.message)}});
 $('#dishForm').addEventListener('submit',async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const id=f.id;delete f.id;f.price=Number(f.price);try{await api(id?`/api/menu/${id}`:'/api/menu',{method:id?'PATCH':'POST',body:JSON.stringify(f)});msg('#formMsg',id?'Dish updated.':'Dish added.');editReset();await loadMenu();await loadSpecialChoices()}catch(err){msg('#formMsg',err.message)}});
-$('#menuList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;try{const rows=await api('/api/admin/menu');const d=rows.find(x=>x.id===Number(b.dataset.edit||b.dataset.toggle||b.dataset.archive));if(b.dataset.edit){for(const k of ['id','name','category','price','image','description'])$('#dishForm [name='+k+']').value=d[k]??'';$('#formTitle').textContent='Edit dish';$('#saveBtn').textContent='Update dish';$('#cancelEdit').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})}else if(b.dataset.toggle){await api('/api/menu/'+d.id,{method:'PATCH',body:JSON.stringify({available:!d.available})});await loadMenu();await loadSpecialChoices()}else if(b.dataset.archive){if(confirm(`Remove ${d.name} from the customer menu?`)){await api('/api/menu/'+d.id,{method:'DELETE'});await loadMenu();await loadSpecialChoices()}}}catch(err){alert(err.message)}});
+$('#menuList').addEventListener('click',async e=>{
+ const b=e.target.closest('button');if(!b)return;
+ const rawId=b.dataset.edit??b.dataset.toggle??b.dataset.archive;
+ if(rawId==null){alert('Could not identify the selected dish. Please refresh the menu.');return;}
+ try{
+  const d=allMenuRows.find(x=>String(x.id)===String(rawId));
+  if(!d){alert('This dish is no longer in the current menu list. Please click Refresh and try again.');await loadMenu();return;}
+  if(b.dataset.edit!==undefined){
+   for(const k of ['id','name','category','price','image','description'])$('#dishForm [name='+k+']').value=d[k]??'';
+   $('#formTitle').textContent='Edit dish';$('#saveBtn').textContent='Update dish';$('#cancelEdit').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
+  }else if(b.dataset.toggle!==undefined){
+   await api('/api/menu/'+encodeURIComponent(d.id),{method:'PATCH',body:JSON.stringify({available:!d.available})});await loadMenu();await loadSpecialChoices();
+  }else if(b.dataset.archive!==undefined){
+   if(confirm(`Remove ${d.name} from the customer menu?`)){await api('/api/menu/'+encodeURIComponent(d.id),{method:'DELETE'});await loadMenu();await loadSpecialChoices();}
+  }
+ }catch(err){alert(err.message)}
+});
 $('#cancelEdit').onclick=editReset;$('#refresh').onclick=()=>loadMenu().catch(e=>alert(e.message));$('#logout').onclick=async()=>{await api('/api/auth/logout',{method:'POST'});location.reload()};api('/api/auth/me').then(x=>{if(x.user.role==='admin')showApp()}).catch(()=>{});
 </script></body></html>
