@@ -895,6 +895,64 @@ function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").replace(/^0+/, "");
 }
 
+// Notify the customer only for Accepted and Delivered statuses.
+async function notifyCustomerOrderStatus(orderId, status) {
+  if (!["Accepted", "Delivered"].includes(status)) return;
+
+  const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
+  if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    console.warn("Customer WhatsApp status notification skipped: API credentials missing.");
+    return;
+  }
+
+  const order = await readOrder(orderId);
+  if (!order?.customer_phone) {
+    console.warn(`Customer WhatsApp status notification skipped for order ${orderId}: phone missing.`);
+    return;
+  }
+
+  let customerPhone = normalizePhone(order.customer_phone);
+  // Website accounts commonly store Indian mobile numbers without the country code.
+  if (customerPhone.length === 10) customerPhone = `91${customerPhone}`;
+
+  const orderCode = `GKK-${String(orderId).padStart(4, "0")}`;
+  const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
+  const response = await fetch(
+    `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: customerPhone,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: "en" },
+          components: [{
+            type: "body",
+            parameters: [
+              { type: "text", text: orderCode },
+              { type: "text", text: status }
+            ]
+          }]
+        }
+      })
+    }
+  );
+
+  const result = await response.json();
+  if (!response.ok) {
+    console.error(`Customer WhatsApp notification failed for order ${orderCode}:`, result);
+    throw new Error("Customer WhatsApp notification failed.");
+  }
+  console.log(`Customer WhatsApp status notification sent for ${orderCode}: ${status}`);
+}
+
 async function sendWhatsAppText(to, body) {
   const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
   const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
@@ -1008,15 +1066,25 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
           if (!status) continue;
 
           const result = await pool.query(
-            "UPDATE orders SET status = $1 WHERE id = $2 RETURNING id",
+            "UPDATE orders SET status = $1 WHERE id = $2 AND status IS DISTINCT FROM $1 RETURNING id",
             [status, orderId]
           );
           const code = `GKK-${String(orderId).padStart(4, "0")}`;
           if (!result.rowCount) {
-            await sendWhatsAppText(message.from, `Order ${code} was not found.`);
+            const existing = await pool.query("SELECT id, status FROM orders WHERE id = $1", [orderId]);
+            if (!existing.rowCount) {
+              await sendWhatsAppText(message.from, `Order ${code} was not found.`);
+            } else {
+              await sendWhatsAppText(message.from, `Order ${code} is already marked ${existing.rows[0].status}.`);
+            }
           } else {
             await sendWhatsAppText(message.from, `Order ${code} updated to: ${status}.`);
             console.log(`WhatsApp owner updated order ${orderId} to ${status}`);
+            if (status === "Accepted" || status === "Delivered") {
+              notifyCustomerOrderStatus(orderId, status).catch((error) =>
+                console.error("Customer status notification error:", error.message)
+              );
+            }
           }
         }
       }
