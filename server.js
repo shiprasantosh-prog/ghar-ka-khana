@@ -1102,7 +1102,11 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
     for (const item of entries) {
       for (const change of item.changes || []) {
         for (const message of change.value?.messages || []) {
-          if (!expectedOwner || normalizePhone(message.from) !== expectedOwner) continue;
+          const ownerMatch = Boolean(expectedOwner) && normalizePhone(message.from) === expectedOwner;
+          if (!ownerMatch) {
+            console.warn("WhatsApp webhook message ignored: sender did not match configured owner.");
+            continue;
+          }
 
           let replyId = "";
           if (message.type === "interactive") {
@@ -1114,6 +1118,12 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
             const legacy = textBody.match(/^(ACCEPT|ACCEPTED|CANCEL|CANCELLED|PREPARING|READY|PREPARED|OUT|OUT FOR DELIVERY|DELIVERED)\s+GKK-?(\d+)$/);
             if (legacy) replyId = `${legacy[1]}|${Number(legacy[2])}`;
           }
+          console.log("WhatsApp owner reply received:", JSON.stringify({
+            type: message.type || "unknown",
+            interactiveType: message.interactive?.button_reply ? "button_reply" : message.interactive?.list_reply ? "list_reply" : null,
+            hasReplyId: Boolean(replyId),
+            action: replyId ? String(replyId.split("|")[0]).trim().toUpperCase().slice(0, 30) : "unrecognized"
+          }));
           if (!replyId) continue;
 
           const parts = replyId.split("|");
