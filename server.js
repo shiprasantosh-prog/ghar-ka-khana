@@ -1004,6 +1004,9 @@ async function notifyCustomerOrderStatus(orderId, status) {
   if (customerPhone.length === 10) customerPhone = `91${customerPhone}`;
 
   const orderCode = `GKK-${String(orderId).padStart(4, "0")}`;
+  const customerMessage = status === "Accepted"
+    ? "We'll keep you updated."
+    : "Thank you for choosing us! We hope you enjoy your meal.";
   // Use the single approved Meta template for both customer status updates.
   const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
   const response = await fetch(
@@ -1026,7 +1029,8 @@ async function notifyCustomerOrderStatus(orderId, status) {
             type: "body",
             parameters: [
               { type: "text", text: orderCode },
-              { type: "text", text: status }
+              { type: "text", text: status },
+              { type: "text", text: customerMessage }
             ]
           }]
         }
