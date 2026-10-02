@@ -109,6 +109,13 @@ async function initializeDatabase() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Link Meta's incoming quick-reply context back to the order notification.
+  await pool.query(`CREATE TABLE IF NOT EXISTS whatsapp_order_messages (
+    wamid TEXT PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Create owner account if it does not exist
   if (process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD) {
     const existing = await pool.query(
@@ -947,6 +954,17 @@ async function notifyWhatsApp(order) {
     throw new Error("WhatsApp notification failed.");
   }
 
+  const sentMessageId = result.messages?.[0]?.id;
+  if (sentMessageId) {
+    await pool.query(
+      `INSERT INTO whatsapp_order_messages (wamid, order_id)
+       VALUES ($1, $2)
+       ON CONFLICT (wamid) DO NOTHING`,
+      [sentMessageId, order.id]
+    );
+  } else {
+    console.warn("WhatsApp notification succeeded but Meta returned no message ID; quick replies cannot be linked to this order.");
+  }
   console.log("WhatsApp order notification sent successfully.");
 }
 
@@ -1119,17 +1137,34 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
             const legacy = textBody.match(/^(ACCEPT|ACCEPTED|CANCEL|CANCELLED|PREPARING|READY|PREPARED|OUT|OUT FOR DELIVERY|DELIVERED)\s+GKK-?(\d+)$/);
             if (legacy) replyId = `${legacy[1]}|${Number(legacy[2])}`;
           }
+          let parts = replyId.split("|");
+          let action = String(parts[0] || "").trim().toUpperCase();
+          let orderId = Number(parts[1]);
+
+          // Meta quick-reply callbacks can return only the visible button label.
+          // Use the original message context to identify the order safely.
+          if ((!Number.isInteger(orderId) || orderId < 1) && message.context?.id) {
+            const linked = await pool.query(
+              "SELECT order_id FROM whatsapp_order_messages WHERE wamid = $1",
+              [message.context.id]
+            );
+            if (linked.rowCount) {
+              orderId = Number(linked.rows[0].order_id);
+              action = action.replace(/[^A-Z ]/g, "").trim();
+              if (action === "MORE ACTIONS" || action === "MORE") action = "MORE";
+              else if (action === "ACCEPTED") action = "ACCEPT";
+              else if (action === "CANCELLED") action = "CANCEL";
+            }
+          }
+
           console.log("WhatsApp owner reply received:", JSON.stringify({
             type: message.type || "unknown",
             interactiveType: message.interactive?.button_reply ? "button_reply" : message.interactive?.list_reply ? "list_reply" : null,
             hasReplyId: Boolean(replyId),
-            action: replyId ? String(replyId.split("|")[0]).trim().toUpperCase().slice(0, 30) : "unrecognized"
+            action: action || "unrecognized",
+            hasOrderContext: Number.isInteger(orderId) && orderId > 0
           }));
-          if (!replyId) continue;
-
-          const parts = replyId.split("|");
-          const action = String(parts[0] || "").trim().toUpperCase();
-          const orderId = Number(parts[1]);
+          if (!Number.isInteger(orderId) || orderId < 1) continue;
           if (!Number.isInteger(orderId) || orderId < 1) continue;
 
           if (action === "MORE") {
