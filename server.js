@@ -107,7 +107,7 @@ async function initializeDatabase() {
     comment TEXT NOT NULL DEFAULT '',
     approved BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-  `);
+  )`);
 
   // Create owner account if it does not exist
   if (process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD) {
