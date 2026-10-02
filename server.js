@@ -919,6 +919,29 @@ async function sendWhatsAppText(to, body) {
 
 // Incoming owner WhatsApp replies update the order status shown in customer order history.
 app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
+  // Log delivery metadata only; never log phone numbers or message contents.
+  const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];
+  let changeCount = 0;
+  let messageCount = 0;
+  let statusCount = 0;
+
+  for (const entry of entries) {
+    const changes = Array.isArray(entry.changes) ? entry.changes : [];
+    changeCount += changes.length;
+    for (const change of changes) {
+      messageCount += Array.isArray(change.value?.messages) ? change.value.messages.length : 0;
+      statusCount += Array.isArray(change.value?.statuses) ? change.value.statuses.length : 0;
+    }
+  }
+
+  console.log("Meta WhatsApp webhook received:", JSON.stringify({
+    object: req.body?.object || "unknown",
+    entries: entries.length,
+    changes: changeCount,
+    messages: messageCount,
+    statuses: statusCount
+  }));
+
   res.sendStatus(200);
   try {
     const expectedOwner = normalizePhone(process.env.WHATSAPP_TO_NUMBER);
