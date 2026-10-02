@@ -934,7 +934,7 @@ async function notifyWhatsApp(order) {
               sub_type: "quick_reply",
               index: button.index,
               parameters: [{ type: "payload", payload: button.payload }]
-            })) : [])
+            })) : [])]
         }
       })
     }
