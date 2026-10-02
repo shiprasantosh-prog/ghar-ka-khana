@@ -88,6 +88,17 @@ async function initializeDatabase() {
       quantity INTEGER NOT NULL
     );
 
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      comment TEXT NOT NULL DEFAULT '',
+      approved BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS daily_specials (
       id SERIAL PRIMARY KEY,
       special_date DATE NOT NULL,
@@ -784,6 +795,63 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   }
 
   res.json(await readOrder(req.params.id));
+}));
+
+
+// Publicly display only owner-approved customer reviews.
+app.get("/api/reviews", asyncRoute(async (req, res) => {
+  const result = await pool.query(
+    `SELECT r.id, r.rating, r.comment, r.created_at,
+            split_part(u.name, ' ', 1) AS customer_name
+     FROM reviews r JOIN users u ON u.id = r.user_id
+     WHERE r.approved = TRUE
+     ORDER BY r.created_at DESC LIMIT 50`
+  );
+  const summary = await pool.query(
+    "SELECT COALESCE(ROUND(AVG(rating), 1), 0) AS average, COUNT(*)::int AS count FROM reviews WHERE approved = TRUE"
+  );
+  res.json({ reviews: result.rows, summary: summary.rows[0] });
+}));
+
+// Customers may review each completed order once; all reviews require owner approval.
+app.post("/api/reviews", auth, asyncRoute(async (req, res) => {
+  const orderId = Number(req.body.orderId);
+  const rating = Number(req.body.rating);
+  const comment = String(req.body.comment || "").trim().slice(0, 1000);
+  if (!Number.isInteger(orderId) || orderId < 1 || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: "Choose a valid order and a rating from 1 to 5 stars." });
+  }
+  const order = await pool.query("SELECT id, status FROM orders WHERE id = $1 AND user_id = $2", [orderId, req.user.id]);
+  if (!order.rowCount) return res.status(404).json({ error: "Order not found." });
+  if (order.rows[0].status !== "Delivered") return res.status(400).json({ error: "You can review an order after it has been delivered." });
+  try {
+    const result = await pool.query(
+      `INSERT INTO reviews (order_id, user_id, rating, comment)
+       VALUES ($1, $2, $3, $4) RETURNING id, rating, comment, approved`,
+      [orderId, req.user.id, rating, comment]
+    );
+    res.status(201).json({ review: result.rows[0], message: "Thank you! Your review has been submitted for approval." });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "You have already reviewed this order." });
+    throw error;
+  }
+}));
+
+// Owner review moderation.
+app.get("/api/admin/reviews", auth, admin, asyncRoute(async (req, res) => {
+  const result = await pool.query(
+    `SELECT r.id, r.order_id, r.rating, r.comment, r.approved, r.created_at,
+            u.name AS customer_name, u.phone AS customer_phone
+     FROM reviews r JOIN users u ON u.id = r.user_id
+     ORDER BY r.created_at DESC`
+  );
+  res.json(result.rows);
+}));
+app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => {
+  if (typeof req.body.approved !== "boolean") return res.status(400).json({ error: "Choose approve or hide." });
+  const result = await pool.query("UPDATE reviews SET approved = $1 WHERE id = $2 RETURNING id, approved", [req.body.approved, req.params.id]);
+  if (!result.rowCount) return res.status(404).json({ error: "Review not found." });
+  res.json(result.rows[0]);
 }));
 
 // WhatsApp notification
