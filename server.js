@@ -855,7 +855,7 @@ async function notifyWhatsApp(order) {
                 { type: "text", text: deliveryAddress }
               ]
             },
-            ...[
+            ...(process.env.WHATSAPP_ORDER_BUTTONS_ENABLED === "true" ? [
               { index: "0", payload: `ACCEPT|${order.id}` },
               { index: "1", payload: `CANCEL|${order.id}` },
               { index: "2", payload: `MORE|${order.id}` }
@@ -864,7 +864,7 @@ async function notifyWhatsApp(order) {
               sub_type: "quick_reply",
               index: button.index,
               parameters: [{ type: "payload", payload: button.payload }]
-            }))
+            })) : [])
         }
       })
     }
