@@ -746,8 +746,9 @@ async function readOrder(id) {
 // Customer order history
 app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT id, total, address, status, created_at
-     FROM orders WHERE user_id = $1
+    `SELECT o.id, o.total, o.address, o.status, o.created_at,
+            EXISTS (SELECT 1 FROM reviews r WHERE r.order_id = o.id) AS reviewed
+     FROM orders o WHERE o.user_id = $1
      ORDER BY id DESC`,
     [req.user.id]
   );
