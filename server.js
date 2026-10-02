@@ -986,7 +986,9 @@ async function notifyCustomerOrderStatus(orderId, status) {
   if (customerPhone.length === 10) customerPhone = `91${customerPhone}`;
 
   const orderCode = `GKK-${String(orderId).padStart(4, "0")}`;
-  const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
+  const templateName = status === "Accepted"
+    ? (process.env.WHATSAPP_CUSTOMER_ACCEPTED_TEMPLATE || "ghar_ka_khana_order_accepted")
+    : (process.env.WHATSAPP_CUSTOMER_DELIVERED_TEMPLATE || "ghar_ka_khana_order_delivered");
   const response = await fetch(
     `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
     {
@@ -1006,8 +1008,7 @@ async function notifyCustomerOrderStatus(orderId, status) {
           components: [{
             type: "body",
             parameters: [
-              { type: "text", text: orderCode },
-              { type: "text", text: status }
+              { type: "text", text: orderCode }
             ]
           }]
         }
