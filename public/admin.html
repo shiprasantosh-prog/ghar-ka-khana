@@ -51,7 +51,7 @@ function setDashboardSection(section,open){
 }
 $('#toggleSpecials').addEventListener('click',()=>setDashboardSection('specials',$('#specialsBody').classList.contains('collapsed')));
 $('#toggleMenu').addEventListener('click',()=>setDashboardSection('menu',$('#menuBody').classList.contains('collapsed')));
-async function showApp(){ $('#login').classList.add('hidden');$('#app').classList.remove('hidden');$('#logout').classList.remove('hidden');await loadMenu();await loadSpecialChoices()}
+async function showApp(){ $('#login').classList.add('hidden');$('#app').classList.remove('hidden');$('#logout').classList.remove('hidden');await loadMenu();await loadSpecialChoices();await loadOwnerReviews()}
 $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();msg('#loginMsg','Signing in…');const f=new FormData(e.target);try{const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify(Object.fromEntries(f))});if(result.user.role!=='admin')throw Error('This account does not have owner access.');msg('#loginMsg','');await showApp()}catch(err){msg('#loginMsg',err.message)}});
 $('#dishForm').addEventListener('submit',async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const id=f.id;delete f.id;f.price=Number(f.price);try{await api(id?`/api/menu/${id}`:'/api/menu',{method:id?'PATCH':'POST',body:JSON.stringify(f)});msg('#formMsg',id?'Dish updated.':'Dish added.');editReset();await loadMenu();await loadSpecialChoices()}catch(err){msg('#formMsg',err.message)}});
 $('#menuList').addEventListener('click',async e=>{
