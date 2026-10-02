@@ -847,33 +847,24 @@ async function notifyWhatsApp(order) {
             {
               type: "body",
               parameters: [
-                {
-                  type: "text",
-                  text: orderId
-                },
-                {
-                  type: "text",
-                  text: customerName
-                },
-                {
-                  type: "text",
-                  text: customerPhone
-                },
-                {
-                  type: "text",
-                  text: itemList
-                },
-                {
-                  type: "text",
-                  text: totalAmount
-                },
-                {
-                  type: "text",
-                  text: deliveryAddress
-                }
+                { type: "text", text: orderId },
+                { type: "text", text: customerName },
+                { type: "text", text: customerPhone },
+                { type: "text", text: itemList },
+                { type: "text", text: totalAmount },
+                { type: "text", text: deliveryAddress }
               ]
-            }
-          ]
+            },
+            ...[
+              { index: "0", payload: `ACCEPT|${order.id}` },
+              { index: "1", payload: `CANCEL|${order.id}` },
+              { index: "2", payload: `MORE|${order.id}` }
+            ].map((button) => ({
+              type: "button",
+              sub_type: "quick_reply",
+              index: button.index,
+              parameters: [{ type: "payload", payload: button.payload }]
+            }))
         }
       })
     }
@@ -917,6 +908,41 @@ async function sendWhatsAppText(to, body) {
   }
 }
 
+async function sendWhatsAppActionList(to, orderId) {
+  const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
+  const code = `GKK-${String(orderId).padStart(4, "0")}`;
+  const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: `Choose the next status for order ${code}:` },
+        action: {
+          button: "More actions",
+          sections: [{
+            title: "Order status",
+            rows: [
+              { id: `PREPARING|${orderId}`, title: "Preparing" },
+              { id: `PREPARED|${orderId}`, title: "Prepared" },
+              { id: `OUT FOR DELIVERY|${orderId}`, title: "Out for Delivery" },
+              { id: `DELIVERED|${orderId}`, title: "Delivered" }
+            ]
+          }]
+        }
+      }
+    })
+  });
+  if (!response.ok) {
+    const result = await response.text();
+    console.error("WhatsApp action list failed:", result);
+  }
+}
+
 // Incoming owner WhatsApp replies update the order status shown in customer order history.
 app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
   // Log delivery metadata only; never log phone numbers or message contents.
@@ -945,35 +971,51 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
   res.sendStatus(200);
   try {
     const expectedOwner = normalizePhone(process.env.WHATSAPP_TO_NUMBER);
-    const entry = req.body?.entry || [];
-    for (const item of entry) {
+    for (const item of entries) {
       for (const change of item.changes || []) {
         for (const message of change.value?.messages || []) {
-          if (!expectedOwner || normalizePhone(message.from) !== expectedOwner || message.type !== "text") continue;
-          const textBody = String(message.text?.body || "").trim().toUpperCase();
-          const match = textBody.match(/^(ACCEPT|ACCEPTED|CANCEL|CANCELLED|PREPARING|READY|PREPARED|OUT|OUT FOR DELIVERY|DELIVERED)\s+GKK-?(\d+)$/);
-          if (!match) {
-            await sendWhatsAppText(message.from, "Order update format: ACCEPT GKK-0001, PREPARING GKK-0001, READY GKK-0001, OUT GKK-0001, DELIVERED GKK-0001, or CANCEL GKK-0001.");
+          if (!expectedOwner || normalizePhone(message.from) !== expectedOwner) continue;
+
+          let replyId = "";
+          if (message.type === "interactive") {
+            replyId = message.interactive?.button_reply?.id || message.interactive?.list_reply?.id || "";
+          } else if (message.type === "button") {
+            replyId = message.button?.payload || message.button?.text || "";
+          } else if (message.type === "text") {
+            const textBody = String(message.text?.body || "").trim().toUpperCase();
+            const legacy = textBody.match(/^(ACCEPT|ACCEPTED|CANCEL|CANCELLED|PREPARING|READY|PREPARED|OUT|OUT FOR DELIVERY|DELIVERED)\s+GKK-?(\d+)$/);
+            if (legacy) replyId = `${legacy[1]}|${Number(legacy[2])}`;
+          }
+          if (!replyId) continue;
+
+          const parts = replyId.split("|");
+          const action = String(parts[0] || "").trim().toUpperCase();
+          const orderId = Number(parts[1]);
+          if (!Number.isInteger(orderId) || orderId < 1) continue;
+
+          if (action === "MORE") {
+            await sendWhatsAppActionList(message.from, orderId);
             continue;
           }
-          const command = match[1];
-          const orderId = Number(match[2]);
+
           const statuses = {
-            ACCEPT: "Accepted", ACCEPTED: "Accepted",
-            CANCEL: "Cancelled", CANCELLED: "Cancelled",
-            PREPARING: "Preparing", READY: "Ready", PREPARED: "Ready",
-            OUT: "Out for delivery", "OUT FOR DELIVERY": "Out for delivery",
+            ACCEPT: "Accepted", CANCEL: "Cancelled",
+            PREPARING: "Preparing", PREPARED: "Ready", READY: "Ready",
+            "OUT FOR DELIVERY": "Out for delivery", OUT: "Out for delivery",
             DELIVERED: "Delivered"
           };
-          const status = statuses[command];
+          const status = statuses[action];
+          if (!status) continue;
+
           const result = await pool.query(
             "UPDATE orders SET status = $1 WHERE id = $2 RETURNING id",
             [status, orderId]
           );
+          const code = `GKK-${String(orderId).padStart(4, "0")}`;
           if (!result.rowCount) {
-            await sendWhatsAppText(message.from, `Order GKK-${String(orderId).padStart(4, "0")} was not found.`);
+            await sendWhatsAppText(message.from, `Order ${code} was not found.`);
           } else {
-            await sendWhatsAppText(message.from, `Order GKK-${String(orderId).padStart(4, "0")} updated to: ${status}.`);
+            await sendWhatsAppText(message.from, `Order ${code} updated to: ${status}.`);
             console.log(`WhatsApp owner updated order ${orderId} to ${status}`);
           }
         }
