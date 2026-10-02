@@ -1151,7 +1151,7 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
             if (linked.rowCount) {
               orderId = Number(linked.rows[0].order_id);
               action = action.replace(/[^A-Z ]/g, "").trim();
-              if (action === "MORE ACTIONS" || action === "MORE") action = "MORE";
+              if (action === "MORE ACTIONS" || action === "MORE" || action === "UPDATE STATUS") action = "MORE";
               else if (action === "ACCEPTED") action = "ACCEPT";
               else if (action === "CANCELLED") action = "CANCEL";
             }
@@ -1164,7 +1164,6 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
             action: action || "unrecognized",
             hasOrderContext: Number.isInteger(orderId) && orderId > 0
           }));
-          if (!Number.isInteger(orderId) || orderId < 1) continue;
           if (!Number.isInteger(orderId) || orderId < 1) continue;
 
           if (action === "MORE") {
@@ -1194,7 +1193,7 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
               await sendWhatsAppText(message.from, `Order ${code} is already marked ${existing.rows[0].status}.`);
             }
           } else {
-            await sendWhatsAppText(message.from, `Order ${code} updated to: ${status}.`);
+            // Keep the owner's WhatsApp uncluttered; the live status is visible in My Orders and the owner dashboard.
             console.log(`WhatsApp owner updated order ${orderId} to ${status}`);
             if (status === "Accepted" || status === "Delivered") {
               notifyCustomerOrderStatus(orderId, status).catch((error) =>
