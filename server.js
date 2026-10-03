@@ -818,9 +818,9 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);
     const code=result.rows[0];
     if(!code||!code.active)return res.status(400).json({error:"Invalid Promo Code."});
-    const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});
-    if(today< String(code.valid_from).slice(0,10))return res.status(400).json({error:"Promo code is not valid yet."});
-    if(today> String(code.valid_until).slice(0,10))return res.status(400).json({error:"Promo code expired."});
+    const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());const dateOnly=value=>value instanceof Date?value.toISOString().slice(0,10):String(value).slice(0,10);
+    if(today< dateOnly(code.valid_from))return res.status(400).json({error:"Promo code is not valid yet."});
+    if(today> dateOnly(code.valid_until))return res.status(400).json({error:"Promo code expired."});
     const customer=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);
     const normalizePromoPhone=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");
     const normalizedPhone=normalizePromoPhone(customer.rows[0]?.phone);
@@ -853,7 +853,7 @@ app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  if(!Array.isArray(items)||!items.length||!String(promoCode||"").trim())return res.status(400).json({error:"Enter a promo code and add items to your basket."});
  const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);const code=result.rows[0];
  if(!code||!code.active)return res.status(400).json({error:"Invalid Promo Code."});
- const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});if(today<String(code.valid_from).slice(0,10))return res.status(400).json({error:"Promo code is not valid yet."});if(today>String(code.valid_until).slice(0,10))return res.status(400).json({error:"Promo code expired."});
+ const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());const dateOnly=value=>value instanceof Date?value.toISOString().slice(0,10):String(value).slice(0,10);if(today<String(code.valid_from).slice(0,10))return res.status(400).json({error:"Promo code is not valid yet."});if(today>String(code.valid_until).slice(0,10))return res.status(400).json({error:"Promo code expired."});
  const user=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);const normalize=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");if(normalize(user.rows[0]?.phone)!==normalize(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
  let subtotal=0,eligibleSubtotal=0;const excluded=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];const excludedItems=[];
  for(const item of items){const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);const dish=r.rows[0];if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});const amount=dish.price*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;}
