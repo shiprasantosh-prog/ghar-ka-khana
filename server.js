@@ -781,80 +781,62 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
-  const { items, address, notes = "" } = req.body || {};
-
-  if (!Array.isArray(items) || !items.length || !address) {
-    return res.status(400).json({
-      error: "Cart and delivery address are required."
-    });
+  const { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
+  if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
+  let subtotal=0; const validated=[];
+  for(const item of items){
+    const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);
+    const dish=result.rows[0],quantity=Number(item.quantity);
+    if(!dish||!Number.isInteger(quantity)||quantity<1||quantity>50)return res.status(400).json({error:"Invalid cart item."});
+    subtotal+=dish.price*quantity;validated.push({...dish,quantity});
   }
-
-  let total = 0;
-  const validated = [];
-
-  for (const item of items) {
-    const result = await pool.query(
-      `SELECT id, name, price FROM menu
-       WHERE id = $1 AND available = TRUE`,
-      [Number(item.menuId)]
-    );
-
-    const dish = result.rows[0];
-    const quantity = Number(item.quantity);
-
-    if (!dish || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
-      return res.status(400).json({ error: "Invalid cart item." });
-    }
-
-    total += dish.price * quantity;
-    validated.push({ ...dish, quantity });
+  let scheduledDate=null;
+  if(orderMode==="scheduled"){
+    scheduledDate=new Date(scheduledAt);
+    if(!scheduledAt||Number.isNaN(scheduledDate.getTime())||scheduledDate<=new Date())return res.status(400).json({error:"Choose a future delivery date and time."});
+    const slot=await pool.query("SELECT id FROM delivery_slots WHERE active=TRUE AND slot_label=$1",[String(deliverySlot)]);
+    if(!slot.rowCount)return res.status(400).json({error:"Choose an available delivery slot."});
+  }else if(orderMode!=="now")return res.status(400).json({error:"Choose Order Now or Prior Order."});
+  let discount=0,appliedCode="";
+  if(String(promoCode).trim()){
+    const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1) AND active=TRUE AND (expires_at IS NULL OR expires_at>NOW())",[String(promoCode).trim()]);
+    const code=result.rows[0];
+    if(!code)return res.status(400).json({error:"This promo code is invalid or expired."});
+    if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});
+    discount=code.discount_type==="percent"?Math.floor(subtotal*code.discount_value/100):code.discount_value;
+    discount=Math.min(subtotal,discount);appliedCode=code.code;
   }
-
-  const kitchenStatus = await getKitchenStatus();
-  if (!kitchenStatus.isOpen) {
-    return res.status(503).json({ error: "Our kitchen is currently closed. Please check back later." });
-  }
-
-  // Use a transaction so order and order items are saved together
-  const client = await pool.connect();
-  let orderId;
-
-  try {
+  const kitchenStatus=await getKitchenStatus();
+  if(!kitchenStatus.isOpen)return res.status(503).json({error:"Our kitchen is currently closed. Please check back later."});
+  const client=await pool.connect();let orderId;
+  try{
     await client.query("BEGIN");
-
-    const orderResult = await client.query(
-      `INSERT INTO orders (user_id, total, address, notes)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id`,
-      [req.user.id, total, address, notes]
-    );
-
-    orderId = orderResult.rows[0].id;
-
-    for (const item of validated) {
-      await client.query(
-        `INSERT INTO order_items
-         (order_id, menu_id, item_name, unit_price, quantity)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [orderId, item.id, item.name, item.price, item.quantity]
-      );
-    }
-
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,promo_code,discount) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[req.user.id,subtotal-discount,address,notes,scheduledDate,appliedCode,discount]);
+    orderId=result.rows[0].id;
+    for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
     await client.query("COMMIT");
-  } catch (e) {
-    await client.query("ROLLBACK");
-    throw e;
-  } finally {
-    client.release();
-  }
-
-  const order = await readOrder(orderId);
-
-  notifyWhatsApp(order).catch((e) =>
-    console.error("WhatsApp notification failed:", e.message)
-  );
-
+  }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
+  const order=await readOrder(orderId);
+  notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
   res.status(201).json(order);
+}));
+
+app.get("/api/checkout/options", asyncRoute(async(req,res)=>{
+  const r=await pool.query("SELECT slot_label FROM delivery_slots WHERE active=TRUE ORDER BY id");
+  res.json({slots:r.rows.map(x=>x.slot_label)});
+}));
+app.get("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("SELECT * FROM promo_codes ORDER BY created_at DESC");res.json(r.rows)}));
+app.post("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{
+  const b=req.body||{},code=String(b.code||"").trim().toUpperCase(),type=b.discountType,value=Number(b.discountValue),minimum=Number(b.minimumOrder||0);
+  if(!/^[A-Z0-9_-]{3,30}$/.test(code)||!["percent","fixed"].includes(type)||!Number.isInteger(value)||value<1||minimum<0||(type==="percent"&&value>100))return res.status(400).json({error:"Enter a valid promo code and discount."});
+  try{const r=await pool.query("INSERT INTO promo_codes(code,discount_type,discount_value,minimum_order,expires_at,active) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[code,type,value,minimum,b.expiresAt||null,b.active!==false]);res.status(201).json(r.rows[0]);}
+  catch(e){if(e.code==="23505")return res.status(409).json({error:"Promo code already exists."});throw e;}
+}));
+app.patch("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("UPDATE promo_codes SET active=$1 WHERE id=$2 RETURNING *",[Boolean(req.body.active),Number(req.params.id)]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json(r.rows[0])}));
+app.get("/api/admin/delivery-slots",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("SELECT * FROM delivery_slots ORDER BY id");res.json(r.rows)}));
+app.put("/api/admin/delivery-slots",auth,admin,asyncRoute(async(req,res)=>{
+  const slots=req.body.slots;if(!Array.isArray(slots)||slots.some(x=>typeof x.label!=="string"||!x.label.trim()))return res.status(400).json({error:"Provide valid delivery slots."});
+  const c=await pool.connect();try{await c.query("BEGIN");await c.query("DELETE FROM delivery_slots");for(const x of slots)await c.query("INSERT INTO delivery_slots(slot_label,active) VALUES($1,$2)",[x.label.trim(),x.active!==false]);await c.query("COMMIT");}catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}res.json({ok:true});
 }));
 
 // Read one order with its items
