@@ -76,6 +76,7 @@ async function initializeDatabase() {
       address TEXT NOT NULL,
       notes TEXT DEFAULT '',
       status TEXT NOT NULL DEFAULT 'Received',
+      cancellation_reason TEXT DEFAULT '',
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -97,6 +98,9 @@ async function initializeDatabase() {
       UNIQUE (special_date, menu_id)
     );
   `);
+
+  // Add cancellation reason to existing orders without affecting order history.
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
 
   // Create reviews separately so existing table initialization remains unchanged.
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
@@ -777,7 +781,7 @@ app.get("/api/admin/orders", auth, admin, asyncRoute(async (req, res) => {
   res.json(orders);
 }));
 
-// Owner: update order status
+// Owner: update order status and notify customers of supported status changes.
 app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   const allowed = [
     "Received",
@@ -793,17 +797,36 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
     return res.status(400).json({ error: "Invalid status." });
   }
 
+  const cancellationReason = String(req.body.cancellationReason || "").trim();
+  if (req.body.status === "Cancelled" && !cancellationReason) {
+    return res.status(400).json({ error: "Please select a cancellation reason." });
+  }
+
   const result = await pool.query(
-    `UPDATE orders SET status = $1
-     WHERE id = $2 RETURNING id`,
-    [req.body.status, req.params.id]
+    `UPDATE orders
+     SET status = $1,
+         cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN $2 ELSE cancellation_reason END
+     WHERE id = $3
+     RETURNING id, status`,
+    [req.body.status, cancellationReason, req.params.id]
   );
 
   if (result.rowCount === 0) {
     return res.status(404).json({ error: "Order not found." });
   }
 
-  res.json(await readOrder(req.params.id));
+  const order = await readOrder(req.params.id);
+  if (result.rows[0].status === "Cancelled") {
+    notifyCustomerOrderStatus(order.id, "Cancelled", cancellationReason).catch((error) =>
+      console.error("Customer cancellation notification error:", error.message)
+    );
+  } else if (["Accepted", "Delivered"].includes(result.rows[0].status)) {
+    notifyCustomerOrderStatus(order.id, result.rows[0].status).catch((error) =>
+      console.error("Customer status notification error:", error.message)
+    );
+  }
+
+  res.json(order);
 }));
 
 
@@ -983,9 +1006,9 @@ function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").replace(/^0+/, "");
 }
 
-// Notify the customer only for Accepted and Delivered statuses.
-async function notifyCustomerOrderStatus(orderId, status) {
-  if (!["Accepted", "Delivered"].includes(status)) return;
+// Notify customers when an order is accepted, delivered, or cancelled.
+async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "") {
+  if (!["Accepted", "Delivered", "Cancelled"].includes(status)) return;
 
   const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
   if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
@@ -1006,7 +1029,11 @@ async function notifyCustomerOrderStatus(orderId, status) {
   const orderCode = `GKK-${String(orderId).padStart(4, "0")}`;
   const customerMessage = status === "Accepted"
     ? "We'll keep you updated."
-    : "Thank you for choosing us! We hope you enjoy your meal.";
+    : status === "Delivered"
+      ? "Thank you for choosing us! We hope you enjoy your meal."
+      : cancellationReason === "Kitchen Closed"
+        ? "Your order has been cancelled — our kitchen is closed. We apologise for the inconvenience."
+        : `Your order has been cancelled because ${cancellationReason || "an item"} is out of stock. We apologise for the inconvenience.`;
   // Use the single approved Meta template for both customer status updates.
   const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
   const response = await fetch(
