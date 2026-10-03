@@ -798,9 +798,13 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   }
 
   const cancellationReason = String(req.body.cancellationReason || "").trim();
-  if (req.body.status === "Cancelled" && !cancellationReason) {
+  if (req.body.status === "Cancelled" &&
+      cancellationReason !== "Kitchen Closed" && !cancellationReason) {
     return res.status(400).json({ error: "Please select a cancellation reason." });
   }
+  const savedCancellationReason = req.body.status === "Cancelled" && cancellationReason !== "Kitchen Closed"
+    ? `Out of Stock: ${cancellationReason}`
+    : cancellationReason;
 
   const result = await pool.query(
     `UPDATE orders
@@ -808,7 +812,7 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
          cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN $2 ELSE cancellation_reason END
      WHERE id = $3
      RETURNING id, status`,
-    [req.body.status, cancellationReason, req.params.id]
+    [req.body.status, savedCancellationReason, req.params.id]
   );
 
   if (result.rowCount === 0) {
@@ -1033,7 +1037,7 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
       ? "Thank you for choosing us! We hope you enjoy your meal."
       : cancellationReason === "Kitchen Closed"
         ? "Your order has been cancelled — our kitchen is closed. We apologise for the inconvenience."
-        : `Your order has been cancelled because ${cancellationReason || "an item"} is out of stock. We apologise for the inconvenience.`;
+        : `Your order has been cancelled because ${String(cancellationReason || "").replace(/^Out of Stock:\\s*/, "") || "an item"} is out of stock. We apologise for the inconvenience.`;
   // Use the single approved Meta template for both customer status updates.
   const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
   const response = await fetch(
