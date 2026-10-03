@@ -335,6 +335,8 @@ app.post("/api/admin/password/change", auth, admin, asyncRoute(async (req, res) 
   res.json({ ok: true, message: "Password changed successfully. Use your new password next time you sign in." });
 }));
 
+app.post("/api/auth/password/change",auth,asyncRoute(async(req,res)=>{const {currentPassword,newPassword}=req.body||{};if(typeof currentPassword!=="string"||typeof newPassword!=="string"||newPassword.length<8)return res.status(400).json({error:"Enter your current password and a new password of at least 8 characters."});const r=await pool.query("SELECT password_hash FROM users WHERE id=$1 AND role<>'admin'",[req.user.id]);const user=r.rows[0];if(!user||!bcrypt.compareSync(currentPassword,user.password_hash))return res.status(401).json({error:"Current password is incorrect."});await pool.query("UPDATE users SET password_hash=$1 WHERE id=$2",[bcrypt.hashSync(newPassword,12),req.user.id]);res.json({ok:true,message:"Password changed successfully."});}));
+
 // Update the signed-in customer's profile. Phone numbers remain fixed because they identify the login account.
 app.patch("/api/auth/profile", auth, asyncRoute(async (req, res) => {
   const { name, email, address } = req.body || {};
