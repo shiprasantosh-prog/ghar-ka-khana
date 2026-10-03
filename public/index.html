@@ -286,6 +286,28 @@ footer{background:#f3f0e3!important;color:#59665d!important;border-color:#e8dfca
 @media(max-width:1100px){.home-category-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 @media(max-width:700px){main,body.sidebar-expanded main{margin-left:0!important}.hero.page-view.active-view{height:460px!important;background-position:62% center!important}.hero.page-view.active-view:before{background:linear-gradient(90deg,rgba(251,247,232,.98),rgba(251,247,232,.84) 70%,rgba(251,247,232,.3))!important}.hero-copy{left:22px!important;width:calc(100% - 44px)!important;top:43%!important}.home-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 </style>
+<style id="desktop-home-layout-repair">
+/* Repair desktop home composition: sidebar and main content must not double-offset */
+@media(min-width:901px){
+  .sidebar{position:fixed!important;left:0!important;top:0!important;bottom:0!important;width:76px!important;height:100vh!important;max-height:none!important;z-index:30!important;overflow-y:auto!important;border-right:1px solid #dfe4d5!important}
+  body.sidebar-expanded .sidebar{width:270px!important}
+  main,body.sidebar-expanded main{display:block!important;width:auto!important;min-width:0!important;margin:0 0 0 76px!important;padding:0!important;overflow-x:hidden!important}
+  body.sidebar-expanded main{margin-left:270px!important}
+  main>.wrap,.wrap{width:100%!important;max-width:none!important;margin:0!important;padding:28px 28px 56px!important;box-sizing:border-box!important}
+  .hero.page-view.active-view{display:block!important;width:100%!important;height:410px!important;min-height:410px!important;margin:0!important;padding:0!important;box-sizing:border-box!important;position:relative!important;overflow:hidden!important;background-position:center 48%!important}
+  .hero-copy{left:clamp(36px,7vw,105px)!important;top:50%!important;transform:translateY(-50%)!important;width:min(48%,560px)!important}
+  .hero-copy h1{font-size:clamp(48px,4.4vw,70px)!important;line-height:1.04!important;margin:12px 0 14px!important}
+  .hero-copy p{font-size:17px!important;max-width:470px!important}
+  .hero-benefits{position:relative!important;display:flex!important;justify-content:center!important;gap:clamp(25px,5vw,80px)!important;width:100%!important;min-height:54px!important;height:auto!important;padding:12px 18px!important;box-sizing:border-box!important}
+  .home-why{margin:12px 14px 20px!important;min-height:190px!important}
+  #homePopular,#homeHow,#homeStory,#homeReviewPreview{padding-left:28px!important;padding-right:28px!important}
+}
+@media(max-width:900px){
+  main,body.sidebar-expanded main{margin-left:0!important;width:100%!important}
+  .sidebar{position:relative!important;width:100%!important;height:auto!important;max-height:75vh!important}
+  .wrap{width:100%!important;max-width:none!important;margin:0!important;box-sizing:border-box!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
