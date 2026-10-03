@@ -559,13 +559,13 @@ footer{border-color:#E5DCC8!important;color:#656457!important}
 main > .hero.page-view.active-view .hero-photo-credit{display:none!important}
 
 
-/* Story expansion layout: keep the photo aligned with the top of the story text. */
+/* Story expansion layout: honor the hidden state and keep the photo aligned. */
 #homeStory .story-panel{align-items:start!important;}
 #homeStory .story-photo{height:320px;min-height:320px;align-self:start;background-position:center center!important;}
-#homeStory .story-more{display:block;}
-#homeStory .story-more[open]{padding-bottom:4px;}
-#homeStory .story-more[open] summary{margin-bottom:12px;}
+#homeStory .story-more[hidden]{display:none!important;}
+#homeStory .story-more:not([hidden]){display:block;}
 #homeStory .story-more p{line-height:1.75;margin:12px 0!important;}
+#homeStory .story-toggle{display:inline-flex;align-items:center;gap:10px;margin-top:14px;}
 /* The sidebar brand is only for the expanded navigation; keep the collapsed rail icon-only. */
 body:not(.sidebar-expanded) .sidebar .sidebar-brand{display:none!important;}
 body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
@@ -777,5 +777,5 @@ document.getElementById("customerMenuSearch").addEventListener("input",e=>{menuS
 loadPublicReviews();checkSession();loadCustomerMenu().catch(err=>{document.getElementById("menuGrid").innerHTML='<p class="empty">We could not load the menu right now. Please refresh the page.</p>';console.error(err)});
 
 /* Place the story toggle after all expanded paragraphs. */
-function toggleStoryMore(){const more=document.getElementById("storyMore"),button=document.getElementById("storyToggle"),expanded=more.hidden;more.hidden=!expanded;button.setAttribute("aria-expanded",String(expanded));button.innerHTML=expanded?'Read Less <span aria-hidden="true">⌃</span>':'Read More <span aria-hidden="true">⌄</span>';}
+function toggleStoryMore(){const more=document.getElementById("storyMore"),button=document.getElementById("storyToggle");if(!more||!button)return;const expanded=more.hidden;more.hidden=!expanded;button.setAttribute("aria-expanded",String(expanded));button.innerHTML=expanded?'Read Less <span aria-hidden="true">⌃</span>':'Read More <span aria-hidden="true">⌄</span>';}
 </script></body></html>
