@@ -853,30 +853,20 @@ function toggleStoryMore(){const more=document.getElementById("storyMore"),butto
 @media(max-width:650px){#specialsGrid>.grid,#menuGrid .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}#specialsGrid .food-img,#menuGrid .food-img{height:125px!important}}
 @media(max-width:360px){#specialsGrid>.grid,#menuGrid .grid{grid-template-columns:1fr!important}}
 </style>
-<style id="hero-explore-button-fix">
-/* Give the hero copy enough vertical room so Explore the Menu isn't clipped by the benefits strip. */
-.hero.page-view.active-view{height:540px!important;min-height:540px!important}
-.hero.page-view.active-view .hero-copy{top:45%!important;transform:translateY(-50%)!important}
-.hero.page-view.active-view .hero-benefits{z-index:4!important}
-@media(max-width:700px){
- .hero.page-view.active-view{height:590px!important;min-height:590px!important}
- .hero.page-view.active-view .hero-copy{top:43%!important}
- .hero.page-view.active-view .hero-benefits{position:absolute!important;bottom:0!important}
-}
-</style><style id="hero-final-layout-icons">
-/* Keep all hero content visible and use the same illustrated icons as Why People Choose Us. */
-.hero.page-view.active-view{height:650px!important;min-height:650px!important;overflow:hidden!important}
-.hero.page-view.active-view .hero-copy{top:48%!important;left:clamp(36px,7vw,110px)!important;width:min(48%,590px)!important}
-.hero.page-view.active-view .hero-copy .hero-actions{margin-top:22px!important}
-.hero.page-view.active-view .hero-copy .btn{display:inline-flex!important;align-items:center!important;min-height:54px!important;white-space:nowrap!important;position:relative!important;z-index:5!important}
-.hero.page-view.active-view .hero-benefits{position:absolute!important;bottom:0!important;left:0!important;right:0!important;min-height:68px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:clamp(24px,5vw,76px)!important;padding:10px 18px!important}
+<style id="hero-layout-stable">
+/* Stable hero layout: reserve a dedicated footer band for the benefits, never overlay the CTA. */
+.hero.page-view.active-view{height:700px!important;min-height:700px!important;overflow:hidden!important;position:relative!important}
+.hero.page-view.active-view .hero-copy{top:40%!important;left:clamp(36px,7vw,110px)!important;width:min(48%,590px)!important;transform:translateY(-50%)!important}
+.hero.page-view.active-view .hero-copy .hero-actions{margin-top:20px!important}
+.hero.page-view.active-view .hero-copy .btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:54px!important;padding:12px 24px!important;white-space:nowrap!important;position:relative!important;z-index:6!important;line-height:1.25!important}
+.hero.page-view.active-view .hero-benefits{position:absolute!important;bottom:0!important;left:0!important;right:0!important;height:72px!important;min-height:72px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:clamp(24px,5vw,76px)!important;padding:10px 18px!important;z-index:3!important}
 .hero.page-view.active-view .hero-benefits span{display:flex!important;align-items:center!important;gap:12px!important;font-size:15px!important;white-space:nowrap!important}
 .hero.page-view.active-view .hero-benefits b{width:48px!important;height:48px!important;display:grid!important;place-items:center!important;flex:0 0 48px!important;border-radius:50%!important;background:#e3ebd6!important;color:#1f5a3a!important;font-size:0!important}
 .hero.page-view.active-view .hero-benefits b svg{display:block!important;width:30px!important;height:30px!important}
 @media(max-width:700px){
- .hero.page-view.active-view{height:660px!important;min-height:660px!important}
- .hero.page-view.active-view .hero-copy{top:43%!important;left:24px!important;width:calc(100% - 48px)!important}
- .hero.page-view.active-view .hero-benefits{flex-wrap:wrap!important;gap:8px 16px!important;justify-content:flex-start!important;min-height:88px!important}
+ .hero.page-view.active-view{height:760px!important;min-height:760px!important}
+ .hero.page-view.active-view .hero-copy{top:39%!important;left:24px!important;width:calc(100% - 48px)!important}
+ .hero.page-view.active-view .hero-benefits{height:112px!important;min-height:112px!important;flex-wrap:wrap!important;gap:8px 16px!important;justify-content:flex-start!important}
  .hero.page-view.active-view .hero-benefits b{width:34px!important;height:34px!important;flex-basis:34px!important}
  .hero.page-view.active-view .hero-benefits b svg{width:23px!important;height:23px!important}
  .hero.page-view.active-view .hero-benefits span{font-size:12px!important}
