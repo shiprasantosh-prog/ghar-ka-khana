@@ -871,4 +871,16 @@ function toggleStoryMore(){const more=document.getElementById("storyMore"),butto
  .hero.page-view.active-view .hero-benefits b svg{width:23px!important;height:23px!important}
  .hero.page-view.active-view .hero-benefits span{font-size:12px!important}
 }
+</style><style id="hero-cta-final-fix">
+/* Anchor hero copy from the top rather than vertically centering its tall content. */
+.hero.page-view.active-view{height:700px!important;min-height:700px!important;overflow:hidden!important;position:relative!important}
+.hero.page-view.active-view .hero-copy{top:24px!important;left:clamp(36px,7.2vw,115px)!important;transform:none!important;width:min(46%,570px)!important}
+.hero.page-view.active-view .hero-copy .hero-actions{margin-top:20px!important;display:block!important}
+.hero.page-view.active-view .hero-copy .btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:54px!important;line-height:1.25!important;padding:12px 24px!important;white-space:nowrap!important;visibility:visible!important;opacity:1!important}
+.hero.page-view.active-view .hero-benefits{bottom:0!important;top:auto!important;height:72px!important;min-height:72px!important;z-index:4!important}
+@media(max-width:700px){
+ .hero.page-view.active-view{height:760px!important;min-height:760px!important}
+ .hero.page-view.active-view .hero-copy{top:20px!important;left:24px!important;width:calc(100% - 48px)!important}
+ .hero.page-view.active-view .hero-benefits{height:112px!important;min-height:112px!important}
+}
 </style></body></html>
