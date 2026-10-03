@@ -341,6 +341,22 @@ app.patch("/api/auth/profile", auth, asyncRoute(async (req, res) => {
 }));
 
 // Public menu
+// Customer favourites: top five dishes by quantity ordered, excluding cancelled orders.
+app.get("/api/popular-menu", asyncRoute(async (req, res) => {
+  const result = await pool.query(
+    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available,
+            COALESCE(SUM(CASE WHEN o.status IS NOT NULL THEN oi.quantity ELSE 0 END), 0)::INTEGER AS orders_count
+     FROM menu m
+     LEFT JOIN order_items oi ON oi.menu_id = m.id
+     LEFT JOIN orders o ON o.id = oi.order_id AND o.status <> 'Cancelled'
+     WHERE m.available = TRUE
+     GROUP BY m.id
+     ORDER BY orders_count DESC, m.created_at DESC, m.name ASC
+     LIMIT 5`
+  );
+  res.json(result.rows);
+}));
+
 app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT id, name, description, category, price, image, available
