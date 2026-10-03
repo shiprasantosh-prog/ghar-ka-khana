@@ -634,6 +634,66 @@ app.post("/api/admin/menu/import", auth, admin, asyncRoute(async (req, res) => {
   }
 }));
 
+// Replace the complete customer menu with an owner-uploaded CSV.
+app.post("/api/admin/menu/replace", auth, admin, asyncRoute(async (req, res) => {
+  const { items } = req.body || {};
+  if (!Array.isArray(items) || items.length < 1 || items.length > 1000) {
+    return res.status(400).json({ error: "Upload a CSV containing between 1 and 1,000 menu rows." });
+  }
+
+  const clean = [];
+  const seen = new Set();
+  for (let i = 0; i < items.length; i++) {
+    const row = items[i] || {};
+    const name = String(row.name || "").trim();
+    const category = String(row.category || "").trim();
+    const price = Number(row.price);
+    if (!name || !category || !Number.isInteger(price) || price < 1) {
+      return res.status(400).json({ error: `Row ${i + 1}: name, category and a positive whole-number price are required.` });
+    }
+    if (name.length > 100 || category.length > 60) {
+      return res.status(400).json({ error: `Row ${i + 1}: name or category is too long.` });
+    }
+    const key = `${category.toLowerCase()}::${name.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push({
+      name, category, price,
+      description: String(row.description || "").trim().slice(0, 500),
+      image: String(row.image || "").trim().slice(0, 1000),
+      available: row.available === false ||
+        ["false", "0", "no"].includes(String(row.available).toLowerCase()) ? false : true
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Clear only menu-dependent selections. Order history and customer data remain untouched.
+    await client.query("DELETE FROM daily_specials");
+    await client.query("DELETE FROM popular_menu");
+    await client.query("DELETE FROM menu");
+    for (const item of clean) {
+      await client.query(
+        `INSERT INTO menu (name, description, category, price, image, available)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [item.name, item.description, item.category, item.price, item.image, item.available]
+      );
+    }
+    await client.query("COMMIT");
+    res.json({
+      ok: true,
+      replaced: clean.length,
+      message: `Menu replaced successfully with ${clean.length} dishes. Customer accounts, orders and reviews were preserved. Please reselect Today’s Specials and Best Selling Items.`
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}));
+
 // Add menu item
 app.post("/api/menu", auth, admin, asyncRoute(async (req, res) => {
   const { name, description = "", category, price, image = "" } = req.body || {};
