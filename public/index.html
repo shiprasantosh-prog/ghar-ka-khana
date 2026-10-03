@@ -467,6 +467,22 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
   #homeStory { display:none!important; }
 }
 </style>
+
+<style id="homepage-brand-logo-fix">
+.hero-copy .hero-brand{
+ display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important;
+ width:max-content!important;max-width:100%!important;margin:0 0 8px!important;padding:0!important;
+ text-decoration:none!important;position:relative!important;z-index:4!important;
+}
+.hero-copy .hero-brand svg{display:block!important;flex:0 0 auto!important;width:64px!important;height:48px!important}
+.hero-copy .hero-brand-copy{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+.hero-copy .hero-brand .logo-name{display:block!important;font:700 23px Georgia,serif!important;white-space:nowrap!important;color:#104d37!important;margin:0!important}
+.hero-copy .hero-brand .logo-tag{display:block!important;font:9px system-ui,sans-serif!important;letter-spacing:2px!important;text-transform:uppercase!important;color:#a77b2b!important;margin-top:5px!important}
+@media(max-width:700px){
+ .hero-copy .hero-brand svg{width:52px!important;height:42px!important}
+ .hero-copy .hero-brand .logo-name{font-size:20px!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -484,7 +500,7 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
 </nav><div class="sidebar-bottom"><p>Good Food<br>Brings People Together <span>♥</span></p><div class="follow-label">Follow us</div><a class="whatsapp-link" href="https://wa.me/918017503518" target="_blank" rel="noopener noreferrer">◉ &nbsp; Chat on WhatsApp</a></div></aside>
 <main>
 <section class="hero page-view active-view" id="story">
-<div class="hero-copy"><div class="eyebrow">A taste of home</div><h1>Good food.<br><em>Made with love.</em></h1><p>Homemade meals, prepared with fresh ingredients, familiar flavours and a little love in every bite.</p><div class="hero-actions"><button class="btn" type="button" onclick="showPage('menu')">Explore the Menu <span aria-hidden="true">→</span></button></div></div>
+<div class="hero-copy"><a class="hero-brand" href="#story" onclick="showPage(\&quot;story\&quot;);return false" aria-label="Ghar ka Khana home"><svg viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana house and cooking pot logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg><span class="hero-brand-copy"><span class="logo-name">Ghar ka Khana</span><span class="logo-tag">Homemade with love</span></span></a><div class="eyebrow">A taste of home</div><h1>Good food.<br><em>Made with love.</em></h1><p>Homemade meals, prepared with fresh ingredients, familiar flavours and a little love in every bite.</p><div class="hero-actions"><button class="btn" type="button" onclick="showPage('menu')">Explore the Menu <span aria-hidden="true">→</span></button></div></div>
 <div class="hero-photo-credit" aria-hidden="true">Freshly<br>Prepared<br>Homemade<br>Delicious <span>♡</span></div>
 <div class="hero-benefits"><span><b>♧</b> Fresh Ingredients</span><span><b>♡</b> Homemade Taste</span><span><b>♜</b> Hygienic Preparation</span></div>
 </section>
