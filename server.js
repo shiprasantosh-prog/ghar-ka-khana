@@ -819,8 +819,9 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     if(today< String(code.valid_from).slice(0,10))return res.status(400).json({error:"Promo code is not valid yet."});
     if(today> String(code.valid_until).slice(0,10))return res.status(400).json({error:"Promo code expired."});
     const customer=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);
-    const normalizedPhone=String(customer.rows[0]?.phone||"").replace(/\\D/g,"");
-    if(normalizedPhone!==String(code.customer_phone||"").replace(/\\D/g,""))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
+    const normalizePromoPhone=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");
+    const normalizedPhone=normalizePromoPhone(customer.rows[0]?.phone);
+    if(normalizedPhone!==normalizePromoPhone(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
     if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});
     discount=code.discount_type==="percent"?Math.floor(subtotal*code.discount_value/100):code.discount_value;
     discount=Math.min(subtotal,discount);appliedCode=code.code;
@@ -847,8 +848,8 @@ app.get("/api/checkout/options", asyncRoute(async(req,res)=>{
 
 app.get("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("SELECT * FROM promo_codes ORDER BY created_at DESC");res.json(r.rows)}));
 app.post("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{
- const b=req.body||{},phone=String(b.customerPhone||"").replace(/\\D/g,""),type=b.discountType,value=Number(b.discountValue),minimum=Number(b.minimumOrder||0),from=b.validFrom,until=b.validUntil;
- if(phone.length<10||phone.length>15||!["percent","fixed"].includes(type)||!Number.isInteger(value)||value<1||minimum<0||(type==="percent"&&value>100)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(from||"")||!/^\\d{4}-\\d{2}-\\d{2}$/.test(until||"")||until<from)return res.status(400).json({error:"Enter a valid customer mobile, discount and valid-from/valid-until dates."});
+ const b=req.body||{},phone=String(b.customerPhone||"").replace(/\D/g,""),type=b.discountType,value=Number(b.discountValue),minimum=Number(b.minimumOrder||0),from=b.validFrom,until=b.validUntil;
+ if(phone.length<10||phone.length>15||!["percent","fixed"].includes(type)||!Number.isInteger(value)||value<1||minimum<0||(type==="percent"&&value>100)||!/^\d{4}-\d{2}-\d{2}$/.test(from||"")||!/^\d{4}-\d{2}-\d{2}$/.test(until||"")||until<from)return res.status(400).json({error:"Enter a valid customer mobile, discount and valid-from/valid-until dates."});
  const code=String(b.code||("GKK"+Math.random().toString(36).slice(2,8).toUpperCase())).trim().toUpperCase();
  if(!/^[A-Z0-9_-]{4,30}$/.test(code))return res.status(400).json({error:"Promo code must be 4–30 letters, numbers, hyphens or underscores."});
  try{const r=await pool.query("INSERT INTO promo_codes(code,customer_phone,discount_type,discount_value,minimum_order,valid_from,valid_until,active) VALUES($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING *",[code,phone,type,value,minimum,from,until]);res.status(201).json(r.rows[0]);}
