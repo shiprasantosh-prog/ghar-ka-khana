@@ -569,6 +569,12 @@ main > .hero.page-view.active-view .hero-photo-credit{display:none!important}
 /* The sidebar brand is only for the expanded navigation; keep the collapsed rail icon-only. */
 body:not(.sidebar-expanded) .sidebar .sidebar-brand{display:none!important;}
 body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
+
+/* Keep the story video at a steady size when Read More expands the text. */
+#homeStory .story-panel{align-items:start!important;}
+#homeStory .story-photo{display:block;width:100%;height:340px!important;min-height:0!important;max-height:340px;align-self:start!important;object-fit:cover;}
+#homeStory .story-panel>div{min-width:0;}
+@media(max-width:700px){#homeStory .story-photo{height:240px!important;max-height:240px;}}
 </style>
 <style>
 /* Final homepage polish: keep the banner artwork aligned and let the story image fill its column. */
