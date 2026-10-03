@@ -74,6 +74,8 @@ header{background:rgba(251,248,239,.98)!important}.navlinks a{color:#203b2e!impo
 .home-section{padding-top:54px;padding-bottom:54px;border-top:1px solid var(--line)}.home-section .section-head{margin-bottom:24px}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.steps h3{color:var(--cream);margin:14px 0 8px}.steps p{color:var(--muted);line-height:1.7;margin:0}.step-number{font:700 28px Georgia,serif;color:var(--gold)}.story-panel{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px}.story-photo{min-height:320px;border-radius:12px;background:linear-gradient(0deg,rgba(20,50,33,.08),rgba(20,50,33,.08)),url('https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85') center/cover}.story-panel h2{font:clamp(28px,4vw,42px) Georgia,serif;color:var(--cream);margin:10px 0 16px}.story-panel p,.home-review-card p{color:var(--muted);line-height:1.8}.review-stars{color:#b58a3b;font-size:20px}.review-stars span{color:#d7d9ce}@media(max-width:700px){.steps,.story-panel{grid-template-columns:1fr}.story-photo{min-height:220px}.home-section{padding-top:35px;padding-bottom:35px}}
 </style>
 <style>
+/* Keep homepage-only content hidden on every other sidebar destination */
+body[data-current-page]:not([data-current-page="story"]) #homeWhy,body[data-current-page]:not([data-current-page="story"]) #homePopular,body[data-current-page]:not([data-current-page="story"]) #homeHow,body[data-current-page]:not([data-current-page="story"]) #homeStory,body[data-current-page]:not([data-current-page="story"]) #homeReviewPreview{display:none!important}
 /* Homepage refresh: warm food photography, category cards and benefits */
 .hero{max-width:none;width:100%;padding:52px clamp(24px,6vw,100px);grid-template-columns:minmax(300px,.85fr) minmax(440px,1.15fr);gap:38px;background:linear-gradient(110deg,#fbf8ef 0%,#f7f1df 100%);min-height:440px}
 .hero-food-collage{height:360px;display:grid;grid-template-columns:1.35fr 1fr;grid-template-rows:1fr 1fr;gap:12px;position:relative}
@@ -606,8 +608,9 @@ function toggleSidebar(){
     toggle.setAttribute("aria-label",expanded?"Collapse navigation":"Expand navigation");
 }
 function showPage(pageId){
-    const allowed=["story","homePopular","homeHow","homeStory","homeReviewPreview","menu","account","myorders","reviews","contact"];
+    const allowed=["story","homePopular","homeWhy","homeHow","homeStory","homeReviewPreview","menu","account","myorders","reviews","contact"];
     if(!allowed.includes(pageId))pageId="story";
+    document.body.dataset.currentPage=pageId;
     document.querySelectorAll(".page-view").forEach(section=>{
         section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
     });
