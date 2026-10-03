@@ -106,7 +106,7 @@ header{background:rgba(251,248,239,.98)!important}.navlinks a{color:#203b2e!impo
 </style>
 <style>
 /* Reference-matched homepage composition */
-.hero.page-view.active-view{display:block;position:relative;max-width:none;width:100%;height:370px;min-height:370px;margin:0;padding:0;background:#f7f1df url('https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=2000&q=90') center 52%/cover no-repeat;overflow:hidden}
+.hero.page-view.active-view{display:block;position:relative;max-width:none;width:100%;height:370px;min-height:370px;margin:0;padding:0;background:#f7f1df url('https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1600&q=75') center 52%/cover no-repeat;overflow:hidden}
 .hero.page-view.active-view:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(251,247,232,.99) 0%,rgba(251,247,232,.96) 33%,rgba(251,247,232,.45) 52%,rgba(251,247,232,0) 72%)}
 .hero-copy{position:absolute;z-index:2;left:clamp(38px,7.2vw,115px);top:50%;transform:translateY(-50%);width:min(46%,570px)}
 .hero-copy .eyebrow{font-size:13px;letter-spacing:3px;color:#477b58}
@@ -145,6 +145,18 @@ header{background:rgba(251,248,239,.98)!important}.navlinks a{color:#203b2e!impo
 @media(max-width:1100px){.home-category-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.home-category img{height:125px}}
 @media(max-width:700px){.hero.page-view.active-view{height:480px;min-height:480px;background-position:58% center}.hero.page-view.active-view:before{background:linear-gradient(90deg,rgba(251,247,232,.97),rgba(251,247,232,.75) 65%,rgba(251,247,232,.2))}.hero-copy{left:22px;top:40%;width:calc(100% - 44px)}.hero-copy h1{font-size:46px}.hero-copy p{font-size:15px;max-width:90%}.hero-benefits{height:auto;min-height:46px;gap:12px;padding:8px 14px;flex-wrap:wrap}.hero-benefits span{font-size:10px}.hero-photo-credit{right:10px;top:12px;font-size:16px}.home-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-category img{height:130px}.home-why{margin:0 8px 12px;padding:15px 8px}.home-why .section-head h2{font-size:26px}.why-grid article{padding:12px 5px}.why-grid h3{font-size:15px}.why-grid p{font-size:12px}#homeStory .story-panel{grid-template-columns:1fr;gap:15px;padding:12px}#homeStory .story-photo{min-height:200px}}
 </style>
+<style>
+/* Fast first paint and closer match to the approved home-page reference */
+.home-category img{loading:lazy}
+.home-category img{content-visibility:auto}
+.home-category{min-height:150px}
+.home-why{min-height:178px;display:flex;flex-direction:column;justify-content:center;background:#f7f5e9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%239bb78b' stroke-width='2' opacity='.6'%3E%3Cpath d='M5 180Q40 130 25 85M25 130Q0 115 4 96Q27 100 25 130M25 145Q53 118 67 123Q57 145 25 145M25 112Q4 84 15 69Q31 83 25 112M25 92Q48 67 57 76Q51 96 25 92'/%3E%3C/g%3E%3C/svg%3E") left bottom/150px auto no-repeat}
+.home-why:after{content:"";position:absolute;right:0;bottom:0;width:150px;height:180px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%239bb78b' stroke-width='2' opacity='.6'%3E%3Cpath d='M175 180Q140 130 155 85M155 130Q180 115 176 96Q153 100 155 130M155 145Q127 118 113 123Q123 145 155 145M155 112Q176 84 165 69Q149 83 155 112M155 92Q132 67 123 76Q129 96 155 92'/%3E%3C/g%3E%3C/svg%3E") right bottom/contain no-repeat;transform:none;opacity:1}
+.home-why:before{content:"";position:absolute;left:0;bottom:0;width:150px;height:180px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%239bb78b' stroke-width='2' opacity='.6'%3E%3Cpath d='M5 180Q40 130 25 85M25 130Q0 115 4 96Q27 100 25 130M25 145Q53 118 67 123Q57 145 25 145M25 112Q4 84 15 69Q31 83 25 112M25 92Q48 67 57 76Q51 96 25 92'/%3E%3C/g%3E%3C/svg%3E") left bottom/contain no-repeat;transform:none;opacity:1}
+.home-why .section-head h2{font:30px Georgia,serif;color:#104d37!important}
+.why-grid article{min-height:105px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+@media(max-width:700px){.home-why{min-height:0}.home-why:before,.home-why:after{width:85px;height:110px}.why-grid article{min-height:110px}}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -167,14 +179,14 @@ header{background:rgba(251,248,239,.98)!important}.navlinks a{color:#203b2e!impo
 <div class="hero-benefits"><span><b>♧</b> Fresh Ingredients</span><span><b>♡</b> Homemade Taste</span><span><b>♜</b> Hygienic Preparation</span></div>
 </section>
 <section class="wrap page-view home-section home-category-section" id="homeCategories"><div class="home-category-grid">
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=85" alt="Indian breakfast"><span>Breakfast</span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=85" alt="Indian main course"><span>Main Course<small>(Gravy, Dry, Daal, Breads, Rice & Biryani)</small></span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=600&q=85" alt="Chinese food"><span>Chinese</span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=600&q=85" alt="Indian parathas"><span>Parathas</span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=600&q=85" alt="Indian snacks"><span>Snacks</span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=85" alt="Healthy salad"><span>Healthy Salads</span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=85" alt="Indian sweets"><span>Sweets & Desserts</span></button>
-<button class="home-category" onclick="showPage('menu')"><img src="https://images.unsplash.com/photo-1553909489-cd47e0ef937f?auto=format&fit=crop&w=600&q=85" alt="Beverage"><span>Beverages</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=85" alt="Indian breakfast"><span>Breakfast</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=85" alt="Indian main course"><span>Main Course<small>(Gravy, Dry, Daal, Breads, Rice & Biryani)</small></span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=600&q=85" alt="Chinese food"><span>Chinese</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=600&q=85" alt="Indian parathas"><span>Parathas</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=600&q=85" alt="Indian snacks"><span>Snacks</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=85" alt="Healthy salad"><span>Healthy Salads</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=85" alt="Indian sweets"><span>Sweets & Desserts</span></button>
+<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1553909489-cd47e0ef937f?auto=format&fit=crop&w=600&q=85" alt="Beverage"><span>Beverages</span></button>
 </div></section>
 <section class="wrap page-view home-section home-why" id="homeWhy"><div class="section-head"><div><div class="eyebrow">Made with care, every day</div><h2>Why People Choose Us</h2></div></div><div class="why-grid"><article><span class="why-icon">♧</span><h3>Fresh Ingredients</h3><p>Quality ingredients, always.</p></article><article><span class="why-icon">♧</span><h3>Hygienic Preparation</h3><p>Clean and safe kitchen practices.</p></article><article><span class="why-icon">⌂</span><h3>Homemade Taste</h3><p>Just like home.</p></article><article><span class="why-icon">♧</span><h3>Timely Delivery</h3><p>Hot and fresh to your doorstep.</p></article></div></section>
 <section class="wrap page-view home-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Popular on Our Menu</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('menu')">View Full Menu</button></div></section>
