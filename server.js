@@ -110,6 +110,9 @@ async function initializeDatabase() {
   )`);
   await pool.query("INSERT INTO kitchen_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
 
+  // Owner-curated dishes featured in the customer-facing Popular section.
+  await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+
   // Create reviews separately so existing table initialization remains unchanged.
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
     id SERIAL PRIMARY KEY,
@@ -344,17 +347,36 @@ app.patch("/api/auth/profile", auth, asyncRoute(async (req, res) => {
 // Customer favourites: top five dishes by quantity ordered, excluding cancelled orders.
 app.get("/api/popular-menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available,
-            COALESCE(SUM(CASE WHEN o.status IS NOT NULL THEN oi.quantity ELSE 0 END), 0)::INTEGER AS orders_count
-     FROM menu m
-     LEFT JOIN order_items oi ON oi.menu_id = m.id
-     LEFT JOIN orders o ON o.id = oi.order_id AND o.status <> 'Cancelled'
-     WHERE m.available = TRUE
-     GROUP BY m.id
-     ORDER BY orders_count DESC, m.created_at DESC, m.name ASC
-     LIMIT 5`
+    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available
+     FROM popular_menu p JOIN menu m ON m.id = p.menu_id
+     WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
   res.json(result.rows);
+}));
+
+app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
+  const result = await pool.query("SELECT menu_id FROM popular_menu ORDER BY display_order");
+  res.json(result.rows.map(row => row.menu_id));
+}));
+
+app.put("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
+  const { menuIds } = req.body || {};
+  if (!Array.isArray(menuIds) || menuIds.length > 5) return res.status(400).json({ error: "Select no more than five Popular dishes." });
+  const ids = [...new Set(menuIds.map(Number))];
+  if (ids.length !== menuIds.length || ids.some(id => !Number.isInteger(id) || id < 1)) return res.status(400).json({ error: "Invalid or duplicate menu item selection." });
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    if (ids.length) {
+      const check = await client.query("SELECT id FROM menu WHERE id = ANY($1::int[]) AND available = TRUE", [ids]);
+      if (check.rowCount !== ids.length) { await client.query("ROLLBACK"); return res.status(400).json({ error: "All selected dishes must exist and be available." }); }
+    }
+    await client.query("DELETE FROM popular_menu");
+    for (let i = 0; i < ids.length; i++) await client.query("INSERT INTO popular_menu (menu_id, display_order) VALUES ($1, $2)", [ids[i], i + 1]);
+    await client.query("COMMIT");
+    res.json({ ok: true, menuIds: ids, message: "Popular items saved." });
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
 }));
 
 app.get("/api/menu", asyncRoute(async (req, res) => {
