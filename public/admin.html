@@ -52,7 +52,7 @@ function parseCsv(text){
   if(quoted)throw Error('CSV has an unclosed quote. Please save it again as CSV.');
   row.push(field);if(row.some(v=>v.trim()!==''))rows.push(row);
   if(rows.length<2)throw Error('CSV must include a header row and at least one dish.');
-  const normalize=s=>s.trim().toLowerCase().replace(/[\s_\\-()₹]+/g,'');
+  const normalize=s=>s.trim().toLowerCase().replace(/[\s_()₹-]+/g,'');
   const headers=rows[0].map(normalize);
   const find=aliases=>aliases.map(normalize).map(a=>headers.indexOf(a)).find(i=>i>=0);
   const columns={name:find(['name','item name','dish name','product name','menu item']),category:find(['category','item category','menu category','sub category','subcategory']),price:find(['price','rate','item rate','selling price','amount']),description:find(['description','details']),image:find(['image','image url','imageurl','photo']),available:find(['available','availability','is available','active'])};
