@@ -383,6 +383,90 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
 }
 </style>
 
+
+<style id="final-homepage-layout-overrides">
+/* Final layout pass: use the live customer entry point (public/index.html), not the unused root prototype. */
+@media (min-width:901px) {
+  html, body { width:100%; max-width:100%; overflow-x:hidden; }
+  body, body.sidebar-expanded { padding-left:0!important; }
+  main, body.sidebar-expanded main {
+    display:block!important; width:auto!important; min-width:0!important;
+    margin:0 0 0 76px!important; padding:0!important;
+    overflow-x:hidden!important; background:#f8f5e9!important;
+  }
+  body.sidebar-expanded main { margin-left:270px!important; }
+  .sidebar { left:0!important; width:76px!important; }
+  body.sidebar-expanded .sidebar { width:270px!important; }
+
+  /* Keep the hero as a clear two-part composition: copy on the left, food on the right. */
+  main > .hero.page-view.active-view {
+    display:block!important; position:relative!important; width:100%!important;
+    height:430px!important; min-height:430px!important; margin:0!important;
+    padding:0!important; overflow:hidden!important; box-sizing:border-box!important;
+    background-color:#f7f1df!important;
+    background-position:right center!important; background-size:cover!important;
+  }
+  main > .hero.page-view.active-view:before {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(90deg,
+      #fbf7e9 0%, #fbf7e9 28%, rgba(251,247,233,.96) 39%,
+      rgba(251,247,233,.72) 52%, rgba(251,247,233,.12) 72%, transparent 100%)!important;
+  }
+  main > .hero.page-view.active-view .hero-copy {
+    position:absolute!important; z-index:3!important;
+    left:clamp(36px,7vw,110px)!important; top:48%!important;
+    transform:translateY(-50%)!important;
+    width:min(43%,560px)!important; max-width:560px!important;
+  }
+  main > .hero.page-view.active-view .hero-copy h1 {
+    max-width:100%!important; font-size:clamp(52px,5vw,76px)!important;
+    line-height:1.04!important; letter-spacing:-1.6px!important;
+    margin:12px 0 16px!important;
+  }
+  main > .hero.page-view.active-view .hero-copy p {
+    max-width:480px!important; font-size:17px!important; line-height:1.55!important;
+  }
+  main > .hero.page-view.active-view .hero-photo-credit {
+    z-index:3!important; right:2.5%!important; top:24px!important;
+  }
+  main > .hero.page-view.active-view .hero-benefits {
+    position:absolute!important; z-index:3!important; left:0!important; right:0!important; bottom:0!important;
+    width:100%!important; min-height:54px!important; height:auto!important;
+    display:flex!important; align-items:center!important; justify-content:center!important;
+    gap:clamp(24px,5vw,76px)!important; padding:10px 18px!important;
+    background:rgba(248,245,233,.94)!important;
+  }
+  main > .home-category-section { width:100%!important; padding:20px 20px 24px!important; }
+  .home-category-grid { grid-template-columns:repeat(8,minmax(0,1fr))!important; gap:12px!important; }
+  .home-category { min-width:0!important; }
+  .home-category img { height:clamp(96px,9vw,140px)!important; }
+  main > .home-why {
+    display:block!important; width:calc(100% - 24px)!important;
+    margin:0 12px 20px!important; padding:20px 24px 26px!important;
+    min-height:190px!important; background:#f7f5e9!important;
+    border:1px solid #e8e6d8!important; border-radius:15px!important;
+  }
+  .why-grid { grid-template-columns:repeat(4,minmax(0,1fr))!important; }
+  .why-grid article { min-width:0!important; }
+  /* The earlier request was to remove the Our Story panel from the homepage. */
+  #homeStory { display:none!important; }
+}
+@media (max-width:900px) {
+  body, body.sidebar-expanded { padding-left:0!important; }
+  main, body.sidebar-expanded main { width:100%!important; margin:0!important; }
+  main > .hero.page-view.active-view { height:460px!important; min-height:460px!important; }
+  main > .hero.page-view.active-view:before {
+    background:linear-gradient(90deg,rgba(251,247,233,.98),rgba(251,247,233,.82) 70%,rgba(251,247,233,.2))!important;
+  }
+  main > .hero.page-view.active-view .hero-copy {
+    left:24px!important; top:42%!important; width:calc(100% - 48px)!important;
+  }
+  main > .hero.page-view.active-view .hero-copy h1 { font-size:clamp(44px,8vw,62px)!important; }
+  .home-category-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+  main > .home-why { margin:0 8px 14px!important; width:calc(100% - 16px)!important; }
+  #homeStory { display:none!important; }
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
