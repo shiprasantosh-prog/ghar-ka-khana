@@ -557,6 +557,18 @@ footer{border-color:#E5DCC8!important;color:#656457!important}
   }
 }
 main > .hero.page-view.active-view .hero-photo-credit{display:none!important}
+
+
+/* Story expansion layout: keep the photo aligned with the top of the story text. */
+#homeStory .story-panel{align-items:start!important;}
+#homeStory .story-photo{height:320px;min-height:320px;align-self:start;background-position:center center!important;}
+#homeStory .story-more{display:block;}
+#homeStory .story-more[open]{padding-bottom:4px;}
+#homeStory .story-more[open] summary{margin-bottom:12px;}
+#homeStory .story-more p{line-height:1.75;margin:12px 0!important;}
+/* The sidebar brand is only for the expanded navigation; keep the collapsed rail icon-only. */
+body:not(.sidebar-expanded) .sidebar .sidebar-brand{display:none!important;}
+body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </style>
 </head>
 <body>
