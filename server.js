@@ -1037,7 +1037,7 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
       ? "Thank you for choosing us! We hope you enjoy your meal."
       : cancellationReason === "Kitchen Closed"
         ? "Your order has been cancelled — our kitchen is closed. We apologise for the inconvenience."
-        : `Your order has been cancelled because ${String(cancellationReason || "").replace(/^Out of Stock:\\s*/, "") || "an item"} is out of stock. We apologise for the inconvenience.`;
+        : `Your order has been cancelled because ${(String(cancellationReason || "").startsWith("Out of Stock: ") ? String(cancellationReason).slice("Out of Stock: ".length) : String(cancellationReason || "")) || "an item"} is out of stock. We apologise for the inconvenience.`;
   // Use the single approved Meta template for both customer status updates.
   const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
   const response = await fetch(
