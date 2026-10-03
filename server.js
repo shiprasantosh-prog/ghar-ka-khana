@@ -815,12 +815,11 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   }else if(orderMode!=="now")return res.status(400).json({error:"Choose Order Now or Prior Order."});
   let discount=0,appliedCode="";
   if(String(promoCode).trim()){
-    const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);
+    const result=await pool.query("SELECT *, ((NOW() AT TIME ZONE 'Asia/Kolkata')::date >= valid_from) AS date_started, ((NOW() AT TIME ZONE 'Asia/Kolkata')::date <= valid_until) AS date_not_expired FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);
     const code=result.rows[0];
     if(!code||!code.active)return res.status(400).json({error:"Invalid Promo Code."});
-    const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).reduce((o,p)=>(o[p.type]=p.value,o),{});const today=parts.year+"-"+parts.month+"-"+parts.day;const dateOnly=value=>value instanceof Date?value.toISOString().slice(0,10):String(value).slice(0,10);
-    if(today< dateOnly(code.valid_from))return res.status(400).json({error:"Promo code is not valid yet."});
-    if(today> dateOnly(code.valid_until))return res.status(400).json({error:"Promo code expired."});
+    if(!code.date_started)return res.status(400).json({error:"Promo code is not valid yet."});
+    if(!code.date_not_expired)return res.status(400).json({error:"Promo code expired."});
     const customer=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);
     const normalizePromoPhone=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");
     const normalizedPhone=normalizePromoPhone(customer.rows[0]?.phone);
@@ -853,7 +852,7 @@ app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  if(!Array.isArray(items)||!items.length||!String(promoCode||"").trim())return res.status(400).json({error:"Enter a promo code and add items to your basket."});
  const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);const code=result.rows[0];
  if(!code||!code.active)return res.status(400).json({error:"Invalid Promo Code."});
- const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).reduce((o,p)=>(o[p.type]=p.value,o),{});const today=parts.year+"-"+parts.month+"-"+parts.day;const dateOnly=value=>value instanceof Date?value.toISOString().slice(0,10):String(value).slice(0,10);if(today<dateOnly(code.valid_from))return res.status(400).json({error:"Promo code is not valid yet."});if(today>dateOnly(code.valid_until))return res.status(400).json({error:"Promo code expired."});
+ if(!code.date_started)return res.status(400).json({error:"Promo code is not valid yet."});if(!code.date_not_expired)return res.status(400).json({error:"Promo code expired."});
  const user=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);const normalize=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");if(normalize(user.rows[0]?.phone)!==normalize(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
  let subtotal=0,eligibleSubtotal=0;const excluded=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];const excludedItems=[];
  for(const item of items){const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);const dish=r.rows[0];if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});const amount=dish.price*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;}
@@ -875,6 +874,7 @@ app.post("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{
  catch(e){if(e.code==="23505")return res.status(409).json({error:"Promo code already exists. Generate another code."});throw e;}
 }));
 app.patch("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("UPDATE promo_codes SET active=$1 WHERE id=$2 RETURNING *",[Boolean(req.body.active),Number(req.params.id)]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json(r.rows[0])}));
+app.delete("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("DELETE FROM promo_codes WHERE id=$1 RETURNING id",[Number(req.params.id)]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json({ok:true,id:r.rows[0].id})}));
 app.get("/api/admin/delivery-slots",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("SELECT * FROM delivery_slots ORDER BY id");res.json(r.rows)}));
 app.put("/api/admin/delivery-slots",auth,admin,asyncRoute(async(req,res)=>{
   const slots=req.body.slots;if(!Array.isArray(slots)||slots.some(x=>typeof x.label!=="string"||!x.label.trim()))return res.status(400).json({error:"Provide valid delivery slots."});
