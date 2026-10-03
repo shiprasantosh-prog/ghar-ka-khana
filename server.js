@@ -102,6 +102,14 @@ async function initializeDatabase() {
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS kitchen_settings (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    is_open BOOLEAN NOT NULL DEFAULT TRUE,
+    reopen_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await pool.query("INSERT INTO kitchen_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
+
   // Create reviews separately so existing table initialization remains unchanged.
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
     id SERIAL PRIMARY KEY,
@@ -689,6 +697,11 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     validated.push({ ...dish, quantity });
   }
 
+  const kitchenStatus = await getKitchenStatus();
+  if (!kitchenStatus.isOpen) {
+    return res.status(503).json({ error: "Our kitchen is currently closed. Please check back later." });
+  }
+
   // Use a transaction so order and order items are saved together
   const client = await pool.connect();
   let orderId;
@@ -754,6 +767,40 @@ async function readOrder(id) {
   order.items = itemsResult.rows;
   return order;
 }
+
+// Public kitchen availability. Scheduled reopening automatically takes effect at reopen_at.
+async function getKitchenStatus() {
+  const result = await pool.query(`SELECT is_open, reopen_at,
+    CASE WHEN is_open = FALSE AND reopen_at IS NOT NULL AND reopen_at <= NOW()
+      THEN TRUE ELSE is_open END AS currently_open
+    FROM kitchen_settings WHERE id = 1`);
+  const row = result.rows[0] || { is_open: true, reopen_at: null, currently_open: true };
+  if (row.currently_open && !row.is_open) {
+    await pool.query("UPDATE kitchen_settings SET is_open = TRUE, reopen_at = NULL, updated_at = NOW() WHERE id = 1");
+    return { isOpen: true, reopenAt: null };
+  }
+  return { isOpen: row.currently_open, reopenAt: row.reopen_at };
+}
+app.get("/api/kitchen/status", asyncRoute(async (req, res) => {
+  res.json(await getKitchenStatus());
+}));
+app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
+  const isOpen = req.body.isOpen;
+  if (typeof isOpen !== "boolean") return res.status(400).json({ error: "Choose whether the kitchen is open or closed." });
+  let reopenAt = null;
+  if (!isOpen && req.body.reopenAt) {
+    const parsed = new Date(req.body.reopenAt);
+    if (Number.isNaN(parsed.getTime()) || parsed <= new Date()) {
+      return res.status(400).json({ error: "Choose a future reopening date and time." });
+    }
+    reopenAt = parsed.toISOString();
+  }
+  await pool.query(
+    "UPDATE kitchen_settings SET is_open = $1, reopen_at = $2, updated_at = NOW() WHERE id = 1",
+    [isOpen, reopenAt]
+  );
+  res.json(await getKitchenStatus());
+}));
 
 // Customer order history
 app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
