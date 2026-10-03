@@ -308,6 +308,81 @@ footer{background:#f3f0e3!important;color:#59665d!important;border-color:#e8dfca
   .wrap{width:100%!important;max-width:none!important;margin:0!important;box-sizing:border-box!important}
 }
 </style>
+
+<style id="layout-root-cause-fix">
+/*
+  ROOT-CAUSE FIX:
+  The original layout offsets content twice: body padding-left AND main margin-left.
+  Keep the sidebar fixed and use ONLY main/footer margin to reserve its width.
+*/
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body,body.sidebar-expanded{padding-left:0!important}
+main,body.sidebar-expanded main{
+  display:block!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0 0 0 76px!important;
+  padding:0!important;
+  overflow:visible!important;
+  background:#f8f5e9!important;
+  transition:margin-left .25s ease;
+}
+body.sidebar-expanded main{margin-left:270px!important}
+footer{margin-left:76px!important;transition:margin-left .25s ease}
+body.sidebar-expanded footer{margin-left:270px!important}
+.sidebar{left:0!important;top:0!important;bottom:0!important;height:100vh!important;z-index:100!important}
+body.sidebar-expanded .sidebar{width:270px!important}
+main>.hero.page-view.active-view{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  height:clamp(360px,31vw,480px)!important;
+  min-height:360px!important;
+  margin:0!important;
+  padding:0!important;
+  position:relative!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+main>.hero.page-view.active-view .hero-copy{
+  left:clamp(36px,7vw,110px)!important;
+  width:min(48%,590px)!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+}
+main>.hero.page-view.active-view .hero-copy h1{
+  max-width:100%!important;
+  font-size:clamp(50px,5.1vw,78px)!important;
+  line-height:1.03!important;
+  letter-spacing:-1.7px!important;
+  margin:12px 0 16px!important;
+}
+main>.hero.page-view.active-view .hero-copy p{max-width:480px!important;font-size:17px!important;line-height:1.55!important}
+main>.hero.page-view.active-view .hero-benefits{
+  position:absolute!important;left:0!important;right:0!important;bottom:0!important;
+  width:100%!important;min-height:52px!important;height:auto!important;
+  justify-content:center!important;padding:10px 20px!important;
+}
+main>.wrap.page-view.active-view{
+  display:block!important;
+  width:100%!important;max-width:none!important;
+  margin:0!important;padding:24px clamp(18px,2vw,32px) 48px!important;
+  box-sizing:border-box!important;
+}
+main>.home-why{margin:0 12px 12px!important;width:calc(100% - 24px)!important;padding:18px clamp(16px,3vw,44px) 24px!important}
+main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-left:clamp(18px,2vw,32px)!important;padding-right:clamp(18px,2vw,32px)!important}
+@media(max-width:900px){
+  body,body.sidebar-expanded{padding-left:0!important}
+  main,body.sidebar-expanded main{width:100%!important;margin:0!important}
+  footer,body.sidebar-expanded footer{margin-left:0!important}
+  .sidebar,body.sidebar-expanded .sidebar{position:sticky!important;top:0!important;bottom:auto!important;width:100%!important;height:auto!important;max-height:75vh!important}
+  main>.hero.page-view.active-view{height:460px!important;min-height:460px!important}
+  main>.hero.page-view.active-view .hero-copy{left:24px!important;width:calc(100% - 48px)!important;top:43%!important}
+  main>.hero.page-view.active-view .hero-copy h1{font-size:clamp(44px,8vw,62px)!important}
+  main>.wrap.page-view.active-view{padding:20px 16px 36px!important}
+}
+</style>
+
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
