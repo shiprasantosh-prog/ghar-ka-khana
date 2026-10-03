@@ -162,8 +162,11 @@ async function initializeDatabase() {
           bcrypt.hashSync(process.env.ADMIN_PASSWORD, 12)
         ]
       );
-
       console.log("Owner account created.");
+    } else {
+      // If this phone was registered as a customer before owner credentials
+      // were configured, promote that same account so owner sign-in works.
+      await pool.query("UPDATE users SET role = 'admin' WHERE phone = $1 AND role <> 'admin'", [process.env.ADMIN_PHONE]);
     }
   }
 
