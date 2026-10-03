@@ -594,6 +594,21 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 /* Show the entire story video frame, including its text and bottom captions. */
 #homeStory video.story-photo{object-fit:contain!important;background:#fbf6ea!important;}
 </style>
+<style>
+/* Compact five-across layout for the curated Best Selling Items row. */
+#popularGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
+#popularGrid>.card{min-width:0;margin:0}
+#popularGrid .food-img{height:145px;overflow:hidden}
+#popularGrid .food-img img{width:100%;height:100%;object-fit:cover}
+#popularGrid .card-body{padding:13px}
+#popularGrid .card-title{gap:8px;align-items:flex-start}
+#popularGrid .card-title h3{font-size:15px;line-height:1.3}
+#popularGrid .card-body>p{font-size:12px;line-height:1.45;margin:8px 0}
+#popularGrid .card-foot{gap:6px;flex-wrap:wrap}
+@media(max-width:1000px){#popularGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){#popularGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#popularGrid .food-img{height:125px}}
+@media(max-width:390px){#popularGrid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -619,7 +634,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </section>
 
 
-<section class="wrap page-view active-view home-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Popular on Our Menu</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('menu')">View Full Menu</button></div></section>
+<section class="wrap page-view active-view home-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Best Selling Items</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('menu')">View Full Menu</button></div></section>
 <section class="wrap page-view active-view home-section home-why" id="homeWhy"><div class="section-head"><div><div class="eyebrow">Made with care, every day</div><h2>Why People Choose Us</h2></div></div><div class="why-grid"><article><span class="why-icon">♧</span><h3>Fresh Ingredients</h3><p>Quality ingredients, always.</p></article><article><span class="why-icon">♧</span><h3>Hygienic Preparation</h3><p>Clean and safe kitchen practices.</p></article><article><span class="why-icon">⌂</span><h3>Homemade Taste</h3><p>Just like home.</p></article><article><span class="why-icon">♧</span><h3>Timely Delivery</h3><p>Hot and fresh to your doorstep.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeHow"><div class="section-head"><div><div class="eyebrow">Easy as 1, 2, 3</div><h2>How Ordering Works</h2></div><p>Simple, and ready on time.</p></div><div class="steps"><article class="card" style="padding:24px"><span class="step-number">01</span><h3>Pick your meal</h3><p>Choose from our menu and add your favourites to your basket.</p></article><article class="card" style="padding:24px"><span class="step-number">02</span><h3>We cook it fresh</h3><p>Every meal is prepared with care in small batches, after your order.</p></article><article class="card" style="padding:24px"><span class="step-number">03</span><h3>Delivered to your door</h3><p>Your food is packed carefully and sent your way, ready to enjoy.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeStory"><div class="story-panel"><video class="story-photo" controls playsinline preload="metadata" aria-label="Ghar ka Khana story video"><source src="/images/story.mp4" type="video/mp4">Your browser does not support HTML video.</video><div><div class="eyebrow">Our Story</div><h2>A Home Kitchen with a Big Dream</h2><p>Ghar ka Khana began in 2025 in my home kitchen in Bengaluru with a simple thought: to bring the warmth and comfort of homemade food to more people. I started by cooking for family and friends, who kept asking for more. Today, we serve families across the city with the same recipes, love and care that inspired us from the beginning.</p><p>From litti chokha and paneer gravies to light, healthy everyday meals, we prepare everything fresh with thoughtful ingredients, less oil and no preservatives—just the way we like to eat at home.</p><p>For me, cooking has always been about more than putting a meal on the table. It is the familiar aroma of spices, the joy of sharing food and the little comforts that make an ordinary day feel special. I bring the flavours I grew up loving into every dish, with care and attention so each meal feels personal, wholesome and welcoming.</p><p><em>Every order is a little taste of home. Thank you for being part of the Ghar ka Khana family.</em></p><p><strong>Shipra Santosh</strong><br>Founder</p><div class="story-more" id="storyMore" hidden><p>What began as a small home kitchen has grown into a cloud kitchen serving wholesome, delicious meals to many happy customers. Whether you are looking for a comforting everyday meal, a traditional favourite or a lighter, healthier choice, our hope is to make you feel at home with every bite.</p><p>Every recipe carries the same intention we started with: honest food, familiar flavours and the warmth of a meal made with love.</p></div><button class="story-toggle" id="storyToggle" type="button" aria-expanded="false" aria-controls="storyMore" onclick="toggleStoryMore()">Read More <span aria-hidden="true">⌄</span></button></div></div></section>
