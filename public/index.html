@@ -853,4 +853,14 @@ function toggleStoryMore(){const more=document.getElementById("storyMore"),butto
 @media(max-width:650px){#specialsGrid>.grid,#menuGrid .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}#specialsGrid .food-img,#menuGrid .food-img{height:125px!important}}
 @media(max-width:360px){#specialsGrid>.grid,#menuGrid .grid{grid-template-columns:1fr!important}}
 </style>
-</body></html>
+<style id="hero-explore-button-fix">
+/* Give the hero copy enough vertical room so Explore the Menu isn't clipped by the benefits strip. */
+.hero.page-view.active-view{height:540px!important;min-height:540px!important}
+.hero.page-view.active-view .hero-copy{top:45%!important;transform:translateY(-50%)!important}
+.hero.page-view.active-view .hero-benefits{z-index:4!important}
+@media(max-width:700px){
+ .hero.page-view.active-view{height:590px!important;min-height:590px!important}
+ .hero.page-view.active-view .hero-copy{top:43%!important}
+ .hero.page-view.active-view .hero-benefits{position:absolute!important;bottom:0!important}
+}
+</style></body></html>
