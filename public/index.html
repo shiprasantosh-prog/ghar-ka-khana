@@ -570,6 +570,14 @@ main > .hero.page-view.active-view .hero-photo-credit{display:none!important}
 body:not(.sidebar-expanded) .sidebar .sidebar-brand{display:none!important;}
 body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </style>
+<style>
+/* Final homepage polish: keep the banner artwork aligned and let the story image fill its column. */
+.hero.page-view.active-view{background-size:cover;background-position:58% center}
+#homeStory .story-panel{align-items:stretch}
+#homeStory .story-photo{height:100%;min-height:320px;align-self:stretch;background-position:center;background-size:cover}
+#homeStory .story-more[open] summary{margin-bottom:8px}
+@media(max-width:700px){#homeStory .story-photo{height:240px;min-height:240px}}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -767,4 +775,16 @@ function closeCart(){document.getElementById("overlay").classList.remove("show")
 document.getElementById("orderForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing your order.";return}const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity})),button=e.target.querySelector('button[type="submit"]');button.disabled=true;button.textContent="Placing order…";try{const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||""})});const success=document.getElementById("success");success.textContent=`Thank you, ${currentUser.name}! Your order #GKK-${String(order.id).padStart(4,"0")} has been sent to the kitchen.`;success.classList.add("show");cart={};updateCart();e.target.reset();await loadMyOrders()}catch(err){const success=document.getElementById("success");success.textContent=err.message;success.classList.add("show")}finally{button.disabled=false;button.textContent="Place order"}});
 document.getElementById("customerMenuSearch").addEventListener("input",e=>{menuSearchQuery=e.target.value;renderMenu()});
 loadPublicReviews();checkSession();loadCustomerMenu().catch(err=>{document.getElementById("menuGrid").innerHTML='<p class="empty">We could not load the menu right now. Please refresh the page.</p>';console.error(err)});
+
+/* Keep the story disclosure button label in sync with its expanded state. */
+document.querySelectorAll("#homeStory .story-more").forEach((details) => {
+  const summary = details.querySelector("summary");
+  if (!summary) return;
+  const label = () => {
+    const textNode = Array.from(summary.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.textContent = details.open ? "Read Less " : "Read More ";
+  };
+  label();
+  details.addEventListener("toggle", label);
+});
 </script></body></html>
