@@ -839,4 +839,13 @@ loadPublicReviews();checkSession();loadCustomerMenu().catch(err=>{document.getEl
 
 /* Place the story toggle after all expanded paragraphs. */
 function toggleStoryMore(){const more=document.getElementById("storyMore"),button=document.getElementById("storyToggle");if(!more||!button)return;const expanded=more.hidden;more.hidden=!expanded;button.setAttribute("aria-expanded",String(expanded));button.innerHTML=expanded?'Read Less <span aria-hidden="true">⌃</span>':'Read More <span aria-hidden="true">⌄</span>';}
-</script></body></html>
+</script><style id="why-leaf-final">
+/* Larger botanical corner flourishes, scaled to match the supplied reference. */
+main > .home-why{position:relative!important;isolation:isolate!important;overflow:hidden!important}
+main > .home-why:before,main > .home-why:after{content:"❧"!important;position:absolute!important;display:block!important;bottom:-66px!important;font-family:Georgia,serif!important;font-size:360px!important;line-height:1!important;color:#a6bf8b!important;opacity:.68!important;pointer-events:none!important;z-index:0!important}
+main > .home-why:before{left:-8px!important;right:auto!important;transform:rotate(-35deg) scale(1.08)!important;transform-origin:bottom left!important}
+main > .home-why:after{right:-8px!important;left:auto!important;transform:scaleX(-1) rotate(-35deg) scale(1.08)!important;transform-origin:bottom right!important}
+main > .home-why .section-head,main > .home-why .why-grid{position:relative!important;z-index:1!important}
+@media(max-width:700px){main > .home-why:before,main > .home-why:after{font-size:245px!important;bottom:-45px!important}}
+</style>
+</body></html>
