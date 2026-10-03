@@ -102,6 +102,7 @@ async function initializeDatabase() {
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_slot TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER NOT NULL DEFAULT 0");
   await pool.query("CREATE TABLE IF NOT EXISTS promo_codes (id SERIAL PRIMARY KEY, code TEXT NOT NULL UNIQUE, customer_phone TEXT NOT NULL DEFAULT '', discount_type TEXT NOT NULL CHECK (discount_type IN ('percent','fixed')), discount_value INTEGER NOT NULL CHECK (discount_value > 0), minimum_order INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, valid_from DATE NOT NULL DEFAULT CURRENT_DATE, valid_until DATE NOT NULL DEFAULT CURRENT_DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
@@ -829,7 +830,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,promo_code,discount) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[req.user.id,subtotal-discount,address,notes,scheduledDate,appliedCode,discount]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,delivery_slot,promo_code,discount) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",[req.user.id,subtotal-discount,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount]);
     orderId=result.rows[0].id;
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
     await client.query("COMMIT");
