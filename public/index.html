@@ -161,6 +161,39 @@ header{background:rgba(251,248,239,.98)!important}.navlinks a{color:#203b2e!impo
 /* Render every home section immediately on first paint; menu API must not gate the homepage. */
 body:not(.showing-nonhome) .page-view.home-section.active-view{display:block}
 </style>
+<style>
+/* Global palette matched to the approved cream, forest-green and muted-gold reference */
+:root{--bg:#f8f5e9;--panel:#fffdf7;--panel2:#f1efdf;--gold:#b98a32;--gold2:#a77b28;--cream:#183d2e;--muted:#59665d;--line:#e5d8b7;--green:#477b58}
+body{background:#f8f5e9!important;color:#183d2e!important}
+header{background:#f8f5e9f2!important;border-bottom:1px solid #e9dfc9!important}
+.navlinks a{color:#183d2e!important}
+.brand,.logo-name{color:#15533b!important}
+.brand small,.logo-tag{color:#ad812e!important}
+.btn{background:#15533b!important;border-color:#15533b!important;color:#fff!important}
+.btn.ghost{background:transparent!important;color:#15533b!important;border-color:#15533b!important}
+.card{background:#fffdf7!important;border-color:#e9dfc9!important;color:#183d2e!important}
+.card h3,.section-head h2{color:#15533b!important}
+.card p,.section-head p{color:#59665d!important}
+.price,.tag{color:#a77b28!important}
+.chip{background:#f0eedf!important;border-color:#ded4b9!important;color:#183d2e!important}
+.chip.active{background:#15533b!important;border-color:#15533b!important;color:#fff!important}
+footer{background:#f5f1e4!important;border-color:#e9dfc9!important;color:#59665d!important}
+.sidebar{background:#f5f4e9!important;border-color:#dfe4d5!important;box-shadow:5px 0 20px #23432a0a!important}
+.sidebar-toggle{background:#e9eddf!important;border-color:#d6dfd0!important;color:#15533b!important}
+.side-links a,.side-links button{color:#183d2e!important}
+.side-links a:hover,.side-links button:hover,.side-links a:focus-visible{background:#e5ecd9!important;color:#15533b!important}
+.side-links button b{background:#15533b!important;color:#fff!important}
+.logo{border-color:#dfe4d5!important}
+.drawer{background:#fffdf7!important;color:#183d2e!important;border-color:#e5d8b7!important}
+.drawer-head,.cart-line{border-color:#e5d8b7!important}
+.close{color:#183d2e!important}
+.qty button{background:#f0eedf!important;color:#15533b!important;border-color:#d9d0b9!important}
+.total{color:#15533b!important}
+.field label{color:#59665d!important}
+.field input,.field textarea{background:#fff!important;border-color:#d9d0b9!important;color:#183d2e!important}
+.add{border-color:#15533b!important;color:#15533b!important}
+.add:hover{background:#15533b!important;color:#fff!important}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -182,16 +215,7 @@ body:not(.showing-nonhome) .page-view.home-section.active-view{display:block}
 <div class="hero-photo-credit" aria-hidden="true">Freshly<br>Prepared<br>Homemade<br>Delicious <span>♡</span></div>
 <div class="hero-benefits"><span><b>♧</b> Fresh Ingredients</span><span><b>♡</b> Homemade Taste</span><span><b>♜</b> Hygienic Preparation</span></div>
 </section>
-<section class="wrap page-view active-view home-section home-category-section" id="homeCategories"><div class="home-category-grid">
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=85" alt="Indian breakfast"><span>Breakfast</span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=85" alt="Indian main course"><span>Main Course<small>(Gravy, Dry, Daal, Breads, Rice & Biryani)</small></span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=600&q=85" alt="Chinese food"><span>Chinese</span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=600&q=85" alt="Indian parathas"><span>Parathas</span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=600&q=85" alt="Indian snacks"><span>Snacks</span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=85" alt="Healthy salad"><span>Healthy Salads</span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=85" alt="Indian sweets"><span>Sweets & Desserts</span></button>
-<button class="home-category" onclick="showPage('menu')"><img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1553909489-cd47e0ef937f?auto=format&fit=crop&w=600&q=85" alt="Beverage"><span>Beverages</span></button>
-</div></section>
+
 <section class="wrap page-view active-view home-section home-why" id="homeWhy"><div class="section-head"><div><div class="eyebrow">Made with care, every day</div><h2>Why People Choose Us</h2></div></div><div class="why-grid"><article><span class="why-icon">♧</span><h3>Fresh Ingredients</h3><p>Quality ingredients, always.</p></article><article><span class="why-icon">♧</span><h3>Hygienic Preparation</h3><p>Clean and safe kitchen practices.</p></article><article><span class="why-icon">⌂</span><h3>Homemade Taste</h3><p>Just like home.</p></article><article><span class="why-icon">♧</span><h3>Timely Delivery</h3><p>Hot and fresh to your doorstep.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Popular on Our Menu</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('menu')">View Full Menu</button></div></section>
 <section class="wrap page-view active-view home-section" id="homeHow"><div class="section-head"><div><div class="eyebrow">Easy as 1, 2, 3</div><h2>How Ordering Works</h2></div><p>Simple, and ready on time.</p></div><div class="steps"><article class="card" style="padding:24px"><span class="step-number">01</span><h3>Pick your meal</h3><p>Choose from our menu and add your favourites to your basket.</p></article><article class="card" style="padding:24px"><span class="step-number">02</span><h3>We cook it fresh</h3><p>Every meal is prepared with care in small batches, after your order.</p></article><article class="card" style="padding:24px"><span class="step-number">03</span><h3>Delivered to your door</h3><p>Your food is packed carefully and sent your way, ready to enjoy.</p></article></div></section>
