@@ -540,6 +540,23 @@ footer{border-color:#E5DCC8!important;color:#656457!important}
 .story-more summary{border-color:#1F5A3A!important;color:#1F5A3A!important}
 .whatsapp-link,.whatsapp-cta{background:#1F5A3A!important;border-color:#1F5A3A!important}
 @media(max-width:900px){.sidebar,body.sidebar-expanded .sidebar{background:#FBF6EA!important;border-color:#E5DCC8!important}}
+
+
+/* Hero image framing correction: preserve the complete handwritten tagline at the top. */
+@media (min-width:701px){
+  main > .hero.page-view.active-view{
+    background-position:right top!important;
+    background-size:cover!important;
+  }
+}
+@media (max-width:700px){
+  main > .hero.page-view.active-view{
+    background-position: right top!important;
+    background-size:auto 100%!important;
+    background-repeat:no-repeat!important;
+  }
+}
+main > .hero.page-view.active-view .hero-photo-credit{display:none!important}
 </style>
 </head>
 <body>
