@@ -109,6 +109,7 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS customer_phone TEXT NOT NULL DEFAULT ''");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS valid_from DATE NOT NULL DEFAULT CURRENT_DATE");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS valid_until DATE NOT NULL DEFAULT CURRENT_DATE");
+  await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS excluded_menu_ids INTEGER[] NOT NULL DEFAULT ARRAY[]::INTEGER[]");
   await pool.query("CREATE TABLE IF NOT EXISTS delivery_slots (id SERIAL PRIMARY KEY, slot_label TEXT NOT NULL UNIQUE, active BOOLEAN NOT NULL DEFAULT TRUE)");
   await pool.query("INSERT INTO delivery_slots (slot_label) VALUES ('12:00 PM - 1:00 PM'),('1:00 PM - 2:00 PM'),('2:00 PM - 3:00 PM'),('6:00 PM - 7:00 PM'),('7:00 PM - 8:00 PM'),('8:00 PM - 9:00 PM') ON CONFLICT (slot_label) DO NOTHING");
 
@@ -807,8 +808,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   if(orderMode==="scheduled"){
     scheduledDate=new Date(scheduledAt);
     if(!scheduledAt||Number.isNaN(scheduledDate.getTime())||scheduledDate<=new Date())return res.status(400).json({error:"Choose a future delivery date and time."});
-    const slot=await pool.query("SELECT id FROM delivery_slots WHERE active=TRUE AND slot_label=$1",[String(deliverySlot)]);
-    if(!slot.rowCount)return res.status(400).json({error:"Choose an available delivery slot."});
+
   }else if(orderMode!=="now")return res.status(400).json({error:"Choose Order Now or Prior Order."});
   let discount=0,appliedCode="";
   if(String(promoCode).trim()){
@@ -823,8 +823,11 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     const normalizedPhone=normalizePromoPhone(customer.rows[0]?.phone);
     if(normalizedPhone!==normalizePromoPhone(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
     if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});
-    discount=code.discount_type==="percent"?Math.floor(subtotal*code.discount_value/100):code.discount_value;
-    discount=Math.min(subtotal,discount);appliedCode=code.code;
+    const excludedIds=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];
+    const eligibleSubtotal=validated.filter(item=>!excludedIds.includes(Number(item.id))).reduce((sum,item)=>sum+item.price*item.quantity,0);
+    if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
+    discount=code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value;
+    discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;
   }
   const kitchenStatus=await getKitchenStatus();
   if(!kitchenStatus.isOpen)return res.status(503).json({error:"Our kitchen is currently closed. Please check back later."});
@@ -841,18 +844,31 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   res.status(201).json(order);
 }));
 
+
+app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
+ const {items,promoCode}=req.body||{};
+ if(!Array.isArray(items)||!items.length||!String(promoCode||"").trim())return res.status(400).json({error:"Enter a promo code and add items to your basket."});
+ const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);const code=result.rows[0];
+ if(!code||!code.active)return res.status(400).json({error:"Invalid Promo Code."});
+ const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});if(today<String(code.valid_from).slice(0,10))return res.status(400).json({error:"Promo code is not valid yet."});if(today>String(code.valid_until).slice(0,10))return res.status(400).json({error:"Promo code expired."});
+ const user=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);const normalize=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");if(normalize(user.rows[0]?.phone)!==normalize(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
+ let subtotal=0,eligibleSubtotal=0;const excluded=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];const excludedItems=[];
+ for(const item of items){const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);const dish=r.rows[0];if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});const amount=dish.price*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;}
+ if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
+ const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,total:subtotal-discount,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
+}));
+
 app.get("/api/checkout/options", asyncRoute(async(req,res)=>{
-  const r=await pool.query("SELECT slot_label FROM delivery_slots WHERE active=TRUE ORDER BY id");
-  res.json({slots:r.rows.map(x=>x.slot_label)});
+  res.json({});
 }));
 
 app.get("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("SELECT * FROM promo_codes ORDER BY created_at DESC");res.json(r.rows)}));
 app.post("/api/admin/promo-codes",auth,admin,asyncRoute(async(req,res)=>{
- const b=req.body||{},phone=String(b.customerPhone||"").replace(/\D/g,""),type=b.discountType,value=Number(b.discountValue),minimum=Number(b.minimumOrder||0),from=b.validFrom,until=b.validUntil;
- if(phone.length<10||phone.length>15||!["percent","fixed"].includes(type)||!Number.isInteger(value)||value<1||minimum<0||(type==="percent"&&value>100)||!/^\d{4}-\d{2}-\d{2}$/.test(from||"")||!/^\d{4}-\d{2}-\d{2}$/.test(until||"")||until<from)return res.status(400).json({error:"Enter a valid customer mobile, discount and valid-from/valid-until dates."});
+ const b=req.body||{},phone=String(b.customerPhone||"").replace(/\D/g,""),type=b.discountType,value=Number(b.discountValue),minimum=Number(b.minimumOrder||0),from=b.validFrom,until=b.validUntil,excludedIds=Array.isArray(b.excludedMenuIds)?[...new Set(b.excludedMenuIds.map(Number))]:[];
+ if(excludedIds.some(id=>!Number.isInteger(id)||id<1)||phone.length<10||phone.length>15||!["percent","fixed"].includes(type)||!Number.isInteger(value)||value<1||minimum<0||(type==="percent"&&value>100)||!/^\d{4}-\d{2}-\d{2}$/.test(from||"")||!/^\d{4}-\d{2}-\d{2}$/.test(until||"")||until<from)return res.status(400).json({error:"Enter a valid customer mobile, discount and valid-from/valid-until dates."});
  const code=String(b.code||("GKK"+Math.random().toString(36).slice(2,8).toUpperCase())).trim().toUpperCase();
  if(!/^[A-Z0-9_-]{4,30}$/.test(code))return res.status(400).json({error:"Promo code must be 4–30 letters, numbers, hyphens or underscores."});
- try{const r=await pool.query("INSERT INTO promo_codes(code,customer_phone,discount_type,discount_value,minimum_order,valid_from,valid_until,active) VALUES($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING *",[code,phone,type,value,minimum,from,until]);res.status(201).json(r.rows[0]);}
+ try{const r=await pool.query("INSERT INTO promo_codes(code,customer_phone,discount_type,discount_value,minimum_order,valid_from,valid_until,excluded_menu_ids,active) VALUES($1,$2,$3,$4,$5,$6,$7,$8,TRUE) RETURNING *",[code,phone,type,value,minimum,from,until,excludedIds]);res.status(201).json(r.rows[0]);}
  catch(e){if(e.code==="23505")return res.status(409).json({error:"Promo code already exists. Generate another code."});throw e;}
 }));
 app.patch("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("UPDATE promo_codes SET active=$1 WHERE id=$2 RETURNING *",[Boolean(req.body.active),Number(req.params.id)]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json(r.rows[0])}));
