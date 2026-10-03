@@ -20,7 +20,7 @@ body{padding-left:76px;transition:padding-left .25s ease}
 .sidebar-toggle{display:flex;align-items:center;justify-content:center;width:54px;height:48px;margin:0 auto 12px;background:#292319;border:1px solid #514126;border-radius:9px;color:var(--gold2);font-size:25px;cursor:pointer;flex-shrink:0}
 .sidebar-toggle:hover{background:#3c2e16}
 .logo{display:none;flex-direction:column;align-items:center;text-decoration:none;color:var(--cream);padding:0 5px 25px;border-bottom:1px solid #514126}
-.logo svg{width:150px;height:125px}.logo-name{font:bold 27px Georgia,serif;white-space:nowrap;color:var(--cream);margin-top:-3px}.logo-tag{font-size:10px;letter-spacing:2.5px;color:var(--gold2);margin-top:7px}
+.logo svg{width:100px;height:74px}.sidebar-brand{margin-bottom:14px}.logo-name{font:bold 27px Georgia,serif;white-space:nowrap;color:var(--cream);margin-top:-3px}.logo-tag{font-size:10px;letter-spacing:2.5px;color:var(--gold2);margin-top:7px}
 .side-links{display:flex;flex-direction:column;gap:9px;margin-top:8px}
 .side-links a,.side-links button{position:relative;display:flex;align-items:center;gap:15px;text-decoration:none;color:var(--cream);background:transparent;border:0;border-radius:8px;padding:13px 12px;text-align:left;font-size:15px;min-height:48px;white-space:nowrap}
 .side-links a:hover,.side-links button:hover,.side-links a:focus-visible{background:#3c2e16;color:var(--gold2)}
@@ -448,8 +448,6 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
   }
   .why-grid { grid-template-columns:repeat(4,minmax(0,1fr))!important; }
   .why-grid article { min-width:0!important; }
-  /* The earlier request was to remove the Our Story panel from the homepage. */
-  #homeStory { display:none!important; }
 }
 @media (max-width:900px) {
   body, body.sidebar-expanded { padding-left:0!important; }
@@ -464,7 +462,6 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
   main > .hero.page-view.active-view .hero-copy h1 { font-size:clamp(44px,8vw,62px)!important; }
   .home-category-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
   main > .home-why { margin:0 8px 14px!important; width:calc(100% - 16px)!important; }
-  #homeStory { display:none!important; }
 }
 </style>
 
@@ -547,7 +544,9 @@ footer{border-color:#E5DCC8!important;color:#656457!important}
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
 <aside class="sidebar" aria-label="Main navigation">
 <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Expand navigation" aria-expanded="false" onclick="toggleSidebar()">☰</button>
-
+<a class="logo sidebar-brand" href="#story" onclick="showPage('story');return false" aria-label="Ghar ka Khana home">
+<svg viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana house and cooking pot logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg>
+<span class="logo-name">Ghar ka Khana</span><span class="logo-tag">Homemade with love</span></a>
 <nav class="side-links">
 <a href="#story" onclick="showPage(&quot;story&quot;);return false" title="Home"><span class="nav-icon">⌂</span><span class="nav-label">Home</span></a>
 <a href="#menu" onclick="showPage(&quot;menu&quot;);return false" title="Order Food"><span class="nav-icon">♨</span><span class="nav-label">Order Food</span></a>
