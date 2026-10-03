@@ -246,6 +246,46 @@ footer{background:#f3f0e3!important;border-top:1px solid #e8dfca!important}
 #customerMenuSearch,.field input,#customerMenuSearch:focus{background:#fffdf7!important;color:#183d2e!important;border-color:#d9d0b9!important}
 #kitchenClosedBanner{background:#fff0e6!important;color:#8a3d24!important;border-color:#e8c6b1!important}
 </style>
+<style id="homepage-reference-final">
+/* Full home-page layout correction: align to supplied reference */
+:root{--bg:#f8f5e9;--panel:#fffdf7;--panel2:#f3f0e3;--gold:#b58a3b;--gold2:#a77b2b;--cream:#183d2e;--muted:#59665d;--line:#e8dfca;--green:#104d37}
+html,body{background:#f8f5e9!important;color:#183d2e!important}
+body{font-family:Inter,Arial,sans-serif}
+main{margin-left:76px!important;min-width:0;background:#f8f5e9!important}
+body.sidebar-expanded main{margin-left:270px!important}
+.sidebar{width:76px!important;background:#f5f4e9!important}
+body.sidebar-expanded .sidebar{width:270px!important;background:#f5f4e9!important}
+.hero.page-view.active-view{height:clamp(330px,27vw,430px)!important;min-height:330px!important;margin:0!important;padding:0!important;background-color:#f7f1df!important;background-image:url('https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=2000&q=85')!important;background-position:center 52%!important;background-size:cover!important}
+.hero.page-view.active-view:before{background:linear-gradient(90deg,rgba(251,247,232,.99) 0%,rgba(251,247,232,.97) 35%,rgba(251,247,232,.72) 48%,rgba(251,247,232,.08) 75%,rgba(251,247,232,0) 100%)!important}
+.hero-copy{left:clamp(34px,7.2vw,115px)!important;width:min(46%,570px)!important;top:50%!important}
+.hero-copy h1{font-size:clamp(48px,5vw,76px)!important;line-height:1.02!important;color:#104d37!important}
+.hero-copy h1 em{color:#104d37!important}
+.hero-copy p{color:#3f4942!important;font-size:17px!important;line-height:1.6!important}
+.hero-copy .eyebrow{color:#477b58!important}
+.hero-copy .btn{background:#104d37!important;border-color:#104d37!important;color:white!important;border-radius:13px!important;padding:13px 25px!important}
+.hero-photo-credit{right:2.5%!important;top:24px!important;color:#183d2e!important}
+.hero-benefits{background:#f8f5e9!important;color:#365143!important}
+.home-category-section{background:#f8f5e9!important;padding:18px 20px!important}
+.home-category-grid{grid-template-columns:repeat(8,minmax(0,1fr))!important;gap:12px!important}
+.home-category{background:#fffdf7!important;border:1px solid #e6d6b0!important;color:#173f2e!important;border-radius:10px!important;box-shadow:none!important;min-height:0!important}
+.home-category img{height:clamp(90px,9vw,145px)!important;object-fit:cover!important}
+.home-why{background:#f7f5e9!important;border:1px solid #eeebdc!important;border-radius:15px!important;margin:0 12px 12px!important;padding:18px 22px 24px!important}
+.home-why .section-head h2{font:30px Georgia,serif!important;color:#104d37!important}
+.why-grid article{border-color:#e0e4d7!important}
+.why-icon{background:#e1eacd!important;color:#104d37!important}
+.why-grid h3{color:#104d37!important}
+.why-grid p{color:#59665d!important}
+#homePopular,#homeHow,#homeStory,#homeReviewPreview{background:#f8f5e9!important}
+#homePopular .section-head h2,#homeHow .section-head h2,#homeStory h2,#homeReviewPreview .section-head h2{color:#104d37!important}
+.card,.story-panel{background:#fffdf7!important;border-color:#e8dfca!important;color:#183d2e!important}
+.btn,.btn:not(.ghost){background:#104d37!important;border-color:#104d37!important;color:#fff!important}
+.btn.ghost{background:transparent!important;border-color:#104d37!important;color:#104d37!important}
+.chip{background:#f1efdf!important;border-color:#e2d8bd!important;color:#183d2e!important}
+.chip.active{background:#104d37!important;color:#fff!important;border-color:#104d37!important}
+footer{background:#f3f0e3!important;color:#59665d!important;border-color:#e8dfca!important}
+@media(max-width:1100px){.home-category-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media(max-width:700px){main,body.sidebar-expanded main{margin-left:0!important}.hero.page-view.active-view{height:460px!important;background-position:62% center!important}.hero.page-view.active-view:before{background:linear-gradient(90deg,rgba(251,247,232,.98),rgba(251,247,232,.84) 70%,rgba(251,247,232,.3))!important}.hero-copy{left:22px!important;width:calc(100% - 44px)!important;top:43%!important}.home-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
