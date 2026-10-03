@@ -609,6 +609,27 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 @media(max-width:650px){#popularGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#popularGrid .food-img{height:125px}}
 @media(max-width:390px){#popularGrid{grid-template-columns:1fr}}
 </style>
+<style>
+/* Match the compact "Why People Choose Us" reference layout. */
+#homeWhy.home-why{position:relative;min-height:0;height:auto;padding:14px 28px 18px;margin:10px 8px 16px;border-radius:16px;background:#f7f5e9;border:1px solid #e8e5d5;overflow:hidden}
+#homeWhy .section-head{margin:0 0 8px!important;padding:0;justify-content:center;text-align:center}
+#homeWhy .section-head h2{font-size:clamp(25px,2.2vw,38px);line-height:1.12;margin:0;color:#124b36}
+#homeWhy .section-head .eyebrow{display:none}
+#homeWhy .why-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+#homeWhy .why-grid article{padding:4px 14px 2px;border-right:1px solid #dedfce;border-bottom:0!important}
+#homeWhy .why-grid article:last-child{border-right:0}
+#homeWhy .why-icon{width:46px;height:46px;font-size:23px}
+#homeWhy .why-grid h3{font-size:17px;line-height:1.2;margin:8px 0 4px;color:#174c37}
+#homeWhy .why-grid p{font-size:13px;line-height:1.35;color:#50584e}
+@media(max-width:700px){
+ #homeWhy.home-why{padding:16px 12px;margin:10px 8px}
+ #homeWhy .why-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #homeWhy .why-grid article{padding:12px 6px;border-bottom:1px solid #dedfce!important}
+ #homeWhy .why-grid article:nth-child(2){border-right:0}
+ #homeWhy .why-grid article:nth-child(n+3){border-bottom:0!important}
+ #homeWhy .why-grid h3{font-size:15px}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
