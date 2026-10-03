@@ -874,4 +874,29 @@ function toggleStoryMore(){const more=document.getElementById("storyMore"),butto
 .social-icon.swiggy span{font-family:Arial,sans-serif;font-size:15px;font-weight:800;letter-spacing:-.8px;color:#f07824}
 .social-icon.zomato span{font-family:Arial,sans-serif;font-size:15px;font-weight:900;font-style:italic;letter-spacing:-1px;color:#d83245}
 @media(max-width:900px){.social-icon.swiggy,.social-icon.zomato{width:66px}}
-</style></body></html>
+</style>
+<style id="hero-benefit-icons-and-copy-alignment">
+/* Restore the circular illustrated badges used in the Why People Choose Us section. */
+main > .hero.page-view.active-view .hero-benefits span{display:flex!important;align-items:center!important;gap:10px!important}
+main > .hero.page-view.active-view .hero-benefits b{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 42px!important;width:42px!important;height:42px!important;
+  border-radius:50%!important;background:#e3ead3!important;color:#1f5a3a!important;
+  font-size:0!important;line-height:0!important
+}
+main > .hero.page-view.active-view .hero-benefits b svg{
+  display:block!important;width:26px!important;height:26px!important;
+  max-width:26px!important;max-height:26px!important;overflow:visible!important
+}
+/* Bring the hero copy a little closer to the left edge without crowding the sidebar. */
+@media(min-width:901px){
+  main > .hero.page-view.active-view .hero-copy{left:clamp(28px,5.5vw,85px)!important}
+  main > .hero.page-view.active-view .hero-benefits{padding-left:clamp(28px,5.5vw,85px)!important}
+}
+@media(max-width:900px){
+  main > .hero.page-view.active-view .hero-benefits b{flex-basis:32px!important;width:32px!important;height:32px!important}
+  main > .hero.page-view.active-view .hero-benefits b svg{width:21px!important;height:21px!important;max-width:21px!important;max-height:21px!important}
+}
+</style>
+
+</body></html>
