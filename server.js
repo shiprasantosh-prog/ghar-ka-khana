@@ -1091,8 +1091,9 @@ async function notifyWhatsApp(order) {
     })
     .join("; ") || "No items found";
 
-  const totalAmount = `Rs. ${Number(order.total) || 0}`;
-  const deliveryAddress = cleanWhatsAppText(order.address);
+  const totalAmount = `Rs. ${Number(order.total) || 0}${Number(order.discount)>0 ? ` (saved Rs. ${Number(order.discount)} with ${order.promo_code})` : ""}`;
+  const scheduledInfo = order.scheduled_at ? `Scheduled: ${new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})}${order.delivery_slot ? " ("+order.delivery_slot+")" : ""}. ` : "";
+  const deliveryAddress = cleanWhatsAppText(scheduledInfo + order.address);
 
   const response = await fetch(
     `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
