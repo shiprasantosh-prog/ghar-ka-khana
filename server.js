@@ -907,6 +907,15 @@ app.get("/api/delivery-area",asyncRoute(async(req,res)=>{const r=await pool.quer
 app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim();if(address.length<8)return res.status(400).json({error:"Please enter the complete delivery address."});
  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
+ // Honor an explicitly selected map pin rather than re-geocoding the address text.
+ const suppliedLat=req.body.latitude,suppliedLng=req.body.longitude;
+ if(suppliedLat!==undefined||suppliedLng!==undefined){
+  const latitude=Number(suppliedLat),longitude=Number(suppliedLng);
+  if(suppliedLat===undefined||suppliedLng===undefined||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Please select a valid point on the map."});
+  const toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+  const isBrigade7Gardens=address.toLowerCase().includes("brigade 7 gardens"),deliveryFee=isBrigade7Gardens?0:(distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0);
+  return res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:"Customer-selected map pin"});
+ }
  const normalized=address.replace(/\bBangalore\b/ig,"Bengaluru").replace(/\bBengaluru\s*[-,]?\s*(\d{6})\b/ig,"Bengaluru $1").replace(/\s+/g," ").trim();
  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
  const queries=[...new Set([normalized,...[1,5,4,3,2].map(n=>parts.slice(-n).join(", "))].filter(x=>x.length>20).map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\s*)+/g,", ").trim()))];
