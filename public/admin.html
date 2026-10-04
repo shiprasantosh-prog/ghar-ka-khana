@@ -134,7 +134,7 @@ $('#menuList').addEventListener('click',async e=>{
   if(!d){alert('This dish is no longer in the current menu list. Please click Refresh and try again.');await loadMenu();return;}
   if(b.dataset.edit!==undefined){
    for(const k of ['id','name','category','price','image','description'])$('#dishForm [name='+k+']').value=d[k]??'';
-   $('#formTitle').textContent='Edit dish';$('#saveBtn').textContent='Update dish';$('#cancelEdit').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
+   $('#formTitle').textContent='Edit dish';$('#saveBtn').textContent='Update dish';$('#cancelEdit').classList.remove('hidden');document.querySelectorAll('.admin-nav [data-panel]').forEach(nav=>nav.classList.toggle('active',nav.dataset.panel==='dishPanel'));document.querySelectorAll('.admin-panel').forEach(panel=>panel.classList.toggle('active',panel.id==='dishPanel'));window.scrollTo({top:0,behavior:'smooth'});
   }else if(b.dataset.toggle!==undefined){
    await api('/api/menu/'+encodeURIComponent(d.id),{method:'PATCH',body:JSON.stringify({available:!d.available})});await loadMenu();await loadSpecialChoices();
   }else if(b.dataset.archive!==undefined){
