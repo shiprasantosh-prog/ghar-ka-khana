@@ -836,7 +836,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,delivery_slot,promo_code,discount) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",[req.user.id,subtotal-discount,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,delivery_slot,promo_code,discount) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",[req.user.id,subtotal-discount+5,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount]);
     orderId=result.rows[0].id;
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
     await client.query("COMMIT");
@@ -857,7 +857,7 @@ app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  let subtotal=0,eligibleSubtotal=0;const excluded=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];const excludedItems=[];
  for(const item of items){const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);const dish=r.rows[0];if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});const amount=dish.price*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;}
  if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
- const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,total:subtotal-discount,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
+ const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,handlingFee:5,total:subtotal-discount+5,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
 }));
 
 app.get("/api/checkout/options", asyncRoute(async(req,res)=>{
@@ -1116,7 +1116,7 @@ async function notifyWhatsApp(order) {
     })
     .join("; ") || "No items found";
 
-  const totalAmount = `Rs. ${Number(order.total) || 0}${Number(order.discount)>0 ? ` (saved Rs. ${Number(order.discount)} with ${order.promo_code})` : ""}`;
+  const totalAmount = `Items subtotal Rs. ${(Number(order.total)||0)+5+(Number(order.discount)||0)}; Handling & processing fee Rs. 5; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
   const scheduledInfo = order.scheduled_at ? `Scheduled: ${new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})}${order.delivery_slot ? " ("+order.delivery_slot+")" : ""}. ` : "";
   const deliveryAddress = cleanWhatsAppText(scheduledInfo + order.address);
 
