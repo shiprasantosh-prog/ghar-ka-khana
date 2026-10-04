@@ -898,11 +898,36 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim();if(address.length<8)return res.status(400).json({error:"Please enter the complete delivery address."});
  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
  const query=address+", Bengaluru, Karnataka, India";
- let geoResponse;try{geoResponse=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query),{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.0 (customer delivery address lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});}catch(e){return res.status(502).json({error:"We could not locate this address right now. Please check the address and try again."});}
- if(!geoResponse.ok)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
- const matches=await geoResponse.json();if(!Array.isArray(matches)||!matches.length)return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
- const latitude=Number(matches[0].lat),longitude=Number(matches[0].lon),toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
- res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,matchedAddress:matches[0].display_name});
+ let match=null,providerFailed=false;
+ // Try Nominatim first. If it is unavailable or rate-limited, fall back to Photon.
+ try{
+  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query);
+  const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.1","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
+  if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match={latitude:Number(results[0].lat),longitude:Number(results[0].lon),displayName:results[0].display_name};}
+  else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
+ }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
+ if(!match){
+  try{
+   const url="https://photon.komoot.io/api/?limit=1&lang=en&q="+encodeURIComponent(query);
+   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.1"},signal:AbortSignal.timeout(10000)});
+   if(!response.ok){providerFailed=true;console.warn("[delivery-area] Photon returned HTTP",response.status);}
+   else{
+    const data=await response.json(),feature=data.features&&data.features[0];
+    if(feature&&feature.geometry&&Array.isArray(feature.geometry.coordinates)){
+     const props=feature.properties||{},parts=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((part,index,array)=>part&&array.indexOf(part)===index);
+     match={longitude:Number(feature.geometry.coordinates[0]),latitude:Number(feature.geometry.coordinates[1]),displayName:parts.join(", ")||query};
+    }
+   }
+  }catch(error){providerFailed=true;console.error("[delivery-area] Photon fallback failed:",error.message);}
+ }
+ if(!match){
+  if(providerFailed)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
+  return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
+ }
+ const {latitude,longitude,displayName}=match;
+ if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});
+ const toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+ res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,matchedAddress:displayName});
 }));
 app.put("/api/admin/delivery-area",auth,admin,asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim(),latitude=Number(req.body.latitude),longitude=Number(req.body.longitude),radiusKm=Number(req.body.radiusKm),graceMeters=Number(req.body.graceMeters);
