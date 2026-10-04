@@ -802,6 +802,15 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
   if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
+  const customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
+  if(!Number.isFinite(customerLat)||customerLat < -90||customerLat>90||!Number.isFinite(customerLng)||customerLng < -180||customerLng>180)return res.status(400).json({error:"Please verify your delivery location using the Check delivery area button."});
+  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");
+  const area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured yet."});
+  const toRad=degrees=>degrees*Math.PI/180,earthRadiusKm=6371.0088,dLat=toRad(customerLat-Number(area.latitude)),dLng=toRad(customerLng-Number(area.longitude));
+  const haversine=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(customerLat))*Math.sin(dLng/2)**2;
+  const distanceKm=earthRadiusKm*2*Math.atan2(Math.sqrt(haversine),Math.sqrt(1-haversine));
+  const maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+  if(distanceKm>maxDistanceKm)return res.status(400).json({error:"Sorry, your location is "+distanceKm.toFixed(1)+" km away. We currently deliver up to "+maxDistanceKm.toFixed(1)+" km from our kitchen."});
   let subtotal=0; const validated=[];
   for(const item of items){
     const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);
