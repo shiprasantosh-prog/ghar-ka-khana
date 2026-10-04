@@ -101,6 +101,8 @@ async function initializeDatabase() {
 
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_delivery_minutes INTEGER");
+  await pool.query("CREATE TABLE IF NOT EXISTS whatsapp_pending_eta (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_slot TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
