@@ -813,7 +813,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
   if(distanceKm>maxDistanceKm)return res.status(400).json({error:"Sorry, your location is "+distanceKm.toFixed(1)+" km away. We currently deliver up to "+maxDistanceKm.toFixed(1)+" km from our kitchen."});
   let subtotal=0; const validated=[];
-  const deliveryFee=distanceKm>1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;
+  const deliveryFee=distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;
   for(const item of items){
     const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);
     const dish=result.rows[0],quantity=Number(item.quantity);
@@ -936,7 +936,8 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const {latitude,longitude,displayName}=match;
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});
  const toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
- const deliveryFee=distanceKm>1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;\n res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,deliveryFee,matchedAddress:displayName});
+ const deliveryFee=distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;
+  res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:displayName});
 }));
 app.put("/api/admin/delivery-area",auth,admin,asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim(),latitude=Number(req.body.latitude),longitude=Number(req.body.longitude),radiusKm=Number(req.body.radiusKm),graceMeters=Number(req.body.graceMeters);
