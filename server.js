@@ -1628,7 +1628,10 @@ app.get("*", (req, res) =>
 
 // General error handler
 app.use((err, req, res, next) => {
-  console.error("Server error:", err);
+  console.error("Server error:", { method: req.method, path: req.path, code: err.code, message: err.message, stack: err.stack });
+  if (req.path === "/api/addresses" && req.method === "POST") {
+    return res.status(500).json({ error: `Address could not be saved (${err.code || "SERVER_ERROR"}). Please try again; if it repeats, share this code with support.` });
+  }
   res.status(500).json({ error: "Something went wrong. Please try again." });
 });
 
