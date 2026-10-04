@@ -839,7 +839,8 @@ function updateCart(){persistCart();
     const subtotal=entries.reduce((sum,[id,q])=>{const d=dishes.find(x=>String(x.id)===String(id));return sum+(d?.price||0)*q},0);
     document.getElementById("total").textContent=money(subtotal);
     const handlingFee=5,discount=appliedPromo?Number(appliedPromo.discount)||0:0;
-    document.getElementById("handlingFee").textContent=money(handlingFee);\n    document.getElementById("deliveryFee").textContent=money(deliveryFee);
+    document.getElementById("handlingFee").textContent=money(handlingFee); 
+    document.getElementById("deliveryFee").textContent=money(deliveryFee);
     const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=appliedPromo&&discount>0?"flex":"none";
     if(appliedPromo&&discount>0){document.getElementById("promoDiscountLabel").textContent="Promo discount ("+appliedPromo.code+")";document.getElementById("promoDiscountAmount").textContent="−"+money(discount)}
     document.getElementById("payableTotal").textContent=money(Math.max(0,subtotal-discount)+handlingFee+deliveryFee);
