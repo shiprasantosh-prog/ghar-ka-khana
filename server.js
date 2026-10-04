@@ -1,4 +1,58 @@
-
+  const normalized=address.replace(/\\bBangalore\\b/ig,"Bengaluru").replace(/\\bBengaluru\\s*[-,]?\\s*(\\d{6})\\b/ig,"Bengaluru $1").replace(/\\s+/g," ").trim();
+  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
+  const candidates=[normalized,parts.slice(1).join(", "),parts.slice(-5).join(", "),parts.slice(-4).join(", "),parts.slice(-3).join(", "),parts.slice(-2).join(", ")].map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\\s*)+/g,", ").trim());
+  const queries=[...new Set(candidates)].filter(x=>x.length>20);
+  const suppliedLatitude=Number(req.body.latitude),suppliedLongitude=Number(req.body.longitude);
+  const hasCoordinates=Number.isFinite(suppliedLatitude)&&Number.isFinite(suppliedLongitude)&&Math.abs(suppliedLatitude)<=90&&Math.abs(suppliedLongitude)<=180&&req.body.latitude!==""&&req.body.longitude!=="";
+  let match=hasCoordinates?{latitude:suppliedLatitude,longitude:suppliedLongitude,displayName:"Customer's shared GPS location"}:null,providerFailed=false;
+  const pinMatch=normalized.match(/\\b\\d{6}\\b/),pin=pinMatch?pinMatch[0]:"";
+  const tokens=normalized.toLowerCase().replace(/\\b(flat|apartment|apt|floor|block|tower|door|no|number|near|opposite|beside|bengaluru|bangalore|karnataka|india|560\\d{3})\\b/g," ").split(/[^a-z0-9]+/).filter(t=>t.length>2);
+  const scoreCandidate=(props,displayName)=>{
+   const text=[displayName,props?.name,props?.street,props?.district,props?.city,props?.county,props?.state,props?.postcode].filter(Boolean).join(" ").toLowerCase();
+   let score=tokens.reduce((n,t)=>n+(text.includes(t)?2:0),0);
+   if(pin&&String(props?.postcode||"")===pin)score+=30;
+   if(/bengaluru|bangalore/i.test(text))score+=5;
+   if(/karnataka/i.test(text))score+=3;
+   if(pin&&String(props?.postcode||"")&&String(props.postcode)!==pin)score-=25;
+   return score;
+  };
+  if(!match){
+   const found=[];
+   for(const photonQuery of queries){
+    try{
+     const url="https://photon.komoot.io/api/?limit=10&lang=en&lat="+encodeURIComponent(area.latitude)+"&lon="+encodeURIComponent(area.longitude)+"&zoom=12&location_bias_scale=0.2&q="+encodeURIComponent(photonQuery);
+     const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.3"},signal:AbortSignal.timeout(10000)});
+     if(!response.ok){providerFailed=true;console.warn("[delivery-area] Photon returned HTTP",response.status);continue;}
+     const data=await response.json(),features=Array.isArray(data.features)?data.features:[];
+     console.info("[delivery-area] Photon matches for query:",features.length,photonQuery.slice(0,120));
+     for(const feature of features){
+      if(!feature.geometry||!Array.isArray(feature.geometry.coordinates)||feature.geometry.coordinates.length<2)continue;
+      const props=feature.properties||{};
+      if(props.countrycode&&String(props.countrycode).toLowerCase()!=="in")continue;
+      const displayName=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((part,index,array)=>part&&array.indexOf(part)===index).join(", ");
+      found.push({longitude:Number(feature.geometry.coordinates[0]),latitude:Number(feature.geometry.coordinates[1]),displayName:displayName||photonQuery,score:scoreCandidate(props,displayName)});
+     }
+    }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
+   }
+   if(found.length)match=found.sort((a,b)=>b.score-a.score)[0];
+  }
+  if(!match){
+   try{
+    const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=in&q="+encodeURIComponent(normalized+", India");
+    const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.3 (Ghar ka Khana customer delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
+    if(response.ok){
+     const results=await response.json();
+     if(Array.isArray(results)&&results.length){
+      const ranked=results.map(r=>({latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,score:scoreCandidate(r.address||{},r.display_name)})).sort((a,b)=>b.score-a.score);
+      match=ranked[0];
+     }
+    }else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
+   }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
+  }
+  if(!match){
+   if(providerFailed)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
+   return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
+  }
 require("dotenv").config();
 
 const express = require("express");
