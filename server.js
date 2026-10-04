@@ -1292,7 +1292,9 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
       ? "Thank you for choosing us! We hope you enjoy your meal."
       : cancellationReason === "Kitchen Closed"
         ? "Your order has been cancelled — our kitchen is closed. We apologise for the inconvenience."
-        : `Your order has been cancelled because ${(String(cancellationReason || "").startsWith("Out of Stock: ") ? String(cancellationReason).slice("Out of Stock: ".length) : String(cancellationReason || "")) || "an item"} is out of stock. We apologise for the inconvenience.`;
+        : cancellationReason === "Cancelled by owner via WhatsApp"
+          ? "Your order has been cancelled by the kitchen. We apologise for the inconvenience."
+          : `Your order has been cancelled because ${(String(cancellationReason || "").startsWith("Out of Stock: ") ? String(cancellationReason).slice("Out of Stock: ".length) : String(cancellationReason || "")) || "an item"} is out of stock. We apologise for the inconvenience.`;
   // Use the single approved Meta template for both customer status updates.
   const templateName = process.env.WHATSAPP_CUSTOMER_STATUS_TEMPLATE || "ghar_ka_khana_order_update";
   const response = await fetch(
@@ -1471,7 +1473,7 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
           if (!status) continue;
 
           const result = await pool.query(
-            "UPDATE orders SET status = $1 WHERE id = $2 AND status IS DISTINCT FROM $1 RETURNING id",
+            "UPDATE orders SET status = $1, cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN 'Cancelled by owner via WhatsApp' ELSE cancellation_reason END WHERE id = $2 AND status IS DISTINCT FROM $1 RETURNING id",
             [status, orderId]
           );
           const code = `GKK-${String(orderId).padStart(4, "0")}`;
@@ -1485,8 +1487,9 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
           } else {
             // Keep the owner's WhatsApp uncluttered; the live status is visible in My Orders and the owner dashboard.
             console.log(`WhatsApp owner updated order ${orderId} to ${status}`);
-            if (status === "Accepted" || status === "Delivered") {
-              notifyCustomerOrderStatus(orderId, status).catch((error) =>
+            if (status === "Accepted" || status === "Delivered" || status === "Cancelled") {
+              const cancellationReason = status === "Cancelled" ? "Cancelled by owner via WhatsApp" : "";
+              notifyCustomerOrderStatus(orderId, status, cancellationReason).catch((error) =>
                 console.error("Customer status notification error:", error.message)
               );
             }
