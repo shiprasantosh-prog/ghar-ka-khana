@@ -853,8 +853,16 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
   if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
-  const customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
-  if(!Number.isFinite(customerLat)||customerLat < -90||customerLat>90||!Number.isFinite(customerLng)||customerLng < -180||customerLng>180)return res.status(400).json({error:"Please verify your delivery location using the Check delivery area button."});
+  let customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
+  const savedAddressId=Number(req.body.addressId);
+  if(Number.isInteger(savedAddressId)&&savedAddressId>0){
+    const saved=await pool.query("SELECT formatted_address,latitude,longitude FROM customer_addresses WHERE id=$1 AND user_id=$2",[savedAddressId,req.user.id]);
+    if(!saved.rowCount)return res.status(400).json({error:"Please select a saved delivery address."});
+    customerLat=Number(saved.rows[0].latitude);customerLng=Number(saved.rows[0].longitude);
+  }else if(req.body.addressId!==undefined){
+    return res.status(400).json({error:"Please select a valid saved delivery address."});
+  }
+  if(!Number.isFinite(customerLat)||customerLat < -90||customerLat>90||!Number.isFinite(customerLng)||customerLng < -180||customerLng>180)return res.status(400).json({error:"Please select and verify a saved delivery address before placing an order."});
   const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");
   const area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured yet."});
   const toRad=degrees=>degrees*Math.PI/180,earthRadiusKm=6371.0088,dLat=toRad(customerLat-Number(area.latitude)),dLng=toRad(customerLng-Number(area.longitude));
