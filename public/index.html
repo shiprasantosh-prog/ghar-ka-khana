@@ -855,7 +855,7 @@ function openCart(){document.getElementById("overlay").classList.add("show");upd
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
 async function loadSavedAddresses(){
  if(!currentUser){savedAddresses=[];return}
- try{savedAddresses=await api("/api/addresses");renderSavedAddresses();populateCheckoutAddresses()}catch(e){console.error("Could not load saved addresses",e)}
+ try{savedAddresses=await api("/api/addresses");renderSavedAddresses();populateCheckoutAddresses();if(!savedAddresses.length&&document.getElementById("savedAddressForm"))showAddressEditor()}catch(e){console.error("Could not load saved addresses",e)}
 }
 function renderSavedAddresses(){
  const host=document.getElementById("savedAddressList");if(!host)return;
@@ -877,7 +877,7 @@ function selectSavedAddress(id){
 }
 document.getElementById("checkoutAddressSelect").addEventListener("change",e=>selectSavedAddress(e.target.value));
 document.getElementById("addCheckoutAddress").addEventListener("click",()=>{closeCart();showPage("account");const form=document.getElementById("savedAddressForm");if(form)form.hidden=false;});
-function showAddressEditor(){const form=document.getElementById("savedAddressForm");form.hidden=false;form.reset();form.dataset.selectedLat="";form.dataset.selectedLng="";document.getElementById("addressSuggestions").innerHTML="";}
+function showAddressEditor(){const form=document.getElementById("savedAddressForm");form.hidden=false;form.reset();form.elements.label.value=savedAddresses.length?"Other":"Home";form.dataset.selectedLat="";form.dataset.selectedLng="";document.getElementById("addressSuggestions").innerHTML="";}
 function hideAddressEditor(){document.getElementById("savedAddressForm").hidden=true}
 let addressSearchTimer=null;
 document.addEventListener("input",e=>{if(e.target.id!=="addressSearch")return;clearTimeout(addressSearchTimer);const q=e.target.value.trim(),host=document.getElementById("addressSuggestions");const form=document.getElementById("savedAddressForm");form.dataset.selectedLat="";form.dataset.selectedLng="";if(q.length<4){host.textContent="Type at least 4 characters to search.";return}addressSearchTimer=setTimeout(async()=>{host.textContent="Searching…";try{const r=await fetch("https://photon.komoot.io/api/?limit=6&lang=en&q="+encodeURIComponent(q+", Bengaluru, Karnataka, India"));const data=await r.json();const features=(data.features||[]).filter(x=>x.geometry?.coordinates);host.innerHTML=features.length?features.map((x,i)=>`<button type="button" class="btn ghost" style="display:block;width:100%;text-align:left;margin:4px 0" data-address-result="${i}">${escapeHTML(x.properties.name||x.properties.street||"Location")}, ${escapeHTML([x.properties.city,x.properties.state,x.properties.postcode].filter(Boolean).join(", "))}</button>`).join(""):"No suggestions found. Try a nearby street or locality.";host._features=features}catch(e){host.textContent="Address search is temporarily unavailable. Please try again."}},350)});
