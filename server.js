@@ -148,6 +148,23 @@ async function initializeDatabase() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS customer_addresses (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    house TEXT NOT NULL DEFAULT '',
+    street TEXT NOT NULL,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    pincode TEXT NOT NULL,
+    formatted_address TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await pool.query("CREATE INDEX IF NOT EXISTS customer_addresses_user_idx ON customer_addresses(user_id)");
+
   // Create owner account if it does not exist
   if (process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD) {
     const existing = await pool.query(
@@ -213,6 +230,16 @@ function tokenFor(user) {
   );
 }
 
+// Production keeps the original same-site Lax cookie. Outside production the app is
+// served inside the cross-site v0 preview iframe, where browsers drop Lax cookies, so
+// the session cookie must be SameSite=None + Secure (Partitioned for third-party cookie blocking).
+function sessionCookieOptions() {
+  if (process.env.NODE_ENV === "production") {
+    return { httpOnly: true, sameSite: "lax", secure: true };
+  }
+  return { httpOnly: true, sameSite: "none", secure: true, partitioned: true };
+}
+
 function auth(req, res, next) {
   try {
     const token =
@@ -274,9 +301,7 @@ app.post("/api/auth/register", asyncRoute(async (req, res) => {
     const user = result.rows[0];
 
     res.cookie("gkk_token", tokenFor(user), {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      ...sessionCookieOptions(),
       maxAge: 7 * 864e5
     });
 
@@ -316,9 +341,7 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
   };
 
   res.cookie("gkk_token", tokenFor(safeUser), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    ...sessionCookieOptions(),
     maxAge: 7 * 864e5
   });
 
@@ -326,7 +349,7 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
 }));
 
 app.post("/api/auth/logout", (req, res) => {
-  res.clearCookie("gkk_token").json({ ok: true });
+  res.clearCookie("gkk_token", sessionCookieOptions()).json({ ok: true });
 });
 
 // Current customer session
@@ -338,6 +361,31 @@ app.get("/api/auth/me", auth, asyncRoute(async (req, res) => {
   );
 
   res.json({ user: result.rows[0] || null });
+}));
+
+// Saved customer delivery addresses
+app.get("/api/addresses", auth, asyncRoute(async (req,res)=>{
+ const result=await pool.query("SELECT id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default FROM customer_addresses WHERE user_id=$1 ORDER BY is_default DESC,id ASC",[req.user.id]);
+ res.json(result.rows);
+}));
+app.post("/api/addresses", auth, asyncRoute(async(req,res)=>{
+ const b=req.body||{},label=String(b.label||"Other").trim().slice(0,40),house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=String(b.formatted_address||"").trim(),latitude=Number(b.latitude),longitude=Number(b.longitude);
+ if(!street||!city||!state||!/^\\d{6}$/.test(pincode)||!formatted||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Enter the complete address, valid PIN code, and select a suggested location."});
+ const existing=await pool.query("SELECT COUNT(*)::int AS n FROM customer_addresses WHERE user_id=$1",[req.user.id]),isDefault=Number(existing.rows[0].n)===0;if(isDefault)label="Home";
+ const result=await pool.query(`INSERT INTO customer_addresses(user_id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default`,[req.user.id,label||"Other",house,street,city,state,pincode,formatted,latitude,longitude,isDefault]);
+ res.status(201).json({address:result.rows[0]});
+}));
+app.patch("/api/addresses/:id", auth, asyncRoute(async(req,res)=>{
+ const b=req.body||{},id=Number(req.params.id),label=String(b.label||"Other").trim().slice(0,40),house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=String(b.formatted_address||"").trim(),latitude=Number(b.latitude),longitude=Number(b.longitude);
+ if(!Number.isInteger(id)||!street||!city||!state||!/^\\d{6}$/.test(pincode)||!formatted||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Enter a complete address and select a suggested location."});
+ const result=await pool.query(`UPDATE customer_addresses SET label=$1,house=$2,street=$3,city=$4,state=$5,pincode=$6,formatted_address=$7,latitude=$8,longitude=$9 WHERE id=$10 AND user_id=$11 RETURNING id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default`,[label||"Other",house,street,city,state,pincode,formatted,latitude,longitude,id,req.user.id]);
+ if(!result.rowCount)return res.status(404).json({error:"Saved address not found."});res.json({address:result.rows[0]});
+}));
+app.delete("/api/addresses/:id",auth,asyncRoute(async(req,res)=>{
+ const id=Number(req.params.id),client=await pool.connect();try{await client.query("BEGIN");const found=await client.query("SELECT is_default FROM customer_addresses WHERE id=$1 AND user_id=$2 FOR UPDATE",[id,req.user.id]);if(!found.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Saved address not found."});}await client.query("DELETE FROM customer_addresses WHERE id=$1 AND user_id=$2",[id,req.user.id]);if(found.rows[0].is_default)await client.query("UPDATE customer_addresses SET is_default=TRUE WHERE id=(SELECT id FROM customer_addresses WHERE user_id=$1 ORDER BY id LIMIT 1)",[req.user.id]);await client.query("COMMIT");res.json({ok:true});}catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
+}));
+app.post("/api/addresses/:id/default",auth,asyncRoute(async(req,res)=>{
+ const id=Number(req.params.id),client=await pool.connect();try{await client.query("BEGIN");const exists=await client.query("SELECT id FROM customer_addresses WHERE id=$1 AND user_id=$2",[id,req.user.id]);if(!exists.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Saved address not found."});}await client.query("UPDATE customer_addresses SET is_default=(id=$1) WHERE user_id=$2",[id,req.user.id]);await client.query("COMMIT");res.json({ok:true});}catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }));
 
 // Allow an authenticated owner to change their password from the dashboard.
@@ -803,10 +851,19 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
-  const { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
+  let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
   if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
-  const customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
-  if(!Number.isFinite(customerLat)||customerLat < -90||customerLat>90||!Number.isFinite(customerLng)||customerLng < -180||customerLng>180)return res.status(400).json({error:"Please verify your delivery location using the Check delivery area button."});
+  let customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
+  const savedAddressId=Number(req.body.addressId);
+  if(Number.isInteger(savedAddressId)&&savedAddressId>0){
+    const saved=await pool.query("SELECT house,formatted_address,latitude,longitude FROM customer_addresses WHERE id=$1 AND user_id=$2",[savedAddressId,req.user.id]);
+    if(!saved.rowCount)return res.status(400).json({error:"Please select a saved delivery address."});
+    address=[saved.rows[0].house,saved.rows[0].formatted_address].filter(Boolean).join(", ");
+    customerLat=Number(saved.rows[0].latitude);customerLng=Number(saved.rows[0].longitude);
+  }else if(req.body.addressId!==undefined){
+    return res.status(400).json({error:"Please select a valid saved delivery address."});
+  }
+  if(!Number.isFinite(customerLat)||customerLat < -90||customerLat>90||!Number.isFinite(customerLng)||customerLng < -180||customerLng>180)return res.status(400).json({error:"Please select and verify a saved delivery address before placing an order."});
   const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");
   const area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured yet."});
   const toRad=degrees=>degrees*Math.PI/180,earthRadiusKm=6371.0088,dLat=toRad(customerLat-Number(area.latitude)),dLng=toRad(customerLng-Number(area.longitude));
@@ -901,6 +958,15 @@ app.get("/api/delivery-area",asyncRoute(async(req,res)=>{const r=await pool.quer
 app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim();if(address.length<8)return res.status(400).json({error:"Please enter the complete delivery address."});
  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
+ // Honor an explicitly selected map pin rather than re-geocoding the address text.
+ const suppliedLat=req.body.latitude,suppliedLng=req.body.longitude;
+ if(suppliedLat!==undefined||suppliedLng!==undefined){
+  const latitude=Number(suppliedLat),longitude=Number(suppliedLng);
+  if(suppliedLat===undefined||suppliedLng===undefined||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Please select a valid point on the map."});
+  const toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+  const isBrigade7Gardens=address.toLowerCase().includes("brigade 7 gardens"),deliveryFee=isBrigade7Gardens?0:(distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0);
+  return res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:"Customer-selected map pin"});
+ }
  const normalized=address.replace(/\bBangalore\b/ig,"Bengaluru").replace(/\bBengaluru\s*[-,]?\s*(\d{6})\b/ig,"Bengaluru $1").replace(/\s+/g," ").trim();
  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
  const queries=[...new Set([normalized,...[1,5,4,3,2].map(n=>parts.slice(-n).join(", "))].filter(x=>x.length>20).map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\s*)+/g,", ").trim()))];
@@ -909,12 +975,14 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const tokens=normalized.toLowerCase().replace(/\b(flat|apartment|apt|floor|block|tower|door|no|number|near|opposite|beside|bengaluru|bangalore|karnataka|india)\b/g," ").split(/[^a-z0-9]+/).filter(t=>t.length>2&&!/^\d+$/.test(t));
  const score=(props,label)=>{
   const searchable=[label,props?.name,props?.street,props?.district,props?.city,props?.county,props?.state,props?.postcode].filter(Boolean).join(" ").toLowerCase();
-  let points=tokens.reduce((sum,t)=>sum+(searchable.includes(t)?2:0),0);
+  const matchedTokens=tokens.filter(t=>searchable.includes(t));
+  let points=matchedTokens.length*2;
   if(pin&&String(props?.postcode||"")===pin)points+=30;
   if(/bengaluru|bangalore/.test(searchable))points+=5;
   if(/karnataka/.test(searchable))points+=3;
-  if(pin&&props?.postcode&&String(props.postcode)!==pin)points-=25;
-  return points;
+  const pinMismatch=Boolean(pin&&props?.postcode&&String(props.postcode)!==pin);
+  if(pinMismatch)points-=100;
+  return {points,matchedTokens:matchedTokens.length,pinMismatch};
  };
  const matches=[];
  for(const query of queries){
@@ -926,8 +994,11 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
    for(const feature of features){
     if(!feature.geometry||!Array.isArray(feature.geometry.coordinates)||feature.geometry.coordinates.length<2)continue;
     const props=feature.properties||{};if(props.countrycode&&String(props.countrycode).toLowerCase()!=="in")continue;
+    if(props.state&&!/karnataka/i.test(String(props.state)))continue;
     const label=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((v,i,a)=>v&&a.indexOf(v)===i).join(", ");
-    matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,score:score(props,label)});
+    const confidence=score(props,label);
+    if(confidence.pinMismatch||confidence.matchedTokens<1)continue;
+    matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,...confidence});
    }
   }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
  }
@@ -936,13 +1007,20 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
   try{
    const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=in&q="+encodeURIComponent(normalized+", India");
    const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.4 (Ghar ka Khana delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
-   if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match=results.map(r=>({latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,score:score(r.address||{},r.display_name)})).sort((a,b)=>b.score-a.score)[0];}
+   if(response.ok){
+    const results=await response.json();
+    if(Array.isArray(results)&&results.length){
+     const candidates=results.map(r=>{const confidence=score(r.address||{},r.display_name);return {latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,...confidence,state:r.address?.state};})
+      .filter(r=>!r.pinMismatch&&r.matchedTokens>=1&&(!r.state||/karnataka/i.test(String(r.state))));
+     if(candidates.length)match=candidates.sort((a,b)=>b.points-a.points)[0];
+    }
+   }
    else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
   }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
  }
  if(!match){
   if(providerFailed)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
-  return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
+  return res.status(400).json({error:"We could not confidently match this address. Please include the correct locality and PIN code, then check again."});
  }
  const {latitude,longitude,displayName}=match;
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});

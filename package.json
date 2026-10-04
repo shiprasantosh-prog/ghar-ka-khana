@@ -1,14 +1,13 @@
-
 {
   "name": "ghar-ka-khana",
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --env-file=.env.development.local --watch server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
