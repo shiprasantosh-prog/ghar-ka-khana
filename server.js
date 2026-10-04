@@ -213,6 +213,16 @@ function tokenFor(user) {
   );
 }
 
+// Production keeps the original same-site Lax cookie. Outside production the app is
+// served inside the cross-site v0 preview iframe, where browsers drop Lax cookies, so
+// the session cookie must be SameSite=None + Secure (Partitioned for third-party cookie blocking).
+function sessionCookieOptions() {
+  if (process.env.NODE_ENV === "production") {
+    return { httpOnly: true, sameSite: "lax", secure: true };
+  }
+  return { httpOnly: true, sameSite: "none", secure: true, partitioned: true };
+}
+
 function auth(req, res, next) {
   try {
     const token =
@@ -274,9 +284,7 @@ app.post("/api/auth/register", asyncRoute(async (req, res) => {
     const user = result.rows[0];
 
     res.cookie("gkk_token", tokenFor(user), {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      ...sessionCookieOptions(),
       maxAge: 7 * 864e5
     });
 
@@ -316,9 +324,7 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
   };
 
   res.cookie("gkk_token", tokenFor(safeUser), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    ...sessionCookieOptions(),
     maxAge: 7 * 864e5
   });
 
@@ -326,7 +332,7 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
 }));
 
 app.post("/api/auth/logout", (req, res) => {
-  res.clearCookie("gkk_token").json({ ok: true });
+  res.clearCookie("gkk_token", sessionCookieOptions()).json({ ok: true });
 });
 
 // Current customer session
