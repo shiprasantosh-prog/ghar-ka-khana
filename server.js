@@ -851,13 +851,14 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
-  const { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
+  let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
   if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
   let customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
   const savedAddressId=Number(req.body.addressId);
   if(Number.isInteger(savedAddressId)&&savedAddressId>0){
-    const saved=await pool.query("SELECT formatted_address,latitude,longitude FROM customer_addresses WHERE id=$1 AND user_id=$2",[savedAddressId,req.user.id]);
+    const saved=await pool.query("SELECT house,formatted_address,latitude,longitude FROM customer_addresses WHERE id=$1 AND user_id=$2",[savedAddressId,req.user.id]);
     if(!saved.rowCount)return res.status(400).json({error:"Please select a saved delivery address."});
+    address=[saved.rows[0].house,saved.rows[0].formatted_address].filter(Boolean).join(", ");
     customerLat=Number(saved.rows[0].latitude);customerLng=Number(saved.rows[0].longitude);
   }else if(req.body.addressId!==undefined){
     return res.status(400).json({error:"Please select a valid saved delivery address."});
