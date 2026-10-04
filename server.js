@@ -41,6 +41,15 @@ app.use(express.json({ limit: "200kb" }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// The Maps browser key is intentionally served to the frontend; protect it with
+// HTTP-referrer and API restrictions in Google Cloud Console.
+app.get("/api/maps-config", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: "Google Maps API key is not configured." });
+  res.json({ apiKey });
+});
+
 const asyncRoute = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
 
