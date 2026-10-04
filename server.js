@@ -899,26 +899,31 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
  const query=address+", Bengaluru, Karnataka, India";
  let match=null,providerFailed=false;
- // Try Nominatim first. If it is unavailable or rate-limited, fall back to Photon.
- try{
-  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query);
-  const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.1","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
-  if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match={latitude:Number(results[0].lat),longitude:Number(results[0].lon),displayName:results[0].display_name};}
-  else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
- }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
+ // Use Photon first; Nominatim's public endpoint is currently rate-limiting this service (HTTP 429).
+ const photonQueries=[query,address.replace(/^(flat|apt|apartment|house|door|plot|no\.?|#)\s*[^,]*,\s*/i,"")+", Bengaluru, Karnataka, India"];
+ for(const photonQuery of [...new Set(photonQueries)]){
+  try{
+   const url="https://photon.komoot.io/api/?limit=3&lang=en&q="+encodeURIComponent(photonQuery);
+   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.2"},signal:AbortSignal.timeout(10000)});
+   if(!response.ok){providerFailed=true;console.warn("[delivery-area] Photon returned HTTP",response.status);continue;}
+   const data=await response.json(),features=Array.isArray(data.features)?data.features:[];
+   console.info("[delivery-area] Photon matches:",features.length);
+   const feature=features.find(f=>f.geometry&&Array.isArray(f.geometry.coordinates)&&f.geometry.coordinates.length>=2);
+   if(feature){
+    const props=feature.properties||{},parts=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((part,index,array)=>part&&array.indexOf(part)===index);
+    match={longitude:Number(feature.geometry.coordinates[0]),latitude:Number(feature.geometry.coordinates[1]),displayName:parts.join(", ")||photonQuery};
+    break;
+   }
+  }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
+ }
+ // Use Nominatim only as a secondary provider; it may be rate-limited.
  if(!match){
   try{
-   const url="https://photon.komoot.io/api/?limit=1&lang=en&q="+encodeURIComponent(query);
-   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.1"},signal:AbortSignal.timeout(10000)});
-   if(!response.ok){providerFailed=true;console.warn("[delivery-area] Photon returned HTTP",response.status);}
-   else{
-    const data=await response.json(),feature=data.features&&data.features[0];
-    if(feature&&feature.geometry&&Array.isArray(feature.geometry.coordinates)){
-     const props=feature.properties||{},parts=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((part,index,array)=>part&&array.indexOf(part)===index);
-     match={longitude:Number(feature.geometry.coordinates[0]),latitude:Number(feature.geometry.coordinates[1]),displayName:parts.join(", ")||query};
-    }
-   }
-  }catch(error){providerFailed=true;console.error("[delivery-area] Photon fallback failed:",error.message);}
+   const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query);
+   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.2 (Ghar ka Khana customer delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
+   if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match={latitude:Number(results[0].lat),longitude:Number(results[0].lon),displayName:results[0].display_name};}
+   else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
+  }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
  }
  if(!match){
   if(providerFailed)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
