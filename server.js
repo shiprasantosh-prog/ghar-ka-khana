@@ -894,6 +894,16 @@ app.patch("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{
 app.delete("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("DELETE FROM promo_codes WHERE id=$1 RETURNING id",[Number(req.params.id)]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json({ok:true,id:r.rows[0].id})}));
 
 app.get("/api/delivery-area",asyncRoute(async(req,res)=>{const r=await pool.query("SELECT kitchen_address,latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");res.json(r.rows[0]||{});}));
+app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
+ const address=String(req.body.address||"").trim();if(address.length<8)return res.status(400).json({error:"Please enter the complete delivery address."});
+ const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
+ const query=address+", Bengaluru, Karnataka, India";
+ let geoResponse;try{geoResponse=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query),{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.0 (customer delivery address lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});}catch(e){return res.status(502).json({error:"We could not locate this address right now. Please check the address and try again."});}
+ if(!geoResponse.ok)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
+ const matches=await geoResponse.json();if(!Array.isArray(matches)||!matches.length)return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
+ const latitude=Number(matches[0].lat),longitude=Number(matches[0].lon),toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+ res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,matchedAddress:matches[0].display_name});
+}));
 app.put("/api/admin/delivery-area",auth,admin,asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim(),latitude=Number(req.body.latitude),longitude=Number(req.body.longitude),radiusKm=Number(req.body.radiusKm),graceMeters=Number(req.body.graceMeters);
  if(!address||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180||!Number.isFinite(radiusKm)||radiusKm<=0||radiusKm>100||!Number.isInteger(graceMeters)||graceMeters<0||graceMeters>5000)return res.status(400).json({error:"Enter a valid address, coordinates, radius and grace distance."});
