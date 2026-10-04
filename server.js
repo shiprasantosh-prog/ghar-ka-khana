@@ -907,6 +907,15 @@ app.get("/api/delivery-area",asyncRoute(async(req,res)=>{const r=await pool.quer
 app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim();if(address.length<8)return res.status(400).json({error:"Please enter the complete delivery address."});
  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
+ // Honor an explicitly selected map pin rather than re-geocoding the address text.
+ const suppliedLat=req.body.latitude,suppliedLng=req.body.longitude;
+ if(suppliedLat!==undefined||suppliedLng!==undefined){
+  const latitude=Number(suppliedLat),longitude=Number(suppliedLng);
+  if(suppliedLat===undefined||suppliedLng===undefined||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Please select a valid point on the map."});
+  const toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+  const isBrigade7Gardens=address.toLowerCase().includes("brigade 7 gardens"),deliveryFee=isBrigade7Gardens?0:(distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0);
+  return res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:"Customer-selected map pin"});
+ }
  const normalized=address.replace(/\bBangalore\b/ig,"Bengaluru").replace(/\bBengaluru\s*[-,]?\s*(\d{6})\b/ig,"Bengaluru $1").replace(/\s+/g," ").trim();
  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
  const queries=[...new Set([normalized,...[1,5,4,3,2].map(n=>parts.slice(-n).join(", "))].filter(x=>x.length>20).map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\s*)+/g,", ").trim()))];
@@ -915,12 +924,14 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const tokens=normalized.toLowerCase().replace(/\b(flat|apartment|apt|floor|block|tower|door|no|number|near|opposite|beside|bengaluru|bangalore|karnataka|india)\b/g," ").split(/[^a-z0-9]+/).filter(t=>t.length>2&&!/^\d+$/.test(t));
  const score=(props,label)=>{
   const searchable=[label,props?.name,props?.street,props?.district,props?.city,props?.county,props?.state,props?.postcode].filter(Boolean).join(" ").toLowerCase();
-  let points=tokens.reduce((sum,t)=>sum+(searchable.includes(t)?2:0),0);
+  const matchedTokens=tokens.filter(t=>searchable.includes(t));
+  let points=matchedTokens.length*2;
   if(pin&&String(props?.postcode||"")===pin)points+=30;
   if(/bengaluru|bangalore/.test(searchable))points+=5;
   if(/karnataka/.test(searchable))points+=3;
-  if(pin&&props?.postcode&&String(props.postcode)!==pin)points-=25;
-  return points;
+  const pinMismatch=Boolean(pin&&props?.postcode&&String(props.postcode)!==pin);
+  if(pinMismatch)points-=100;
+  return {points,matchedTokens:matchedTokens.length,pinMismatch};
  };
  const matches=[];
  for(const query of queries){
@@ -932,8 +943,11 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
    for(const feature of features){
     if(!feature.geometry||!Array.isArray(feature.geometry.coordinates)||feature.geometry.coordinates.length<2)continue;
     const props=feature.properties||{};if(props.countrycode&&String(props.countrycode).toLowerCase()!=="in")continue;
+    if(props.state&&!/karnataka/i.test(String(props.state)))continue;
     const label=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((v,i,a)=>v&&a.indexOf(v)===i).join(", ");
-    matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,score:score(props,label)});
+    const confidence=score(props,label);
+    if(confidence.pinMismatch||confidence.matchedTokens<1)continue;
+    matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,...confidence});
    }
   }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
  }
@@ -942,13 +956,20 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
   try{
    const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=in&q="+encodeURIComponent(normalized+", India");
    const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.4 (Ghar ka Khana delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
-   if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match=results.map(r=>({latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,score:score(r.address||{},r.display_name)})).sort((a,b)=>b.score-a.score)[0];}
+   if(response.ok){
+    const results=await response.json();
+    if(Array.isArray(results)&&results.length){
+     const candidates=results.map(r=>{const confidence=score(r.address||{},r.display_name);return {latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,...confidence,state:r.address?.state};})
+      .filter(r=>!r.pinMismatch&&r.matchedTokens>=1&&(!r.state||/karnataka/i.test(String(r.state))));
+     if(candidates.length)match=candidates.sort((a,b)=>b.points-a.points)[0];
+    }
+   }
    else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
   }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
  }
  if(!match){
   if(providerFailed)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
-  return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
+  return res.status(400).json({error:"We could not confidently match this address. Please include the correct locality and PIN code, then check again."});
  }
  const {latitude,longitude,displayName}=match;
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});
