@@ -148,6 +148,23 @@ async function initializeDatabase() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS customer_addresses (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    house TEXT NOT NULL DEFAULT '',
+    street TEXT NOT NULL,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    pincode TEXT NOT NULL,
+    formatted_address TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await pool.query("CREATE INDEX IF NOT EXISTS customer_addresses_user_idx ON customer_addresses(user_id)");
+
   // Create owner account if it does not exist
   if (process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD) {
     const existing = await pool.query(
@@ -344,6 +361,31 @@ app.get("/api/auth/me", auth, asyncRoute(async (req, res) => {
   );
 
   res.json({ user: result.rows[0] || null });
+}));
+
+// Saved customer delivery addresses
+app.get("/api/addresses", auth, asyncRoute(async (req,res)=>{
+ const result=await pool.query("SELECT id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default FROM customer_addresses WHERE user_id=$1 ORDER BY is_default DESC,id ASC",[req.user.id]);
+ res.json(result.rows);
+}));
+app.post("/api/addresses", auth, asyncRoute(async(req,res)=>{
+ const b=req.body||{},label=String(b.label||"Other").trim().slice(0,40),house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=String(b.formatted_address||"").trim(),latitude=Number(b.latitude),longitude=Number(b.longitude);
+ if(!street||!city||!state||!/^\\d{6}$/.test(pincode)||!formatted||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Enter the complete address, valid PIN code, and select a suggested location."});
+ const existing=await pool.query("SELECT COUNT(*)::int AS n FROM customer_addresses WHERE user_id=$1",[req.user.id]),isDefault=Number(existing.rows[0].n)===0;
+ const result=await pool.query(`INSERT INTO customer_addresses(user_id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default`,[req.user.id,label||"Other",house,street,city,state,pincode,formatted,latitude,longitude,isDefault]);
+ res.status(201).json({address:result.rows[0]});
+}));
+app.patch("/api/addresses/:id", auth, asyncRoute(async(req,res)=>{
+ const b=req.body||{},id=Number(req.params.id),label=String(b.label||"Other").trim().slice(0,40),house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=String(b.formatted_address||"").trim(),latitude=Number(b.latitude),longitude=Number(b.longitude);
+ if(!Number.isInteger(id)||!street||!city||!state||!/^\\d{6}$/.test(pincode)||!formatted||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Enter a complete address and select a suggested location."});
+ const result=await pool.query(`UPDATE customer_addresses SET label=$1,house=$2,street=$3,city=$4,state=$5,pincode=$6,formatted_address=$7,latitude=$8,longitude=$9 WHERE id=$10 AND user_id=$11 RETURNING id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default`,[label||"Other",house,street,city,state,pincode,formatted,latitude,longitude,id,req.user.id]);
+ if(!result.rowCount)return res.status(404).json({error:"Saved address not found."});res.json({address:result.rows[0]});
+}));
+app.delete("/api/addresses/:id",auth,asyncRoute(async(req,res)=>{
+ const id=Number(req.params.id),client=await pool.connect();try{await client.query("BEGIN");const found=await client.query("SELECT is_default FROM customer_addresses WHERE id=$1 AND user_id=$2 FOR UPDATE",[id,req.user.id]);if(!found.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Saved address not found."});}await client.query("DELETE FROM customer_addresses WHERE id=$1 AND user_id=$2",[id,req.user.id]);if(found.rows[0].is_default)await client.query("UPDATE customer_addresses SET is_default=TRUE WHERE id=(SELECT id FROM customer_addresses WHERE user_id=$1 ORDER BY id LIMIT 1)",[req.user.id]);await client.query("COMMIT");res.json({ok:true});}catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
+}));
+app.post("/api/addresses/:id/default",auth,asyncRoute(async(req,res)=>{
+ const id=Number(req.params.id),client=await pool.connect();try{await client.query("BEGIN");const exists=await client.query("SELECT id FROM customer_addresses WHERE id=$1 AND user_id=$2",[id,req.user.id]);if(!exists.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Saved address not found."});}await client.query("UPDATE customer_addresses SET is_default=(id=$1) WHERE user_id=$2",[id,req.user.id]);await client.query("COMMIT");res.json({ok:true});}catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }));
 
 // Allow an authenticated owner to change their password from the dashboard.
