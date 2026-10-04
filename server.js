@@ -932,8 +932,11 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
    for(const feature of features){
     if(!feature.geometry||!Array.isArray(feature.geometry.coordinates)||feature.geometry.coordinates.length<2)continue;
     const props=feature.properties||{};if(props.countrycode&&String(props.countrycode).toLowerCase()!=="in")continue;
+    if(props.state&&!/karnataka/i.test(String(props.state)))continue;
     const label=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((v,i,a)=>v&&a.indexOf(v)===i).join(", ");
-    matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,score:score(props,label)});
+    const confidence=score(props,label);
+    if(confidence.pinMismatch||confidence.matchedTokens<1)continue;
+    matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,...confidence});
    }
   }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
  }
@@ -942,13 +945,20 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
   try{
    const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=in&q="+encodeURIComponent(normalized+", India");
    const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.4 (Ghar ka Khana delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
-   if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match=results.map(r=>({latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,score:score(r.address||{},r.display_name)})).sort((a,b)=>b.score-a.score)[0];}
+   if(response.ok){
+    const results=await response.json();
+    if(Array.isArray(results)&&results.length){
+     const candidates=results.map(r=>{const confidence=score(r.address||{},r.display_name);return {latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,...confidence,state:r.address?.state};})
+      .filter(r=>!r.pinMismatch&&r.matchedTokens>=1&&(!r.state||/karnataka/i.test(String(r.state))));
+     if(candidates.length)match=candidates.sort((a,b)=>b.points-a.points)[0];
+    }
+   }
    else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
   }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
  }
  if(!match){
   if(providerFailed)return res.status(502).json({error:"Address lookup is temporarily unavailable. Please try again."});
-  return res.status(400).json({error:"We could not find this address. Please include the area, city and PIN code."});
+  return res.status(400).json({error:"We could not confidently match this address. Please include the correct locality and PIN code, then check again."});
  }
  const {latitude,longitude,displayName}=match;
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});
