@@ -121,6 +121,8 @@ async function initializeDatabase() {
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await pool.query("INSERT INTO kitchen_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
+  await pool.query("CREATE TABLE IF NOT EXISTS delivery_area_settings (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), kitchen_address TEXT NOT NULL DEFAULT 'Brigade 7 Gardens, Paduka Madira Road, Subramanyapura, Uttarahalli, Bengaluru 560061', latitude DOUBLE PRECISION NOT NULL DEFAULT 12.89627, longitude DOUBLE PRECISION NOT NULL DEFAULT 77.528264, radius_km NUMERIC(5,2) NOT NULL DEFAULT 10 CHECK (radius_km > 0 AND radius_km <= 100), grace_meters INTEGER NOT NULL DEFAULT 300 CHECK (grace_meters >= 0 AND grace_meters <= 5000), updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("INSERT INTO delivery_area_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
 
   // Owner-curated dishes featured in the customer-facing Popular section.
   await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
@@ -881,6 +883,13 @@ app.patch("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{
  try{const r=await pool.query("UPDATE promo_codes SET code=$1,customer_phone=$2,discount_type=$3,discount_value=$4,minimum_order=$5,valid_from=$6,valid_until=$7,excluded_menu_ids=$8 WHERE id=$9 RETURNING *",[code,phone,type,value,minimum,from,until,excludedIds,id]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json(r.rows[0]);}catch(e){if(e.code==="23505")return res.status(409).json({error:"That promo code already exists. Choose a different code."});throw e;}
 }));
 app.delete("/api/admin/promo-codes/:id",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("DELETE FROM promo_codes WHERE id=$1 RETURNING id",[Number(req.params.id)]);if(!r.rowCount)return res.status(404).json({error:"Promo code not found."});res.json({ok:true,id:r.rows[0].id})}));
+
+app.get("/api/delivery-area",asyncRoute(async(req,res)=>{const r=await pool.query("SELECT kitchen_address,latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");res.json(r.rows[0]||{});}));
+app.put("/api/admin/delivery-area",auth,admin,asyncRoute(async(req,res)=>{
+ const address=String(req.body.address||"").trim(),latitude=Number(req.body.latitude),longitude=Number(req.body.longitude),radiusKm=Number(req.body.radiusKm),graceMeters=Number(req.body.graceMeters);
+ if(!address||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180||!Number.isFinite(radiusKm)||radiusKm<=0||radiusKm>100||!Number.isInteger(graceMeters)||graceMeters<0||graceMeters>5000)return res.status(400).json({error:"Enter a valid address, coordinates, radius and grace distance."});
+ const r=await pool.query("UPDATE delivery_area_settings SET kitchen_address=$1,latitude=$2,longitude=$3,radius_km=$4,grace_meters=$5,updated_at=NOW() WHERE id=1 RETURNING kitchen_address,latitude,longitude,radius_km,grace_meters",[address,latitude,longitude,radiusKm,graceMeters]);res.json(r.rows[0]);
+}));
 app.get("/api/admin/delivery-slots",auth,admin,asyncRoute(async(req,res)=>{const r=await pool.query("SELECT * FROM delivery_slots ORDER BY id");res.json(r.rows)}));
 app.put("/api/admin/delivery-slots",auth,admin,asyncRoute(async(req,res)=>{
   const slots=req.body.slots;if(!Array.isArray(slots)||slots.some(x=>typeof x.label!=="string"||!x.label.trim()))return res.status(400).json({error:"Provide valid delivery slots."});
