@@ -955,31 +955,44 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1"),area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured."});
  const normalized=address.replace(/\bBangalore\b/ig,"Bengaluru").replace(/\bBengaluru\s*[-,]?\s*(\d{6})\b/ig,"Bengaluru $1").replace(/\s+/g," ").trim();
  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
- const candidates=[normalized,parts.slice(1).join(", "),parts.slice(-5).join(", "),parts.slice(-4).join(", "),parts.slice(-3).join(", "),parts.slice(-2).join(", ")].map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\s*)+/g,", ").trim());
- const queries=[...new Set(candidates)].filter(x=>x.length>20);
+ const queries=[...new Set([normalized,parts.slice(1).join(", "),parts.slice(-5).join(", "),parts.slice(-4).join(", "),parts.slice(-3).join(", "),parts.slice(-2).join(", ")].filter(x=>x.length>20).map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\s*)+/g,", ").trim()))];
  const suppliedLatitude=Number(req.body.latitude),suppliedLongitude=Number(req.body.longitude);
  const hasCoordinates=Number.isFinite(suppliedLatitude)&&Number.isFinite(suppliedLongitude)&&Math.abs(suppliedLatitude)<=90&&Math.abs(suppliedLongitude)<=180&&req.body.latitude!==""&&req.body.longitude!=="";
- let match=hasCoordinates?{latitude:suppliedLatitude,longitude:suppliedLongitude,displayName:"Customer's shared GPS location"}:null,providerFailed=false;
- for(const photonQuery of (match?[]:queries)){
-  try{
-   const url="https://photon.komoot.io/api/?limit=5&lang=en&lat="+encodeURIComponent(area.latitude)+"&lon="+encodeURIComponent(area.longitude)+"&zoom=12&location_bias_scale=0.2&q="+encodeURIComponent(photonQuery);
-   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.3"},signal:AbortSignal.timeout(10000)});
-   if(!response.ok){providerFailed=true;console.warn("[delivery-area] Photon returned HTTP",response.status);continue;}
-   const data=await response.json(),features=Array.isArray(data.features)?data.features:[];
-   console.info("[delivery-area] Photon matches for query:",features.length,photonQuery.slice(0,120));
-   const feature=features.find(f=>f.geometry&&Array.isArray(f.geometry.coordinates)&&f.geometry.coordinates.length>=2&&(!f.properties?.countrycode||String(f.properties.countrycode).toLowerCase()==="in"));
-   if(feature){
-    const props=feature.properties||{},partsOut=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((part,index,array)=>part&&array.indexOf(part)===index);
-    match={longitude:Number(feature.geometry.coordinates[0]),latitude:Number(feature.geometry.coordinates[1]),displayName:partsOut.join(", ")||photonQuery};
-    break;
-   }
-  }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
+ let match=hasCoordinates?{latitude:suppliedLatitude,longitude:suppliedLongitude,displayName:"Verified address coordinates"}:null,providerFailed=false;
+ const pin=normalized.match(/\b\d{6}\b/)?.[0]||"";
+ const tokens=normalized.toLowerCase().replace(/\b(flat|apartment|apt|floor|block|tower|door|no|number|near|opposite|beside|bengaluru|bangalore|karnataka|india)\b/g," ").split(/[^a-z0-9]+/).filter(t=>t.length>2&&!/^\d+$/.test(t));
+ const score=(props,label)=>{
+  const searchable=[label,props?.name,props?.street,props?.district,props?.city,props?.county,props?.state,props?.postcode].filter(Boolean).join(" ").toLowerCase();
+  let points=tokens.reduce((sum,t)=>sum+(searchable.includes(t)?2:0),0);
+  if(pin&&String(props?.postcode||"")===pin)points+=30;
+  if(/bengaluru|bangalore/.test(searchable))points+=5;
+  if(/karnataka/.test(searchable))points+=3;
+  if(pin&&props?.postcode&&String(props.postcode)!==pin)points-=25;
+  return points;
+ };
+ if(!match){
+  const matches=[];
+  for(const query of queries){
+   try{
+    const url="https://photon.komoot.io/api/?limit=10&lang=en&lat="+encodeURIComponent(area.latitude)+"&lon="+encodeURIComponent(area.longitude)+"&zoom=12&location_bias_scale=0.2&q="+encodeURIComponent(query);
+    const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.4"},signal:AbortSignal.timeout(10000)});
+    if(!response.ok){providerFailed=true;console.warn("[delivery-area] Photon returned HTTP",response.status);continue;}
+    const data=await response.json(),features=Array.isArray(data.features)?data.features:[];
+    for(const feature of features){
+     if(!feature.geometry||!Array.isArray(feature.geometry.coordinates)||feature.geometry.coordinates.length<2)continue;
+     const props=feature.properties||{};if(props.countrycode&&String(props.countrycode).toLowerCase()!=="in")continue;
+     const label=[props.name,props.street,props.district,props.city,props.state,props.postcode,props.country].filter((v,i,arr)=>v&&arr.indexOf(v)===i).join(", ");
+     matches.push({latitude:Number(feature.geometry.coordinates[1]),longitude:Number(feature.geometry.coordinates[0]),displayName:label||query,score:score(props,label)});
+    }
+   }catch(error){providerFailed=true;console.warn("[delivery-area] Photon request failed:",error.message);}
+  }
+  if(matches.length)match=matches.sort((x,y)=>y.score-x.score)[0];
  }
  if(!match){
   try{
-   const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(normalized+", India");
-   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.3 (Ghar ka Khana customer delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
-   if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length)match={latitude:Number(results[0].lat),longitude:Number(results[0].lon),displayName:results[0].display_name};}
+   const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=in&q="+encodeURIComponent(normalized+", India");
+   const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.4 (Ghar ka Khana delivery lookup)","Accept-Language":"en"},signal:AbortSignal.timeout(10000)});
+   if(response.ok){const results=await response.json();if(Array.isArray(results)&&results.length){match=results.map(r=>({latitude:Number(r.lat),longitude:Number(r.lon),displayName:r.display_name,score:score(r.address||{},r.display_name)})).sort((x,y)=>y.score-x.score)[0];}}
    else{providerFailed=true;console.warn("[delivery-area] Nominatim returned HTTP",response.status);}
   }catch(error){providerFailed=true;console.warn("[delivery-area] Nominatim request failed:",error.message);}
  }
