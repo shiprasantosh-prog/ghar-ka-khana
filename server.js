@@ -1298,7 +1298,7 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
 
   const orderCode = `GKK-${String(orderId).padStart(4, "0")}`;
   const customerMessage = status === "Accepted"
-    ? "We'll keep you updated."
+    ? (order.estimated_delivery_minutes ? `Your estimated delivery time is ${order.estimated_delivery_minutes} minutes.` : "We'll keep you updated.")
     : status === "Delivered"
       ? "Thank you for choosing us! We hope you enjoy your meal."
       : cancellationReason === "Kitchen Closed"
@@ -1430,6 +1430,25 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
             continue;
           }
 
+          // If the owner is replying with an ETA, consume the numeric reply before status parsing.
+          if (message.type === "text") {
+            const pending = await pool.query("SELECT order_id FROM whatsapp_pending_eta WHERE id = 1");
+            const minutesText = String(message.text?.body || "").trim();
+            if (pending.rowCount && /^\d{1,3}$/.test(minutesText)) {
+              const minutes = Number(minutesText);
+              if (minutes < 5 || minutes > 480) {
+                await sendWhatsAppText(message.from, "Please enter an estimate between 5 and 480 minutes.");
+                continue;
+              }
+              const orderId = Number(pending.rows[0].order_id);
+              await pool.query("UPDATE orders SET estimated_delivery_minutes = $1 WHERE id = $2", [minutes, orderId]);
+              await pool.query("DELETE FROM whatsapp_pending_eta WHERE id = 1");
+              await sendWhatsAppText(message.from, `Saved ${minutes} minutes for order GKK-${String(orderId).padStart(4,"0")}. The customer will be notified.`);
+              notifyCustomerOrderStatus(orderId, "Accepted").catch(error => console.error("Customer ETA notification failed:", error.message));
+              continue;
+            }
+          }
+
           let replyId = "";
           if (message.type === "interactive") {
             replyId = message.interactive?.button_reply?.id || message.interactive?.list_reply?.id || "";
@@ -1482,6 +1501,17 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
           };
           const status = statuses[action];
           if (!status) continue;
+
+          if (status === "Accepted") {
+            const accepted = await pool.query("UPDATE orders SET status = 'Accepted' WHERE id = $1 AND status IS DISTINCT FROM 'Accepted' RETURNING id", [orderId]);
+            if (!accepted.rowCount) {
+              await sendWhatsAppText(message.from, `Order GKK-${String(orderId).padStart(4,"0")} is already accepted or was not found.`);
+              continue;
+            }
+            await pool.query("INSERT INTO whatsapp_pending_eta(id, order_id, created_at) VALUES (1, $1, NOW()) ON CONFLICT (id) DO UPDATE SET order_id = EXCLUDED.order_id, created_at = NOW()", [orderId]);
+            await sendWhatsAppText(message.from, `Order GKK-${String(orderId).padStart(4,"0")} accepted. Reply with the estimated delivery time in minutes (for example, 40). The customer will be notified after you enter it.`);
+            continue;
+          }
 
           const result = await pool.query(
             "UPDATE orders SET status = $1, cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN 'Cancelled by owner via WhatsApp' ELSE cancellation_reason END WHERE id = $2 AND status IS DISTINCT FROM $1 RETURNING id",
