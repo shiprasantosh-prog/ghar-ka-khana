@@ -915,12 +915,14 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const tokens=normalized.toLowerCase().replace(/\b(flat|apartment|apt|floor|block|tower|door|no|number|near|opposite|beside|bengaluru|bangalore|karnataka|india)\b/g," ").split(/[^a-z0-9]+/).filter(t=>t.length>2&&!/^\d+$/.test(t));
  const score=(props,label)=>{
   const searchable=[label,props?.name,props?.street,props?.district,props?.city,props?.county,props?.state,props?.postcode].filter(Boolean).join(" ").toLowerCase();
-  let points=tokens.reduce((sum,t)=>sum+(searchable.includes(t)?2:0),0);
+  const matchedTokens=tokens.filter(t=>searchable.includes(t));
+  let points=matchedTokens.length*2;
   if(pin&&String(props?.postcode||"")===pin)points+=30;
   if(/bengaluru|bangalore/.test(searchable))points+=5;
   if(/karnataka/.test(searchable))points+=3;
-  if(pin&&props?.postcode&&String(props.postcode)!==pin)points-=25;
-  return points;
+  const pinMismatch=Boolean(pin&&props?.postcode&&String(props.postcode)!==pin);
+  if(pinMismatch)points-=100;
+  return {points,matchedTokens:matchedTokens.length,pinMismatch};
  };
  const matches=[];
  for(const query of queries){
