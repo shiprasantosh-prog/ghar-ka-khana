@@ -901,8 +901,10 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
  const candidates=[normalized,parts.slice(1).join(", "),parts.slice(-5).join(", "),parts.slice(-4).join(", "),parts.slice(-3).join(", "),parts.slice(-2).join(", ")].map(x=>x+", Bengaluru, Karnataka, India").map(x=>x.replace(/(?:,\s*)+/g,", ").trim());
  const queries=[...new Set(candidates)].filter(x=>x.length>20);
- let match=null,providerFailed=false;
- for(const photonQuery of queries){
+ const suppliedLatitude=Number(req.body.latitude),suppliedLongitude=Number(req.body.longitude);
+ const hasCoordinates=Number.isFinite(suppliedLatitude)&&Number.isFinite(suppliedLongitude)&&Math.abs(suppliedLatitude)<=90&&Math.abs(suppliedLongitude)<=180&&req.body.latitude!==""&&req.body.longitude!=="";
+ let match=hasCoordinates?{latitude:suppliedLatitude,longitude:suppliedLongitude,displayName:"Customer's shared GPS location"}:null,providerFailed=false;
+ for(const photonQuery of (match?[]:queries)){
   try{
    const url="https://photon.komoot.io/api/?limit=5&lang=en&lat="+encodeURIComponent(area.latitude)+"&lon="+encodeURIComponent(area.longitude)+"&zoom=12&location_bias_scale=0.2&q="+encodeURIComponent(photonQuery);
    const response=await fetch(url,{headers:{"User-Agent":"GharKaKhanaDeliveryChecker/1.3"},signal:AbortSignal.timeout(10000)});
