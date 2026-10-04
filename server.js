@@ -850,7 +850,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
 app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  const {items,promoCode}=req.body||{};
  if(!Array.isArray(items)||!items.length||!String(promoCode||"").trim())return res.status(400).json({error:"Enter a promo code and add items to your basket."});
- const result=await pool.query("SELECT * FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);const code=result.rows[0];
+ const result=await pool.query("SELECT *, ((NOW() AT TIME ZONE 'Asia/Kolkata')::date >= valid_from) AS date_started, ((NOW() AT TIME ZONE 'Asia/Kolkata')::date <= valid_until) AS date_not_expired FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);const code=result.rows[0];
  if(!code||!code.active)return res.status(400).json({error:"Invalid Promo Code."});
  if(!code.date_started)return res.status(400).json({error:"Promo code is not valid yet."});if(!code.date_not_expired)return res.status(400).json({error:"Promo code expired."});
  const user=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);const normalize=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");if(normalize(user.rows[0]?.phone)!==normalize(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
