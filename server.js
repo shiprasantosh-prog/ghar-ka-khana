@@ -105,6 +105,7 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_slot TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0");
   await pool.query("CREATE TABLE IF NOT EXISTS promo_codes (id SERIAL PRIMARY KEY, code TEXT NOT NULL UNIQUE, customer_phone TEXT NOT NULL DEFAULT '', discount_type TEXT NOT NULL CHECK (discount_type IN ('percent','fixed')), discount_value INTEGER NOT NULL CHECK (discount_value > 0), minimum_order INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, valid_from DATE NOT NULL DEFAULT CURRENT_DATE, valid_until DATE NOT NULL DEFAULT CURRENT_DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS customer_phone TEXT NOT NULL DEFAULT ''");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS valid_from DATE NOT NULL DEFAULT CURRENT_DATE");
@@ -811,7 +812,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const distanceKm=earthRadiusKm*2*Math.atan2(Math.sqrt(haversine),Math.sqrt(1-haversine));
   const maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
   if(distanceKm>maxDistanceKm)return res.status(400).json({error:"Sorry, your location is "+distanceKm.toFixed(1)+" km away. We currently deliver up to "+maxDistanceKm.toFixed(1)+" km from our kitchen."});
-  let subtotal=0; const validated=[];
+  let subtotal=0; const validated=[];\n  const deliveryFee=distanceKm>1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;
   for(const item of items){
     const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);
     const dish=result.rows[0],quantity=Number(item.quantity);
@@ -847,7 +848,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,delivery_slot,promo_code,discount) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",[req.user.id,subtotal-discount+5,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,delivery_slot,promo_code,discount,delivery_fee) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",[req.user.id,subtotal-discount+5+deliveryFee,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee]);
     orderId=result.rows[0].id;
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
     await client.query("COMMIT");
@@ -868,7 +869,7 @@ app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  let subtotal=0,eligibleSubtotal=0;const excluded=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];const excludedItems=[];
  for(const item of items){const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);const dish=r.rows[0];if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});const amount=dish.price*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;}
  if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
- const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,handlingFee:5,total:subtotal-discount+5,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
+ const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,handlingFee:5,deliveryFee:0,total:subtotal-discount+5,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
 }));
 
 app.get("/api/checkout/options", asyncRoute(async(req,res)=>{
@@ -934,7 +935,7 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  const {latitude,longitude,displayName}=match;
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});
  const toRad=d=>d*Math.PI/180,dLat=toRad(latitude-Number(area.latitude)),dLng=toRad(longitude-Number(area.longitude)),a=Math.sin(dLat/2)**2+Math.cos(toRad(Number(area.latitude)))*Math.cos(toRad(latitude))*Math.sin(dLng/2)**2,distanceKm=6371.0088*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
- res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,matchedAddress:displayName});
+ const deliveryFee=distanceKm>1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;\n res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:displayName});
 }));
 app.put("/api/admin/delivery-area",auth,admin,asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim(),latitude=Number(req.body.latitude),longitude=Number(req.body.longitude),radiusKm=Number(req.body.radiusKm),graceMeters=Number(req.body.graceMeters);
@@ -1176,7 +1177,7 @@ async function notifyWhatsApp(order) {
     })
     .join("; ") || "No items found";
 
-  const totalAmount = `Items subtotal Rs. ${(Number(order.total)||0)+5+(Number(order.discount)||0)}; Handling & processing fee Rs. 5; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
+  const deliveryFee=Number(order.delivery_fee)||0;\n  const totalAmount = `Items subtotal Rs. ${(Number(order.total)||0)-5-deliveryFee+(Number(order.discount)||0)}; Handling & processing fee Rs. 5; Delivery Charge Rs. ${deliveryFee}; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
   const scheduledInfo = order.scheduled_at ? `Scheduled: ${new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})}${order.delivery_slot ? " ("+order.delivery_slot+")" : ""}. ` : "";
   const deliveryAddress = cleanWhatsAppText(scheduledInfo + order.address);
 
