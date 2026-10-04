@@ -860,7 +860,7 @@ document.getElementById("chooseDeliveryPin").addEventListener("click",()=>{
  const panel=document.getElementById("deliveryPinPanel");panel.hidden=false;
  if(!deliveryMap){
   deliveryMap=L.map("deliveryPinMap").setView([12.89627,77.528264],13);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(deliveryMap);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{maxZoom:19,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(deliveryMap);
   deliveryMap.on("click",event=>{const {lat,lng}=event.latlng;if(deliveryPin)deliveryPin.setLatLng(event.latlng);else deliveryPin=L.marker(event.latlng,{draggable:true}).addTo(deliveryMap);deliveryPin.off("dragend").on("dragend",e=>setDeliveryPin(e.target.getLatLng().lat,e.target.getLatLng().lng));setDeliveryPin(lat,lng);});
   setTimeout(()=>deliveryMap.invalidateSize(),100);
  }else setTimeout(()=>deliveryMap.invalidateSize(),100);
