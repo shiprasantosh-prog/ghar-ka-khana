@@ -1022,7 +1022,7 @@ app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
 // Customer order history
 app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT o.id, o.total, o.address, o.status, o.created_at,
+    `SELECT o.id, o.total, o.address, o.status, o.created_at, o.estimated_delivery_minutes,
             EXISTS (SELECT 1 FROM reviews r WHERE r.order_id = o.id) AS reviewed
      FROM orders o WHERE o.user_id = $1
      ORDER BY id DESC`,
