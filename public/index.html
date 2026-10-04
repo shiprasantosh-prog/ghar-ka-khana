@@ -716,6 +716,8 @@ function toggleSidebar(){
     toggle.setAttribute("aria-label",expanded?"Collapse navigation":"Expand navigation");
 }
 function showPage(pageId){
+    // Always dismiss the basket before switching sections, especially on mobile where the fixed drawer can cover navigation.
+    closeCart();
     const allowed=["story","homePopular","homeWhy","homeHow","homeStory","homeReviewPreview","menu","account","myorders","reviews","contact"];
     if(!allowed.includes(pageId))pageId="story";
     document.body.dataset.currentPage=pageId;
