@@ -1277,22 +1277,23 @@ app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => 
 app.get("/bulk-chat/:phone", (req, res) => {
   let customerPhone = normalizePhone(req.params.phone);
 
-  // Bulk enquiries are currently for India. Normalize common Indian
-  // formats to the WhatsApp click-to-chat international format:
-  // 6363891872 / 0916363891872 / +916363891872 -> 916363891872.
+  // WhatsApp click-to-chat needs the full international number without
+  // +, spaces, brackets, dashes, or leading zeroes.
+  // For Indian mobile numbers, convert 10 digits to the 91 country-code form.
   if (customerPhone.length === 10) {
     customerPhone = "91" + customerPhone;
   } else if (customerPhone.length === 11 && customerPhone.startsWith("0")) {
     customerPhone = "91" + customerPhone.slice(1);
   }
 
-  if (!/^91[6-9]\d{9}$/.test(customerPhone)) {
+  // Keep this validation deliberately format-only. Do not reject a number
+  // based on the mobile prefix; Meta has already checked WhatsApp eligibility
+  // separately in the bulk enquiry flow.
+  if (!/^\d{10,15}$/.test(customerPhone)) {
     return res.status(400).send("Invalid customer WhatsApp number.");
   }
 
-  // WhatsApp click-to-chat requires the full international number without
-  // a plus sign, spaces, brackets, or dashes.
-  res.redirect(302, `https://api.whatsapp.com/send?phone=${customerPhone}`);
+  res.redirect(302, `https://wa.me/${customerPhone}`);
 });
 
 // Bulk & party order enquiries
