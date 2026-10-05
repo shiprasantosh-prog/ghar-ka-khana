@@ -1037,10 +1037,42 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
   const ok=expected.length===razorpaySignature.length&&crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(razorpaySignature));
   if(!ok)return res.status(400).json({error:"Payment verification failed. Your order has not been confirmed."});
+  const payment=await razorpay.payments.fetch(razorpayPaymentId);
+  if(String(payment.order_id||"")!==razorpayOrderId)return res.status(400).json({error:"Payment order does not match this order."});
+  if(Number(payment.amount)!==Number(row.total)*100)return res.status(400).json({error:"Payment amount does not match this order."});
+  if(payment.status!=="captured" && payment.captured!==true)return res.status(400).json({error:"Payment has not been captured yet. Your order remains pending."});
   const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
   const order=await readOrder(orderId);
   if(updated.rowCount)notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
   res.json(order);
+}));
+
+// Razorpay Callback URL fallback. Razorpay POSTs successful Checkout results here,
+// allowing the order to be confirmed even when the browser cannot execute the
+// client-side handler. Signature is verified against our stored Razorpay order ID.
+app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRoute(async (req,res)=>{
+  const razorpayOrderId=String(req.body?.razorpay_order_id||"");
+  const razorpayPaymentId=String(req.body?.razorpay_payment_id||"");
+  const razorpaySignature=String(req.body?.razorpay_signature||"");
+  if(!razorpay||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.redirect("/?payment=failed&reason=invalid_callback");
+  const result=await pool.query("SELECT id,total,payment_status FROM orders WHERE razorpay_order_id=$1",[razorpayOrderId]);
+  const row=result.rows[0];
+  if(!row)return res.redirect("/?payment=failed&reason=order_not_found");
+  if(row.payment_status!=="paid"){
+    const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
+    const ok=expected.length===razorpaySignature.length&&crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(razorpaySignature));
+    if(!ok)return res.redirect("/?payment=failed&reason=verification_failed");
+    const payment=await razorpay.payments.fetch(razorpayPaymentId);
+    if(String(payment.order_id||"")!==razorpayOrderId || Number(payment.amount)!==Number(row.total)*100 || (payment.status!=="captured" && payment.captured!==true)){
+      return res.redirect("/?payment=failed&reason=payment_not_captured");
+    }
+    const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,row.id]);
+    if(updated.rowCount){
+      const order=await readOrder(row.id);
+      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+    }
+  }
+  return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
 }));
 
 app.post("/api/payments/cancel",auth,asyncRoute(async(req,res)=>{
