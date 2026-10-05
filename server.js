@@ -67,6 +67,20 @@ async function initializeDatabase() {
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS bulk_enquiries (
+      id SERIAL PRIMARY KEY,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT NOT NULL,
+      occasion TEXT NOT NULL,
+      event_date DATE NOT NULL,
+      guests INTEGER NOT NULL,
+      delivery_location TEXT NOT NULL,
+      food_preferences TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      customer_whatsapp_status TEXT DEFAULT 'unknown',
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS menu (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
@@ -1257,6 +1271,43 @@ app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => 
   res.json(result.rows[0]);
 }));
 
+// Bulk & party order enquiries
+app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
+  const clean = (value, max = 1000) => String(value ?? "").trim().replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").slice(0, max);
+  const customerName = clean(req.body?.name, 120);
+  const rawPhone = clean(req.body?.phone, 30);
+  const occasion = clean(req.body?.occasion, 80);
+  const eventDate = clean(req.body?.date, 20);
+  const guests = Number(req.body?.guests);
+  const deliveryLocation = clean(req.body?.location, 1000);
+  const foodPreferences = clean(req.body?.preferences, 600);
+  const notes = clean(req.body?.notes, 1000);
+  if (!customerName || !rawPhone || !occasion || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate) || !Number.isInteger(guests) || guests < 1 || guests > 5000 || !deliveryLocation) return res.status(400).json({ error: "Please complete all required enquiry details." });
+  let customerPhone = normalizePhone(rawPhone);
+  if (customerPhone.length === 10) customerPhone = "91" + customerPhone;
+  if (customerPhone.length < 10 || customerPhone.length > 15) return res.status(400).json({ error: "Please enter a valid mobile number." });
+  const saved = await pool.query('INSERT INTO bulk_enquiries (customer_name, customer_phone, occasion, event_date, guests, delivery_location, food_preferences, notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, created_at', [customerName, customerPhone, occasion, eventDate, guests, deliveryLocation, foodPreferences, notes]);
+  const enquiryId = saved.rows[0].id;
+  const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_TO_NUMBER, WHATSAPP_API_VERSION = "v21.0", WHATSAPP_BULK_ENQUIRY_TEMPLATE = "ghar_ka_khana_bulk_enquiry" } = process.env;
+  if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_TO_NUMBER) {
+    await pool.query("UPDATE bulk_enquiries SET customer_whatsapp_status='not_configured' WHERE id=$1", [enquiryId]);
+    return res.status(503).json({ error: "Bulk enquiry WhatsApp delivery is not configured yet. The enquiry was saved." });
+  }
+  let customerWhatsappStatus = "unknown";
+  try {
+    const contactResponse = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/contacts`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", blocking: "wait", contacts: [customerPhone] }) });
+    const contactResult = await contactResponse.json().catch(() => ({}));
+    customerWhatsappStatus = contactResult.contacts?.[0]?.status === "valid" ? "valid" : "invalid";
+  } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
+  const customerChatLink = customerWhatsappStatus === "valid" ? `https://wa.me/${customerPhone}` : "Customer number is not registered on WhatsApp (or could not be verified).";
+  const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None", customerChatLink].map(value => ({ type: "text", text: cleanTemplate(value) }));
+  const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: WHATSAPP_TO_NUMBER, type: "template", template: { name: WHATSAPP_BULK_ENQUIRY_TEMPLATE, language: { code: "en" }, components: [{ type: "body", parameters: templateParameters }] } }) });
+  const result = await response.json().catch(() => ({}));
+  await pool.query("UPDATE bulk_enquiries SET customer_whatsapp_status=$1 WHERE id=$2", [customerWhatsappStatus, enquiryId]);
+  if (!response.ok) { console.error("Bulk enquiry WhatsApp notification failed:", result); return res.status(502).json({ error: "The enquiry was saved, but WhatsApp could not deliver it to the owner. Please try again." }); }
+  res.json({ success: true, enquiryId, customerWhatsappStatus, message: "Your enquiry has been sent to Ghar ka Khana. We will contact you shortly." });
+}));
 // WhatsApp notification
 
 async function notifyWhatsApp(order) {
