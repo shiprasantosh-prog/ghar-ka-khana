@@ -1275,7 +1275,14 @@ app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => 
 // Meta does not allow direct wa.me links in template buttons, so the
 // template points to this route and the server redirects the owner to WhatsApp.
 app.get("/bulk-chat/:phone", (req, res) => {
-  let customerPhone = normalizePhone(req.params.phone);
+  const rawBulkChatPhone = String(req.params.phone || "");
+  console.log("Bulk chat requested:", {
+    rawPhone: rawBulkChatPhone,
+    normalizedInput: normalizePhone(rawBulkChatPhone),
+    url: req.originalUrl
+  });
+
+  let customerPhone = normalizePhone(rawBulkChatPhone);
 
   // Normalize common Indian phone formats for WhatsApp click-to-chat.
   if (customerPhone.length === 10) {
@@ -1291,6 +1298,7 @@ app.get("/bulk-chat/:phone", (req, res) => {
   // Open the final WhatsApp URL from the browser instead of relying on an
   // HTTP redirect. This preserves the exact click-to-chat number.
   const whatsappUrl = `https://wa.me/${customerPhone}`;
+  console.log("Bulk chat final WhatsApp URL:", whatsappUrl);
   const safeUrl = whatsappUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(`<!doctype html>
