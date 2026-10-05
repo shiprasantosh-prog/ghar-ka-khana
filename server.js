@@ -1393,8 +1393,7 @@ app.get("/bulk-chat/:phone", (req, res) => {
 
 // Bulk & party order enquiries
 app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
-  const clean = (value, max = 1000) => String(value ?? "").trim().replace(/[\r
-\t]+/g, " ").replace(/\s{2,}/g, " ").slice(0, max);
+  const clean = (value, max = 1000) => String(value ?? "").trim().replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").slice(0, max);
   const customerName = clean(req.body?.name, 120);
   const rawPhone = clean(req.body?.phone, 30);
   const occasion = clean(req.body?.occasion, 80);
@@ -1427,8 +1426,7 @@ app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
     // not a Meta API identifier.
     customerWhatsappId = customerPhone;
   } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
-  const cleanTemplate = value => String(value || "Not provided").replace(/[\r
-\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
   const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None"].map(value => ({ type: "text", text: cleanTemplate(value) }));
   // The approved Meta template contains a required dynamic URL button.
   // Pass Meta's canonical WhatsApp ID when available.
@@ -1466,8 +1464,7 @@ async function notifyWhatsApp(order) {
   // Remove line breaks, tabs and repeated spaces from WhatsApp template values.
   const cleanWhatsAppText = (value, fallback = "Not provided") =>
     String(value ?? fallback)
-      .replace(/[\r
-\t]+/g, " ")
+      .replace(/[\r\n\t]+/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim() || fallback;
   
