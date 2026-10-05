@@ -1156,6 +1156,26 @@ app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
   res.json(result.rows);
 }));
 
+// Customer: read one of the signed-in customer's orders with full item and checkout details.
+app.get("/api/orders/mine/:id", auth, asyncRoute(async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (!Number.isInteger(orderId) || orderId < 1) {
+    return res.status(400).json({ error: "Invalid order." });
+  }
+
+  const result = await pool.query(
+    "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
+    [orderId, req.user.id]
+  );
+  if (!result.rowCount) {
+    return res.status(404).json({ error: "Order not found." });
+  }
+
+  const order = await readOrder(orderId);
+  if (!order) return res.status(404).json({ error: "Order not found." });
+  res.json(order);
+}));
+
 // Owner: all orders
 app.get("/api/admin/orders", auth, admin, asyncRoute(async (req, res) => {
   const result = await pool.query(
