@@ -7,12 +7,16 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
+const Razorpay = require("razorpay");
 const { Pool } = require("pg");
 const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
+
+const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET }) : null;
 
 if (!SECRET) {
   console.warn("Set JWT_SECRET in environment variables before production use.");
@@ -178,6 +182,9 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER NOT NULL DEFAULT 0");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT");
   await pool.query("CREATE TABLE IF NOT EXISTS promo_codes (id SERIAL PRIMARY KEY, code TEXT NOT NULL UNIQUE, customer_phone TEXT NOT NULL DEFAULT '', discount_type TEXT NOT NULL CHECK (discount_type IN ('percent','fixed')), discount_value INTEGER NOT NULL CHECK (discount_value > 0), minimum_order INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, valid_from DATE NOT NULL DEFAULT CURRENT_DATE, valid_until DATE NOT NULL DEFAULT CURRENT_DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS customer_phone TEXT NOT NULL DEFAULT ''");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS valid_from DATE NOT NULL DEFAULT CURRENT_DATE");
@@ -497,8 +504,7 @@ app.patch("/api/auth/profile", auth, asyncRoute(async (req, res) => {
     res.json({ user: result.rows[0] });
   } catch (e) {
     if (e.code === "23505") {
-      return res.status(409).json({ error: "That email address is already in use." });
-    }
+      return res.status(409).json({ error: "That email address is already in use." });    }
     throw e;
   }
 }));
@@ -996,19 +1002,53 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   }
   const kitchenStatus=await getKitchenStatus();
   if(!kitchenStatus.isOpen)return res.status(503).json({error:"Our kitchen is currently closed. Please check back later."});
+  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
+  const total=Number(subtotal-discount+5+deliveryFee);
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,scheduled_at,delivery_slot,promo_code,discount,delivery_fee) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",[req.user.id,subtotal-discount+5+deliveryFee,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,payment_status) VALUES($1,$2,$3,$4,'Payment Pending',$5,$6,$7,$8,$9,'created') RETURNING id",[req.user.id,total,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee]);
     orderId=result.rows[0].id;
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
     await client.query("COMMIT");
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
-  const order=await readOrder(orderId);
-  notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
-  res.status(201).json(order);
+  try{
+    const rpOrder=await razorpay.orders.create({amount:total*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
+    await pool.query("UPDATE orders SET razorpay_order_id=$1 WHERE id=$2",[rpOrder.id,orderId]);
+    const order=await readOrder(orderId);
+    res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
+  }catch(e){
+    await pool.query("DELETE FROM orders WHERE id=$1",[orderId]).catch(()=>{});
+    console.error("Razorpay order creation failed:",e.message);
+    return res.status(502).json({error:"We could not start the online payment. Please try again."});
+  }
 }));
 
+ 
+// Verify a successful Razorpay Checkout payment before confirming the customer order.
+app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
+  const orderId=Number(req.body?.orderId),razorpayOrderId=String(req.body?.razorpay_order_id||""),razorpayPaymentId=String(req.body?.razorpay_payment_id||""),razorpaySignature=String(req.body?.razorpay_signature||"");
+  if(!Number.isInteger(orderId)||orderId<1||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.status(400).json({error:"Incomplete payment verification details."});
+  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
+  const result=await pool.query("SELECT id,total,payment_status,razorpay_order_id FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]),row=result.rows[0];
+  if(!row)return res.status(404).json({error:"Order not found."});
+  if(row.payment_status==="paid")return res.json(await readOrder(orderId));
+  if(row.razorpay_order_id!==razorpayOrderId)return res.status(400).json({error:"Payment order does not match this order."});
+  const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
+  const ok=expected.length===razorpaySignature.length&&crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(razorpaySignature));
+  if(!ok)return res.status(400).json({error:"Payment verification failed. Your order has not been confirmed."});
+  const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
+  const order=await readOrder(orderId);
+  if(updated.rowCount)notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+  res.json(order);
+}));
+
+app.post("/api/payments/cancel",auth,asyncRoute(async(req,res)=>{
+  const orderId=Number(req.body?.orderId);
+  if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
+  await pool.query("UPDATE orders SET status='Payment Pending' WHERE id=$1 AND user_id=$2 AND payment_status='created'",[orderId,req.user.id]);
+  res.json({ok:true});
+}));
 
 app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  const {items,promoCode}=req.body||{};
@@ -1239,6 +1279,7 @@ app.get("/api/admin/orders", auth, admin, asyncRoute(async (req, res) => {
 // Owner: update order status and notify customers of supported status changes.
 app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   const allowed = [
+    "Payment Pending",
     "Received",
     "Accepted",
     "Preparing",
@@ -1497,8 +1538,7 @@ async function notifyWhatsApp(order) {
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: WHATSAPP_TO_NUMBER,
-        type: "template",
-        template: {
+        type: "template",        template: {
           name: "ghar_ka_khana_new_order",
           language: {
             code: "en"
