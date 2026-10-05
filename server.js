@@ -43,6 +43,24 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // The Maps browser key is intentionally served to the frontend; protect it with
 // HTTP-referrer and API restrictions in Google Cloud Console.
+app.get("/api/menu-images", (req, res) => {
+  const folders = ["Breakfast", "Chinese", "Main Course", "Snacks", "Parathas", "Healthy Salads", "Sweets & Deserts", "Beverages"];
+  const result = {};
+  for (const folder of folders) {
+    const directory = path.join(__dirname, "public", "images", folder);
+    try {
+      result[folder] = require("fs").readdirSync(directory, { withFileTypes: true })
+        .filter(entry => entry.isFile() && /\\.(jpe?g|png|webp)$/i.test(entry.name))
+        .map(entry => entry.name)
+        .sort((a, b) => a.localeCompare(b));
+    } catch (error) {
+      result[folder] = [];
+    }
+  }
+  res.set("Cache-Control", "no-store");
+  res.json(result);
+});
+
 app.get("/api/maps-config", (req, res) => {
   res.set("Cache-Control", "no-store");
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
