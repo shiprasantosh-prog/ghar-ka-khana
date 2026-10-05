@@ -1052,8 +1052,7 @@ async function loadCustomerMenu(){
   });
   return best.score>=0.68?'/images/'+folder+'/'+encodeURIComponent(best.file):'';
  };
- const findCategoryImage=name=>{
-  const category=menuGroup({cat:name});
+ const findCategoryImage=(name,category)=>{
   const candidates=imageCandidates[category];
   const folder=imageFolders[category];
   return candidates&&folder?findImage(name,candidates,folder):'';
@@ -1061,7 +1060,7 @@ async function loadCustomerMenu(){
  const mapDish=d=>{
   const name=normalizeDishName(d.name);
   const category=menuGroup(d);
-  const categoryImage=findCategoryImage(d.name);
+  const categoryImage=findCategoryImage(d.name,category);
   const fallback=d.image||fallbackFoodImage;
   return {
    id:Number(d.id),
