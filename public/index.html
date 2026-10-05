@@ -1049,7 +1049,7 @@ async function loadCustomerMenu(){
   const category=menuGroup(d);
   const categoryImage=findCategoryImage(d.name,category);
   const fallback=d.image||fallbackFoodImage;
-  return {id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||fallback,fallbackImg:fallback,tag:'Kitchen special'};
+  return {id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:d.image_url||categoryImage||fallback,fallbackImg:fallback,tag:'Kitchen special'};
  };
  dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
