@@ -56,9 +56,9 @@ const normalizeMenuImageName = value => String(value || "").toLowerCase()
   .replace(/\b(momos)\b/g, "momo").replace(/\b(pcs?|pieces?)\b/g, " ")
   .replace(/\b(serve|serves|serving)\s*\d+\b/g, " ").replace(/[^a-z0-9]/g, "");
 function getMenuImageCandidates(category) {
-  const folder = MENU_IMAGE_FOLDERS[category]; if (!folder) return [];
-  if (menuImageCatalog[category]) return menuImageCatalog[category];
-  try { menuImageCatalog[category] = require("fs").readdirSync(path.join(__dirname, "public", "images", folder), {withFileTypes:true})
+  const canonicalCategory = canonicalMenuImageCategory(category);\n  const folder = MENU_IMAGE_FOLDERS[canonicalCategory]; if (!folder) return [];
+  if (menuImageCatalog[canonicalCategory]) return menuImageCatalog[canonicalCategory];
+  try { menuImageCatalog[canonicalCategory] = require("fs").readdirSync(path.join(__dirname, "public", "images", folder), {withFileTypes:true})
     .filter(e => e.isFile() && /\.(jpe?g|png|webp)$/i.test(e.name)).map(e => e.name).sort((a,b)=>a.localeCompare(b));
   } catch (error) { menuImageCatalog[category] = []; }
   return menuImageCatalog[category];
@@ -69,15 +69,19 @@ function levenshteinMenuImage(a,b){
     for(let j=1;j<=b.length;j++){ const above=prev[j]; prev[j]=Math.min(prev[j]+1,prev[j-1]+1,left+(a[i-1]===b[j-1]?0:1)); left=above; }
   } return prev[b.length];
 }
+function canonicalMenuImageCategory(category) {
+  const value = String(category || "").trim().toLowerCase();
+  return Object.keys(MENU_IMAGE_FOLDERS).find(key => key.toLowerCase() === value) || "";
+}
 function menuImagePath(name, category) {
-  const candidates=getMenuImageCandidates(category), target=normalizeMenuImageName(name);
+  const canonicalCategory = canonicalMenuImageCategory(category);\n  const candidates=getMenuImageCandidates(canonicalCategory), target=normalizeMenuImageName(name);
   if(!target || !candidates.length) return ""; let best={file:"",score:0};
   for(const file of candidates){ const candidate=normalizeMenuImageName(file); if(!candidate) continue;
     let score=1-(levenshteinMenuImage(target,candidate)/Math.max(target.length,candidate.length));
     if(target===candidate) score=1; else if(target.includes(candidate)||candidate.includes(target)) score=Math.max(score,.86);
     if(score>best.score) best={file,score};
   }
-  return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[category])+"/"+encodeURIComponent(best.file) : "";
+  return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory])+"/"+encodeURIComponent(best.file) : "";
 }
 app.get("/api/menu-images", (req, res) => {
   const result={}; for(const category of Object.keys(MENU_IMAGE_FOLDERS)) result[category]=getMenuImageCandidates(category);
