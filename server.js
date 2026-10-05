@@ -1271,6 +1271,17 @@ app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => 
   res.json(result.rows[0]);
 }));
 
+// Owner CTA redirect for bulk enquiry WhatsApp chat.
+// Meta does not allow direct wa.me links in template buttons, so the
+// template points to this route and the server redirects the owner to WhatsApp.
+app.get("/bulk-chat/:phone", (req, res) => {
+  const customerPhone = normalizePhone(req.params.phone);
+  if (customerPhone.length < 10 || customerPhone.length > 15) {
+    return res.status(400).send("Invalid customer WhatsApp number.");
+  }
+  res.redirect(302, `https://wa.me/${customerPhone}`);
+});
+
 // Bulk & party order enquiries
 app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
   const clean = (value, max = 1000) => String(value ?? "").trim().replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").slice(0, max);
@@ -1299,10 +1310,12 @@ app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
     const contactResult = await contactResponse.json().catch(() => ({}));
     customerWhatsappStatus = contactResult.contacts?.[0]?.status === "valid" ? "valid" : "invalid";
   } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
-  const customerChatLink = customerWhatsappStatus === "valid" ? `https://wa.me/${customerPhone}` : "Customer number is not registered on WhatsApp (or could not be verified).";
   const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
-  const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None", customerChatLink].map(value => ({ type: "text", text: cleanTemplate(value) }));
-  const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: WHATSAPP_TO_NUMBER, type: "template", template: { name: WHATSAPP_BULK_ENQUIRY_TEMPLATE, language: { code: "en" }, components: [{ type: "body", parameters: templateParameters }] } }) });
+  const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None"].map(value => ({ type: "text", text: cleanTemplate(value) }));
+  const buttonParameters = customerWhatsappStatus === "valid"
+    ? [{ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: customerPhone }] }]
+    : [];
+  const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: WHATSAPP_TO_NUMBER, type: "template", template: { name: WHATSAPP_BULK_ENQUIRY_TEMPLATE, language: { code: "en" }, components: [{ type: "body", parameters: templateParameters }, ...buttonParameters] } }) });
   const result = await response.json().catch(() => ({}));
   await pool.query("UPDATE bulk_enquiries SET customer_whatsapp_status=$1 WHERE id=$2", [customerWhatsappStatus, enquiryId]);
   if (!response.ok) { console.error("Bulk enquiry WhatsApp notification failed:", result); return res.status(502).json({ error: "The enquiry was saved, but WhatsApp could not deliver it to the owner. Please try again." }); }
