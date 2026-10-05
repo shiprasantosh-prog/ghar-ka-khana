@@ -497,8 +497,7 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
  --line:#E5DCC8;
  --green:#1F5A3A;
 }
-body{background:#FBF6EA!important;color:#4A4A3F!important}
-header{background:rgba(251,246,234,.97)!important;border-bottom-color:#E5DCC8!important}
+body{background:#FBF6EA!important;color:#4A4A3F!important}header{background:rgba(251,246,234,.97)!important;border-bottom-color:#E5DCC8!important}
 .brand,.brand small{color:#1F5A3A}
 .navlinks a{color:#4A4A3F!important}
 .sidebar{background:#FBF6EA!important;border-right-color:#E5DCC8!important}
@@ -997,8 +996,7 @@ function showPage(pageId){
     const allowed=["story","homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview","menu","account","myorders","reviews","contact"];
     if(!allowed.includes(pageId))pageId="story";
     document.body.dataset.currentPage=pageId;
-    document.querySelectorAll(".page-view").forEach(section=>{
-        section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
+    document.querySelectorAll(".page-view").forEach(section=>{        section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
     });
     if(document.body.classList.contains("sidebar-expanded"))toggleSidebar();
     document.querySelector(".cart-fab").style.display=pageId==="story"?"none":"block";
@@ -1316,7 +1314,51 @@ function confirmAddressMapPin(){if(!addressMapPoint){document.getElementById("ad
 async function saveCustomerAddress(event){event.preventDefault();const form=event.target,msg=document.getElementById("addressFormMessage"),data=Object.fromEntries(new FormData(form)),search=document.getElementById("addressSearch");if(!/^[0-9]{6}$/.test(String(data.pincode||"").trim())){msg.textContent="Please enter a valid 6-digit PIN code.";return}let lat=Number(form.dataset.selectedLat),lng=Number(form.dataset.selectedLng);if(!form.dataset.selectedLat||!form.dataset.selectedLng){msg.textContent="Finding the address location…";try{const fullAddress=[data.house,data.street,data.pincode,data.city||"Bangalore",data.state||"Karnataka","India"].filter(Boolean).join(", "),queries=[fullAddress,search.value.trim()?search.value.trim()+", Bengaluru, Karnataka, India":"", [data.street,data.pincode,"Bengaluru Karnataka India"].filter(Boolean).join(", ")].filter(Boolean);let feature=null;for(const query of [...new Set(queries)]){const response=await fetch("https://photon.komoot.io/api/?limit=10&lang=en&lat=12.89627&lon=77.52864&zoom=10&q="+encodeURIComponent(query));if(!response.ok)continue;const result=await response.json();feature=(result.features||[]).find(x=>x.geometry?.coordinates);if(feature)break}if(!feature){for(const query of [...new Set(queries)]){try{const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query);const response=await fetch(url,{headers:{"Accept":"application/json"}});if(!response.ok)continue;const results=await response.json();if(results.length&&Number.isFinite(Number(results[0].lat))&&Number.isFinite(Number(results[0].lon))){feature={geometry:{coordinates:[Number(results[0].lon),Number(results[0].lat)]},properties:{name:results[0].display_name}};break}}catch(err){console.warn("Fallback address lookup failed",err)}}}if(feature){[lng,lat]=feature.geometry.coordinates;form.dataset.selectedLat=lat;form.dataset.selectedLng=lng;}else{lat=null;lng=null;msg.textContent="Exact map location not found. Saving your address details; delivery availability must be verified before ordering.";}if(!search.value.trim())search.value=fullAddress;}catch(e){console.warn("Address geocoding failed; saving address without coordinates",e);lat=null;lng=null;msg.textContent="Map lookup is temporarily unavailable. Saving your address details; delivery availability must be verified before ordering."}}const payload={...data,city:data.city||"Bengaluru",state:data.state||"Karnataka",formatted_address:addressWithoutHousePrefix(search.value.trim(),data.house)||[data.street,data.city,data.pincode].filter(Boolean).join(", "),latitude:Number.isFinite(lat)?lat:null,longitude:Number.isFinite(lng)?lng:null};msg.textContent="Saving address…";try{const editId=form.dataset.editId;await api(editId?`/api/addresses/${editId}`:"/api/addresses",{method:editId?"PATCH":"POST",body:JSON.stringify(payload)});await loadSavedAddresses();form.hidden=true;delete form.dataset.editId;msg.textContent=editId?"Address updated successfully.":"Address saved. You can now select it at checkout.";}catch(e){msg.textContent=e.message}}
 async function deleteSavedAddress(id){if(!confirm("Delete this saved address?"))return;try{await api("/api/addresses/"+id,{method:"DELETE",body:"{}"});await loadSavedAddresses()}catch(e){alert(e.message)}}
 async function setDefaultAddress(id){try{await api("/api/addresses/"+id+"/default",{method:"POST",body:"{}"});await loadSavedAddresses()}catch(e){alert(e.message)}}
-document.getElementById("orderForm").addEventListener("submit",async e=>{e.preventDefault();if(!document.getElementById("checkoutAddressId").value||!document.getElementById("deliveryLatitude").value||!document.getElementById("deliveryLongitude").value||!deliveryVerifiedAddress){document.getElementById("deliveryLocationStatus").textContent="Please select a saved address and verify delivery availability before placing your order.";return}if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing an order.";return}const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity})),mode=data.orderMode||"now",button=e.target.querySelector('button[type="submit"]');button.disabled=true;button.textContent="Placing order…";try{const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:document.getElementById("promoCode").value.trim(),addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude)})});const success=document.getElementById("success");success.textContent="Thank you, "+currentUser.name+"! Your order #GKK-"+String(order.id).padStart(4,"0")+" has been placed. "+(order.discount>0?("Promo "+order.promo_code+" applied — you saved "+money(order.discount)+". Final total: "+money(order.total)+". "):("Total: "+money(order.total)+". "))+"Your order has been sent to the kitchen.";success.classList.add("show");cart={};persistCart();appliedPromo=null;updateCart();e.target.reset();await loadMyOrders();await loadSavedAddresses()}catch(err){const success=document.getElementById("success");success.textContent=err.message;success.classList.add("show")}finally{button.disabled=false;button.textContent="Place order"}});
+async function startRazorpayPayment(order,checkoutData,form,button){
+ const success=document.getElementById("success");
+ return new Promise(resolve=>{
+  if(!window.Razorpay){success.textContent="Payment gateway could not be loaded. Please refresh and try again.";success.classList.add("show");resolve(false);return}
+  const options={
+   key:order.payment.keyId,
+   amount:order.payment.amount,
+   currency:order.payment.currency||"INR",
+   name:"Ghar ka Khana",
+   description:"Food order #GKK-"+String(order.id).padStart(4,"0"),
+   order_id:order.payment.orderId,
+   prefill:{name:checkoutData.name||currentUser?.name||"",email:checkoutData.email||currentUser?.email||"",contact:checkoutData.phone||currentUser?.phone||""},
+   notes:{ghar_ka_khana_order_id:String(order.id)},
+   theme:{color:"#104d37"},
+   handler:async response=>{
+    try{
+     button.textContent="Verifying payment…";
+     const verified=await api("/api/payments/verify",{method:"POST",body:JSON.stringify({orderId:order.id,razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
+     success.textContent="Thank you, "+currentUser.name+"! Your payment was successful and order #GKK-"+String(verified.id).padStart(4,"0")+" has been confirmed. "+(verified.discount>0?("Promo "+verified.promo_code+" applied — you saved "+money(verified.discount)+". Final total: "+money(verified.total)+". "):("Total: "+money(verified.total)+". "))+"Your order has been sent to the kitchen.";
+     success.classList.add("show");
+     cart={};persistCart();appliedPromo=null;updateCart();form.reset();await loadMyOrders();await loadSavedAddresses();
+     resolve(true);
+    }catch(err){success.textContent=err.message;success.classList.add("show");resolve(false)}
+   },
+   modal:{ondismiss:async()=>{try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }success.textContent="Payment was cancelled. Your order has not been confirmed. You can try again.";success.classList.add("show");resolve(false)}}
+  };
+  const rzp=new Razorpay(options);
+  rzp.on("payment.failed",response=>{success.textContent=response?.error?.description||"Payment failed. Your order has not been confirmed.";success.classList.add("show");resolve(false)});
+  rzp.open();
+ });
+}
+document.getElementById("orderForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ if(!document.getElementById("checkoutAddressId").value||!document.getElementById("deliveryLatitude").value||!document.getElementById("deliveryLongitude").value||!deliveryVerifiedAddress){document.getElementById("deliveryLocationStatus").textContent="Please select a saved address and verify delivery availability before placing the order.";return}
+ if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing an order.";return}
+ const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity})),mode=data.orderMode||"now",button=e.target.querySelector('button[type="submit"]');
+ button.disabled=true;button.textContent="Preparing payment…";
+ try{
+  const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
+  const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:document.getElementById("promoCode").value.trim(),addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude})});
+  await startRazorpayPayment(order,data,e.target,button);
+ }catch(err){
+  const success=document.getElementById("success");success.textContent=err.message;success.classList.add("show");
+ }finally{button.disabled=false;button.textContent="Place order";}
+});
 async function toggleScheduledCheckout(){const show=document.querySelector('input[name="orderMode"]:checked')?.value==="scheduled",panel=document.getElementById("scheduledCheckout");panel.hidden=!show;const date=document.getElementById("scheduledDate"),time=document.getElementById("deliveryTime");date.required=show;time.required=show;date.min=new Date(Date.now()+60000).toLocaleDateString("en-CA");if(show&&!date.value)date.value=date.min;}
 async function applyPromoCode(){const button=document.getElementById("applyPromoButton"),message=document.getElementById("promoMessage");if(!currentUser){message.textContent="Please sign in to validate a promo code.";return}button.disabled=true;button.textContent="Applying…";try{const items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity}));const result=await api("/api/promo/validate",{method:"POST",body:JSON.stringify({items,promoCode:document.getElementById("promoCode").value.trim()})});appliedPromo=result;message.textContent="Promo code applied successfully.";updateCart()}catch(err){appliedPromo=null;document.getElementById("promoBreakdown").textContent="";message.textContent=err.message;updateCart()}finally{button.disabled=false;button.textContent="Apply"}}
 document.getElementById("customerMenuSearch").addEventListener("input",e=>{menuSearchQuery=e.target.value;renderMenu()});
@@ -1485,4 +1527,5 @@ main > .hero.page-view.active-view .hero-brand svg{position:relative;top:9px}
 #bulkEnquiryOverlay .bulk-location-result span{display:block;margin-top:3px;font-size:11px;line-height:1.4;color:#68796d}
 #bulkEnquiryOverlay .bulk-location-hint{display:block;margin-top:6px;color:#68796d;font-size:11px}
 </style>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body></html>
