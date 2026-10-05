@@ -1326,12 +1326,10 @@ app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
     const contact = contactResult.contacts?.[0];
     customerWhatsappStatus = contact?.status === "valid" ? "valid" : "invalid";
 
-    // Meta returns the canonical WhatsApp ID (wa_id) for a valid contact.
-    // Use that ID for the chat link instead of assuming it always equals
-    // the customer's entered phone number.
-    if (customerWhatsappStatus === "valid" && contact?.wa_id) {
-      customerWhatsappId = normalizePhone(contact.wa_id);
-    }
+    // Keep the click-to-chat target as the normalized phone number.
+    // WhatsApp click-to-chat expects the full international phone number,
+    // not a Meta API identifier.
+    customerWhatsappId = customerPhone;
   } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
   const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
   const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None"].map(value => ({ type: "text", text: cleanTemplate(value) }));
