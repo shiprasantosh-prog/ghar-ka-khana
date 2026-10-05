@@ -43,22 +43,45 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // The Maps browser key is intentionally served to the frontend; protect it with
 // HTTP-referrer and API restrictions in Google Cloud Console.
-app.get("/api/menu-images", (req, res) => {
-  const folders = ["Breakfast", "Chinese", "Main Course", "Snacks", "Parathas", "Healthy Salads", "Sweets & Deserts", "Beverages"];
-  const result = {};
-  for (const folder of folders) {
-    const directory = path.join(__dirname, "public", "images", folder);
-    try {
-      result[folder] = require("fs").readdirSync(directory, { withFileTypes: true })
-        .filter(entry => entry.isFile() && /\.(jpe?g|png|webp)$/i.test(entry.name))
-        .map(entry => entry.name)
-        .sort((a, b) => a.localeCompare(b));
-    } catch (error) {
-      result[folder] = [];
-    }
+const MENU_IMAGE_FOLDERS = {
+  "Breakfast": "Breakfast", "Chinese": "Chinese", "Main Course": "Main Course",
+  "Snacks": "Snacks", "Parathas": "Parathas", "Healthy Salads": "Healthy Salads",
+  "Sweets & Desserts": "Sweets & Deserts", "Beverages": "Beverages"
+};
+const menuImageCatalog = {};
+const normalizeMenuImageName = value => String(value || "").toLowerCase()
+  .replace(/\.(jpg|jpeg|png|webp)$/i, "").replace(/\([^)]*\)/g, " ")
+  .replace(/\b(daal)\b/g, "dal").replace(/\b(cheela)\b/g, "chilla")
+  .replace(/\b(sooji)\b/g, "suji").replace(/\b(chilly)\b/g, "chilli")
+  .replace(/\b(momos)\b/g, "momo").replace(/\b(pcs?|pieces?)\b/g, " ")
+  .replace(/\b(serve|serves|serving)\s*\d+\b/g, " ").replace(/[^a-z0-9]/g, "");
+function getMenuImageCandidates(category) {
+  const folder = MENU_IMAGE_FOLDERS[category]; if (!folder) return [];
+  if (menuImageCatalog[category]) return menuImageCatalog[category];
+  try { menuImageCatalog[category] = require("fs").readdirSync(path.join(__dirname, "public", "images", folder), {withFileTypes:true})
+    .filter(e => e.isFile() && /\.(jpe?g|png|webp)$/i.test(e.name)).map(e => e.name).sort((a,b)=>a.localeCompare(b));
+  } catch (error) { menuImageCatalog[category] = []; }
+  return menuImageCatalog[category];
+}
+function levenshteinMenuImage(a,b){
+  const prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){ let left=prev[0]; prev[0]=i;
+    for(let j=1;j<=b.length;j++){ const above=prev[j]; prev[j]=Math.min(prev[j]+1,prev[j-1]+1,left+(a[i-1]===b[j-1]?0:1)); left=above; }
+  } return prev[b.length];
+}
+function menuImagePath(name, category) {
+  const candidates=getMenuImageCandidates(category), target=normalizeMenuImageName(name);
+  if(!target || !candidates.length) return ""; let best={file:"",score:0};
+  for(const file of candidates){ const candidate=normalizeMenuImageName(file); if(!candidate) continue;
+    let score=1-(levenshteinMenuImage(target,candidate)/Math.max(target.length,candidate.length));
+    if(target===candidate) score=1; else if(target.includes(candidate)||candidate.includes(target)) score=Math.max(score,.86);
+    if(score>best.score) best={file,score};
   }
-  res.set("Cache-Control", "no-store");
-  res.json(result);
+  return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[category])+"/"+encodeURIComponent(best.file) : "";
+}
+app.get("/api/menu-images", (req, res) => {
+  const result={}; for(const category of Object.keys(MENU_IMAGE_FOLDERS)) result[category]=getMenuImageCandidates(category);
+  res.set("Cache-Control","no-store"); res.json(result);
 });
 
 app.get("/api/maps-config", (req, res) => {
@@ -482,7 +505,7 @@ app.get("/api/popular-menu", asyncRoute(async (req, res) => {
      FROM popular_menu p JOIN menu m ON m.id = p.menu_id
      WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
-  res.json(result.rows);
+  res.json(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) })));
 }));
 
 app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
@@ -518,7 +541,7 @@ app.get("/api/menu", asyncRoute(async (req, res) => {
      ORDER BY category, name`
   );
 
-  res.json(result.rows);
+  res.json(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) })));
 }));
 
 // Owner menu
@@ -553,7 +576,7 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
     [requestedDate || null]
   );
 
-  res.json(result.rows);
+  res.json(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) })));
 }));
 
 // Get saved specials for the owner
