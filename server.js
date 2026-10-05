@@ -37,7 +37,7 @@ pool.on("error", (err) => {
 app.set("trust proxy", 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: "200kb" }));
+app.use(express.json({ limit: "3mb" }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -816,6 +816,9 @@ app.post("/api/menu", auth, admin, asyncRoute(async (req, res) => {
       error: "Valid name, category and whole-number price required."
     });
   }
+  if (typeof image === "string" && image.startsWith("data:image/") && image.length > 1500000) {
+    return res.status(413).json({ error: "Dish image is too large. Please choose a smaller photo." });
+  }
 
   const result = await pool.query(
     `INSERT INTO menu (name, description, category, price, image)
@@ -841,6 +844,10 @@ app.patch("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
   }
 
   const d = { ...old, ...req.body };
+
+  if (typeof d.image === "string" && d.image.startsWith("data:image/") && d.image.length > 1500000) {
+    return res.status(413).json({ error: "Dish image is too large. Please choose a smaller photo." });
+  }
 
   const available =
     d.available === false || d.available === 0 || d.available === "0"
