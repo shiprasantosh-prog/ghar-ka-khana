@@ -862,7 +862,7 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 }));
 
 async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinationLng){
- const apiKey=process.env.GOOGLE_MAPS_SERVER_API_KEY;if(!apiKey){const e=new Error("Driving-distance service is not configured. Please contact the kitchen.");e.status=503;throw e;}
+ const apiKey=process.env.GOOGLE_MAPS_API_KEY;if(!apiKey){const e=new Error("Driving-distance service is not configured. Please contact the kitchen.");e.status=503;throw e;}
  const response=await fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",headers:{"Content-Type":"application/json","X-Goog-Api-Key":apiKey,"X-Goog-FieldMask":"routes.distanceMeters"},body:JSON.stringify({origin:{location:{latLng:{latitude:Number(originLat),longitude:Number(originLng)}}},destination:{location:{latLng:{latitude:Number(destinationLat),longitude:Number(destinationLng)}}},travelMode:"DRIVE",routingPreference:"TRAFFIC_UNAWARE",units:"METRIC"}),signal:AbortSignal.timeout(12000)});
  if(!response.ok){console.error("[routes] Google Routes API HTTP",response.status,(await response.text().catch(()=>"")).slice(0,500));const e=new Error("We could not calculate the driving distance right now. Please try again.");e.status=502;throw e;}
  const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
