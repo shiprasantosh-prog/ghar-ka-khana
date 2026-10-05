@@ -1312,9 +1312,17 @@ app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
   } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
   const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
   const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None"].map(value => ({ type: "text", text: cleanTemplate(value) }));
-  const buttonParameters = customerWhatsappStatus === "valid"
-    ? [{ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: customerPhone }] }]
-    : [];
+  // The approved Meta template always contains the dynamic "Chat with Customer"
+  // URL button, so its required parameter must always be supplied. The WhatsApp
+  // contact check is still used only to tell the customer whether the number is valid.
+  const buttonParameters = [
+    {
+      type: "button",
+      sub_type: "url",
+      index: "0",
+      parameters: [{ type: "text", text: customerPhone }]
+    }
+  ];
   const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: WHATSAPP_TO_NUMBER, type: "template", template: { name: WHATSAPP_BULK_ENQUIRY_TEMPLATE, language: { code: "en" }, components: [{ type: "body", parameters: templateParameters }, ...buttonParameters] } }) });
   const result = await response.json().catch(() => ({}));
   await pool.query("UPDATE bulk_enquiries SET customer_whatsapp_status=$1 WHERE id=$2", [customerWhatsappStatus, enquiryId]);
