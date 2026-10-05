@@ -1,0 +1,95 @@
+name: Optimize menu images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install image optimizer
+        run: npm install --no-save sharp@0.33.5
+
+      - name: Compress JPEG menu images
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const sharp = require('sharp');
+
+          const roots = [
+            path.join(process.cwd(), 'public', 'images')
+          ];
+
+          function walk(dir) {
+            return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+              const full = path.join(dir, entry.name);
+              return entry.isDirectory() ? walk(full) : [full];
+            });
+          }
+
+          (async () => {
+            const files = roots.flatMap(walk).filter(file => /\.(jpe?g)$/i.test(file));
+            let changed = 0;
+            let before = 0;
+            let after = 0;
+
+            for (const file of files) {
+              const input = fs.readFileSync(file);
+              before += input.length;
+
+              const output = await sharp(input, { failOn: 'none' })
+                .resize({
+                  width: 1200,
+                  height: 1200,
+                  fit: 'inside',
+                  withoutEnlargement: true
+                })
+                .jpeg({
+                  quality: 80,
+                  progressive: true,
+                  mozjpeg: true
+                })
+                .toBuffer();
+
+              if (output.length < input.length * 0.92) {
+                fs.writeFileSync(file, output);
+                changed++;
+                after += output.length;
+              } else {
+                after += input.length;
+              }
+            }
+
+            console.log(`Checked ${files.length} JPEGs; optimized ${changed} files.`);
+            console.log(`JPEG bytes: ${(before / 1024 / 1024).toFixed(2)} MB -> ${(after / 1024 / 1024).toFixed(2)} MB`);
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Commit optimized images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/images
+          if git diff --cached --quiet; then
+            echo "No image changes to commit."
+          else
+            git commit -m "Optimize menu images [skip ci]"
+            git push
+          fi
