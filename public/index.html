@@ -640,7 +640,58 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 @media(min-width:701px){#homeWhy .why-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}#homeWhy .why-grid article{border-bottom:0!important}#homeWhy .why-grid article:nth-child(2){border-right:1px solid #dedfce!important}}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-</head>
+<style id="bulk-order-design">
+/* Premium Bulk & Party Orders — matched to the approved homepage direction */
+#homeBulkOrders{padding:28px clamp(16px,3vw,34px) 42px!important;background:#fbf8ef!important;border-top:1px solid #e4e7d8!important}
+#homeBulkOrders .bulk-order-section{width:100%;max-width:1280px;margin:0 auto;min-height:468px;display:grid;grid-template-columns:50% 50%;position:relative;overflow:hidden;border:0;border-radius:0;background:#f8efd9;box-shadow:none}
+#homeBulkOrders .bulk-order-copy{position:relative;z-index:2;padding:52px clamp(26px,4.5vw,70px);display:flex;flex-direction:column;justify-content:center;background:#f8efd9;clip-path:ellipse(78% 78% at 24% 50%)}
+#homeBulkOrders .bulk-order-copy:after{content:"";position:absolute;right:-18%;top:0;width:40%;height:100%;background:#f8efd9;z-index:-1}
+#homeBulkOrders .bulk-order-copy .eyebrow{font-size:12px;letter-spacing:3px;color:#b58a3b;margin-bottom:10px}
+#homeBulkOrders .bulk-order-copy h2{font:clamp(34px,3.7vw,52px)/1.06 Georgia,serif;letter-spacing:-.7px;color:#124f39!important;margin:0 0 16px;max-width:650px}
+#homeBulkOrders .bulk-order-copy>p{font-size:16px;line-height:1.55;color:#4f5f55!important;max-width:620px;margin:0 0 12px}
+#homeBulkOrders .bulk-occasions{display:flex;flex-wrap:wrap;gap:9px;margin:7px 0 15px;max-width:640px}
+#homeBulkOrders .bulk-occasion{display:inline-flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #dce2cc;border-radius:12px;background:#eef1d9;color:#1c4935;font-size:13px;font-weight:700;box-shadow:0 2px 8px rgba(30,70,45,.04)}
+#homeBulkOrders .bulk-occasion span{font-size:18px}
+#homeBulkOrders .bulk-order-copy .btn{margin-top:5px;border-radius:999px;padding:13px 22px;font-size:15px;box-shadow:0 7px 18px rgba(16,77,55,.14)}
+#homeBulkOrders .bulk-order-photo{position:relative;min-height:468px;background:url('/images/Kadhai%20Paneer.png') center/cover no-repeat}
+#homeBulkOrders .bulk-order-photo:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#f8efd9 0%,rgba(248,239,217,.6) 9%,rgba(248,239,217,.05) 27%,rgba(16,77,55,.02) 100%)}
+#homeBulkOrders .bulk-order-photo:after{content:"";position:absolute;left:-35px;top:-3%;width:90px;height:106%;background:#f8efd9;border-radius:50%}
+#bulkEnquiryOverlay{display:none;position:fixed;inset:0;z-index:90;background:rgba(25,43,31,.45);backdrop-filter:blur(3px);align-items:center;justify-content:flex-end;padding:24px}
+#bulkEnquiryOverlay.show{display:flex}
+#bulkEnquiryOverlay .bulk-enquiry-modal{width:min(520px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fffdf8;border:1px solid #dce4d5;border-radius:18px;box-shadow:0 24px 70px rgba(21,45,31,.25);padding:28px}
+#bulkEnquiryOverlay .bulk-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:7px}
+#bulkEnquiryOverlay .bulk-modal-head h2{font:32px/1.1 Georgia,serif;color:#174d38!important;margin:0}
+#bulkEnquiryOverlay .bulk-modal-head h2:after{content:"";display:block;width:78px;height:2px;margin:12px 0 0;background:#b58a3b}
+#bulkEnquiryOverlay .bulk-modal-close{border:0;background:transparent;color:#243b30;font-size:30px;line-height:1;padding:0}
+#bulkEnquiryOverlay .bulk-modal-intro{color:#52695a;line-height:1.6;margin:18px 0 20px}
+#bulkEnquiryOverlay .bulk-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+#bulkEnquiryOverlay .bulk-form-grid .field{margin:0}
+#bulkEnquiryOverlay .bulk-form-grid .field.full{grid-column:1/-1}
+#bulkEnquiryOverlay .bulk-form-grid .field label{color:#30483b;font-size:13px;font-weight:700;margin-bottom:7px}
+#bulkEnquiryOverlay .bulk-form-grid input,#bulkEnquiryOverlay .bulk-form-grid select,#bulkEnquiryOverlay .bulk-form-grid textarea{background:#fffdf8!important;border:1px solid #d7dfd2!important;color:#203b2e!important;border-radius:9px!important;padding:12px 13px;min-height:46px;outline:none}
+#bulkEnquiryOverlay .bulk-form-grid input:focus,#bulkEnquiryOverlay .bulk-form-grid select:focus,#bulkEnquiryOverlay .bulk-form-grid textarea:focus{border-color:#5e8a6c!important;box-shadow:0 0 0 3px rgba(94,138,108,.1)}
+#bulkEnquiryOverlay .bulk-form-grid textarea{min-height:80px!important}
+#bulkEnquiryOverlay .bulk-form-note{font-size:12px;color:#68796d;line-height:1.5;margin:13px 0 0}
+#bulkEnquiryOverlay .bulk-form-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:17px}
+#bulkEnquiryOverlay .bulk-form-actions .btn{width:100%;border-radius:10px;padding:13px}
+#bulkEnquiryOverlay .bulk-form-message{display:none;margin-top:10px;padding:10px;border-radius:8px;background:#edf6e9;color:#285d38;border:1px solid #cfe2ce;font-size:13px}
+#bulkEnquiryOverlay .bulk-form-message.show{display:block}
+@media(max-width:760px){
+ #homeBulkOrders{padding:20px 12px 34px!important}
+ #homeBulkOrders .bulk-order-section{grid-template-columns:1fr;min-height:0}
+ #homeBulkOrders .bulk-order-photo{min-height:270px;order:-1}
+ #homeBulkOrders .bulk-order-photo:before{background:linear-gradient(180deg,rgba(248,239,217,.02),rgba(248,239,217,.2))}
+ #homeBulkOrders .bulk-order-photo:after{display:none}
+ #homeBulkOrders .bulk-order-copy{clip-path:none;padding:30px 22px 34px}
+ #homeBulkOrders .bulk-order-copy:after{display:none}
+ #homeBulkOrders .bulk-occasions{gap:7px}
+ #homeBulkOrders .bulk-occasion{font-size:12px;padding:8px 10px}
+ #bulkEnquiryOverlay{padding:10px;align-items:center}
+ #bulkEnquiryOverlay .bulk-enquiry-modal{max-height:95vh;padding:20px;border-radius:15px}
+ #bulkEnquiryOverlay .bulk-form-grid{grid-template-columns:1fr}
+ #bulkEnquiryOverlay .bulk-form-grid .field.full{grid-column:auto}
+}
+</style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
 <aside class="sidebar" aria-label="Main navigation">
@@ -720,7 +771,25 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  <div class="card" style="padding:22px;margin-top:24px"><h3 style="font:25px Georgia,serif;color:var(--gold2)">Share your experience</h3><p class="notice">Sign in and review a delivered order from My Orders.</p><button class="btn ghost" type="button" onclick="showPage('myorders')">Go to My Orders</button></div>
  </section>
  <section class="wrap page-view" id="contact" style="border-top:1px solid #332b1d;padding-top:35px"><div class="section-head"><div><div class="eyebrow">We’re happy to help</div><h2>Contact Us</h2></div><p>Questions about the menu or your order? Get in touch.</p></div><div class="card contact-card"><h3>Ghar ka Khana</h3><p>Freshly prepared, just for you.</p><p class="notice">For orders and enquiries, please contact us on WhatsApp.</p><a class="btn whatsapp-cta" href="https://wa.me/918017503518" target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a></div></section></main><footer>Ghar ka Khana · Homemade with Love<br><br>Freshly prepared, just for you.</footer>
-<button class="btn cart-fab" style="display:none" onclick="openCart()">🛒 Basket <span id="fabCount">0</span></button>
+<div id="bulkEnquiryOverlay" role="dialog" aria-modal="true" aria-labelledby="bulkEnquiryTitle" onclick="if(event.target===this)closeBulkEnquiry()">
+<div class="bulk-enquiry-modal">
+<div class="bulk-modal-head"><h2 id="bulkEnquiryTitle">Bulk Order Enquiry</h2><button class="bulk-modal-close" type="button" aria-label="Close" onclick="closeBulkEnquiry()">×</button></div>
+<p class="bulk-modal-intro">Tell us your requirements and we’ll get back to you with menu options and quantities.</p>
+<form id="bulkEnquiryForm" onsubmit="submitBulkEnquiry(event)">
+<div class="bulk-form-grid">
+<div class="field"><label for="bulkName">Your Name</label><input id="bulkName" name="name" autocomplete="name" placeholder="Enter your name" required></div>
+<div class="field"><label for="bulkPhone">Mobile Number</label><input id="bulkPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Enter your mobile number" required></div>
+<div class="field"><label for="bulkOccasion">Occasion</label><select id="bulkOccasion" name="occasion" required><option value="">Select occasion</option><option>Birthday Party</option><option>Kitty Party</option><option>Get-Together</option><option>Family Function</option><option>Small Event</option><option>Other</option></select></div>
+<div class="field"><label for="bulkDate">Event Date</label><input id="bulkDate" name="date" type="date" required></div>
+<div class="field"><label for="bulkGuests">Number of Guests</label><input id="bulkGuests" name="guests" type="number" min="1" max="5000" placeholder="e.g. 20" required></div>
+<div class="field full"><label for="bulkLocation">Delivery Location</label><input id="bulkLocation" name="location" placeholder="Apartment, area or locality" required></div>
+<div class="field full"><label for="bulkPreferences">Food Preferences</label><textarea id="bulkPreferences" name="preferences" placeholder="e.g. North Indian, South Indian, Veg only, Jain, less spicy, etc."></textarea></div>
+<div class="field full"><label for="bulkNotes">Additional Requirements <span style="font-weight:400">(optional)</span></label><textarea id="bulkNotes" name="notes" placeholder="Any special instructions"></textarea></div>
+</div>
+<p class="bulk-form-note">Your enquiry will open WhatsApp with these details so our team can respond directly.</p>
+<div class="bulk-form-actions"><button class="btn ghost" type="button" onclick="closeBulkEnquiry()">Cancel</button><button class="btn" type="submit">✈ Send Enquiry</button></div>
+<div id="bulkFormMessage" class="bulk-form-message" role="status"></div>
+</form></div></div><button class="btn cart-fab" style="display:none" onclick="openCart()">🛒 Basket <span id="fabCount">0</span></button>
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeCart()"><aside class="drawer"><div class="drawer-head"><h2>Your Basket</h2><button class="close" onclick="closeCart()">×</button></div><div id="cartItems"></div><div id="checkout" style="display:none"><div class="total"><span>Subtotal</span><strong id="total">₹0</strong></div><div class="total" id="promoDiscountRow" style="display:none;color:#18734b"><span id="promoDiscountLabel">Promo discount</span><strong id="promoDiscountAmount">−₹0</strong></div><div class="total"><span>Handling &amp; processing fee</span><strong id="handlingFee">₹5</strong></div><div class="total"><span>Delivery Charge</span><strong id="deliveryFee">₹0</strong></div><div class="total"><span><strong>Amount payable</strong></span><strong id="payableTotal">₹5</strong></div><div id="promoBreakdown" class="notice" aria-live="polite"></div><h3 style="font:22px Georgia,serif;color:var(--gold2)">Delivery details</h3><form id="orderForm"><div class="field"><label>Full name</label><input name="name" required placeholder="Your name"></div><div class="field"><label>Phone number</label><input name="phone" required type="tel" pattern="[0-9 +()\\-]{10,}" placeholder="Mobile number"></div><div class="field"><label>Deliver to saved address</label><select id="checkoutAddressSelect" required><option value="">Choose a saved address</option></select><p id="checkoutAddressDetails" class="notice" role="status">Select an address to check delivery availability.</p><button type="button" class="btn secondary" id="addCheckoutAddress">+ Add new address</button><span id="deliveryLocationStatus" class="notice" role="status"></span><input type="hidden" name="address" id="checkoutAddressText" required><input type="hidden" name="latitude" id="deliveryLatitude"><input type="hidden" name="longitude" id="deliveryLongitude"><input type="hidden" name="addressId" id="checkoutAddressId"></div><div class="field"><label>When would you like your food?</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label><input type="radio" name="orderMode" value="now" checked onchange="toggleScheduledCheckout()"> Order Now</label><label><input type="radio" name="orderMode" value="scheduled" onchange="toggleScheduledCheckout()"> Prior Order (Schedule for Later)</label></div></div><div id="scheduledCheckout" hidden><div class="field"><label>Delivery date</label><input id="scheduledDate" type="date" min=""></div><div class="field"><label>Preferred delivery time</label><input id="deliveryTime" type="time" step="60"></div></div><div class="field"><label>Promo code (optional)</label><div style="display:flex;gap:8px"><input id="promoCode" placeholder="Enter promo code" style="flex:1;min-width:0"><button class="btn" type="button" id="applyPromoButton" onclick="applyPromoCode()">Apply</button></div><p class="notice">Codes are linked to the registered mobile number.</p><p id="promoMessage" class="notice" role="status"></p></div><div class="field"><label>Delivery instructions (optional)</label><input name="notes" placeholder="Any special instructions"></div><button class="btn" type="submit" style="width:100%">Place order</button></form><p class="notice">Your order will be saved securely and sent to the kitchen.</p><div class="success" id="success"></div></div></aside></div>
 <script>
 let dishes=[],todaySpecials=[],cart=loadSavedCart("guest"),category="All",currentUser=null,authMode="login",menuSearchQuery="",appliedPromo=null,cartOwnerKey="guest",deliveryFee=0,deliveryVerifiedAddress="",savedAddresses=[],selectedSavedAddress=null;
