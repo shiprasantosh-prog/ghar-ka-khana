@@ -824,11 +824,11 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="field"><label for="bulkOccasion">Occasion</label><select id="bulkOccasion" name="occasion" required><option value="">Select occasion</option><option>Birthday Party</option><option>Kitty Party</option><option>Get-Together</option><option>Family Function</option><option>Small Event</option><option>Other</option></select></div>
 <div class="field"><label for="bulkDate">Event Date</label><input id="bulkDate" name="date" type="date" required></div>
 <div class="field"><label for="bulkGuests">Number of Guests</label><input id="bulkGuests" name="guests" type="number" min="1" max="5000" placeholder="e.g. 20" required></div>
-<div class="field full"><label for="bulkLocation">Delivery Location</label><input id="bulkLocation" name="location" placeholder="Apartment, area or locality" required></div>
+<div class="field full bulk-location-field"><label for="bulkLocation">Delivery Location</label><input id="bulkLocation" name="location" autocomplete="street-address" placeholder="Search apartment, area or locality" required><div id="bulkLocationResults" class="bulk-location-results" role="listbox" aria-label="Address suggestions"></div><input type="hidden" id="bulkLocationLat" name="latitude"><input type="hidden" id="bulkLocationLng" name="longitude"><small class="bulk-location-hint">Search and select the delivery location from the suggestions.</small></div>
 <div class="field full"><label for="bulkPreferences">Food Preferences</label><textarea id="bulkPreferences" name="preferences" placeholder="e.g. North Indian, South Indian, Veg only, Jain, less spicy, etc."></textarea></div>
 <div class="field full"><label for="bulkNotes">Additional Requirements <span style="font-weight:400">(optional)</span></label><textarea id="bulkNotes" name="notes" placeholder="Any special instructions"></textarea></div>
 </div>
-<p class="bulk-form-note">Your enquiry will open WhatsApp with these details so our team can respond directly.</p>
+<p class="bulk-form-note">Your enquiry will be sent directly to Ghar ka Khana. If your mobile number is on WhatsApp, the owner will also get an option to chat with you.</p>
 <div class="bulk-form-actions"><button class="btn ghost" type="button" onclick="closeBulkEnquiry()">Cancel</button><button class="btn" type="submit">✈ Send Enquiry</button></div>
 <div id="bulkFormMessage" class="bulk-form-message" role="status"></div>
 </form></div></div><button class="btn cart-fab" style="display:none" onclick="openCart()">🛒 Basket <span id="fabCount">0</span></button>
@@ -1105,7 +1105,59 @@ setAuthMode("login");loadPublicReviews();checkSession();loadCustomerMenu().catch
 function toggleStoryMore(){const more=document.getElementById("storyMore"),button=document.getElementById("storyToggle");if(!more||!button)return;const expanded=more.hidden;more.hidden=!expanded;button.setAttribute("aria-expanded",String(expanded));button.innerHTML=expanded?'Read Less <span aria-hidden="true">⌃</span>':'Read More <span aria-hidden="true">⌄</span>';}
 function openBulkEnquiry(){const overlay=document.getElementById("bulkEnquiryOverlay");if(!overlay)return;overlay.classList.add("show");document.body.style.overflow="hidden";const date=document.getElementById("bulkDate");if(date&&!date.min)date.min=new Date().toLocaleDateString("en-CA");setTimeout(()=>document.getElementById("bulkName")?.focus(),80)}
 function closeBulkEnquiry(){const overlay=document.getElementById("bulkEnquiryOverlay");if(!overlay)return;overlay.classList.remove("show");document.body.style.overflow=""}
-function submitBulkEnquiry(event){event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));const message=["Bulk Order Enquiry","",`Name: ${data.name}`,`Mobile: ${data.phone}`,`Occasion: ${data.occasion}`,`Event Date: ${data.date}`,`Guests: ${data.guests}`,`Delivery Location: ${data.location}`,`Food Preferences: ${data.preferences||"Not specified"}`,`Additional Requirements: ${data.notes||"None"}`].join("\n");window.open("https://wa.me/918017503518?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");const status=document.getElementById("bulkFormMessage");if(status){status.textContent="WhatsApp is opening with your enquiry details.";status.classList.add("show")}}
+let bulkLocationSearchTimer=null;
+function renderBulkLocationResults(features){
+  const host=document.getElementById("bulkLocationResults"); if(!host)return;
+  host._features=features||[];
+  host.innerHTML=(features||[]).length?features.map((x,i)=>{
+    const p=x.properties||{};
+    const title=p.name||p.street||p.locality||"Location";
+    const detail=[p.street,p.suburb||p.neighbourhood||p.district||p.city,p.postcode,p.state].filter(Boolean).filter((v,j,a)=>a.indexOf(v)===j).join(", ");
+    return '<button type="button" class="bulk-location-result" data-index="'+i+'"><strong>'+escapeHTML(title)+'</strong><span>'+escapeHTML(detail)+'</span></button>';
+  }).join(""):"";
+}
+document.addEventListener("input",event=>{
+  if(event.target.id!=="bulkLocation")return;
+  const q=event.target.value.trim(),host=document.getElementById("bulkLocationResults");
+  clearTimeout(bulkLocationSearchTimer);
+  document.getElementById("bulkLocationLat").value="";
+  document.getElementById("bulkLocationLng").value="";
+  if(q.length<3){renderBulkLocationResults([]);return}
+  bulkLocationSearchTimer=setTimeout(async()=>{
+    try{
+      const response=await fetch("https://photon.komoot.io/api/?limit=8&lang=en&lat=12.89627&lon=77.52864&zoom=10&q="+encodeURIComponent(q));
+      if(!response.ok)throw new Error("Search unavailable");
+      const data=await response.json();
+      renderBulkLocationResults((data.features||[]).filter(x=>x.geometry?.coordinates));
+    }catch(error){console.warn("Bulk address search failed:",error);renderBulkLocationResults([])}
+  },350);
+});
+document.addEventListener("click",event=>{
+  const button=event.target.closest("#bulkLocationResults .bulk-location-result"); if(!button)return;
+  const host=document.getElementById("bulkLocationResults"),feature=host?._features?.[Number(button.dataset.index)];
+  if(!feature)return;
+  const [lng,lat]=feature.geometry.coordinates,p=feature.properties||{};
+  const title=p.name||p.street||p.locality||"Selected location";
+  const detail=[p.street,p.suburb||p.neighbourhood||p.district||p.city,p.postcode,p.state].filter(Boolean).filter((v,j,a)=>a.indexOf(v)===j).join(", ");
+  document.getElementById("bulkLocation").value=[title,detail].filter(Boolean).join(", ");
+  document.getElementById("bulkLocationLat").value=String(lat);
+  document.getElementById("bulkLocationLng").value=String(lng);
+  renderBulkLocationResults([]);
+});
+function submitBulkEnquiry(event){
+  event.preventDefault();
+  const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=document.getElementById("bulkFormMessage");
+  const data=Object.fromEntries(new FormData(form));
+  if(!data.latitude||!data.longitude){status.textContent="Please search for and select the delivery location from the suggestions.";status.classList.add("show");document.getElementById("bulkLocation").focus();return}
+  button.disabled=true;button.textContent="Sending…";status.classList.remove("show");
+  api("/api/bulk-enquiries",{method:"POST",body:JSON.stringify(data)}).then(result=>{
+    status.textContent=result.message+(result.customerWhatsappStatus==="valid"?" The owner will have a WhatsApp chat option for your number.":"");
+    status.classList.add("show");
+    form.reset();renderBulkLocationResults([]);
+  }).catch(error=>{
+    status.textContent=error.message;status.classList.add("show");
+  }).finally(()=>{button.disabled=false;button.textContent="✈ Send Enquiry"});
+}
 </script>
 <style id="compact-menu-cards">
 /* Match the compact Best Selling Items card treatment in specials and full menu. */
@@ -1200,5 +1252,16 @@ main > .hero.page-view.active-view .hero-brand svg{position:relative;top:9px}
 .address-form-message{margin:14px 0}
 .address-form-actions{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:520px){.address-fields-grid{grid-template-columns:1fr;gap:14px}.address-field-house,.address-field-street{grid-column:auto}.saved-address-form{padding:15px}}
+</style>
+<style id="bulk-location-search">
+#bulkEnquiryOverlay .bulk-location-field{position:relative}
+#bulkEnquiryOverlay .bulk-location-results{position:absolute;left:0;right:0;top:100%;z-index:5;margin-top:4px;background:#fffdf8;border:1px solid #d7dfd2;border-radius:9px;box-shadow:0 10px 25px rgba(30,60,40,.12);overflow:hidden}
+#bulkEnquiryOverlay .bulk-location-results:empty{display:none}
+#bulkEnquiryOverlay .bulk-location-result{display:block;width:100%;padding:11px 13px;border:0;border-bottom:1px solid #edf1eb;background:#fffdf8;text-align:left;color:#203b2e;cursor:pointer}
+#bulkEnquiryOverlay .bulk-location-result:last-child{border-bottom:0}
+#bulkEnquiryOverlay .bulk-location-result:hover{background:#f2f7ef}
+#bulkEnquiryOverlay .bulk-location-result strong{display:block;font-size:13px}
+#bulkEnquiryOverlay .bulk-location-result span{display:block;margin-top:3px;font-size:11px;line-height:1.4;color:#68796d}
+#bulkEnquiryOverlay .bulk-location-hint{display:block;margin-top:6px;color:#68796d;font-size:11px}
 </style>
 </body></html>
