@@ -987,33 +987,25 @@ const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<
 async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
 async function loadCustomerMenu(){
  await refreshKitchenBanner();
- const [rows,specialRows,breakfastCatalogue,popularRows,breakfastImageFiles,chineseImageFiles,mainCourseImageFiles,snacksImageFiles,parathasImageFiles,healthySaladImageFiles,sweetsImageFiles,beverageImageFiles]=await Promise.all([
+ const [rows,specialRows,breakfastCatalogue,popularRows,imageCatalog]=await Promise.all([
   api('/api/menu'),
   api('/api/specials'),
   fetch('/menu-descriptions/breakfast.json').then(r=>r.ok?r.json():null).catch(()=>null),
   api('/api/popular-menu').catch(()=>[]),
-  fetch('/images/Breakfast/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Chinese/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Main%20Course/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Snacks/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Parathas/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Healthy%20Salads/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Sweets%20%26%20Deserts/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch('/images/Beverages/manifest.json').then(r=>r.ok?r.json():[]).catch(()=>[])
+  api('/api/menu-images',{cache:'no-store'}).catch(()=>({}))
  ]);
  const normalizeDishName=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
  const breakfastDescriptions=new Map((breakfastCatalogue?.items||[]).map(item=>[normalizeDishName(item.name),item.description]));
  const normalizeImageName=value=>String(value||'').toLowerCase().replace(/\.(jpg|jpeg|png|webp)$/i,'').replace(/\([^)]*\)/g,' ').replace(/\b(daal)\b/g,'dal').replace(/\b(cheela)\b/g,'chilla').replace(/\b(sooji)\b/g,'suji').replace(/\b(chilly)\b/g,'chilli').replace(/\b(momos)\b/g,'momo').replace(/\b(pcs?|pieces?)\b/g,' ').replace(/\b(serve|serves|serving)\s*\d+\b/g,' ').replace(/[^a-z0-9]/g,'');
  const imageCandidates={
-  Breakfast:Array.isArray(breakfastImageFiles)?breakfastImageFiles.filter(Boolean):[],
-  Chinese:Array.isArray(chineseImageFiles)?chineseImageFiles.filter(Boolean):[],
-  'Main Course':Array.isArray(mainCourseImageFiles)?mainCourseImageFiles.filter(Boolean):[],
-  Snacks:Array.isArray(snacksImageFiles)?snacksImageFiles.filter(Boolean):[],
-  Parathas:Array.isArray(parathasImageFiles)?parathasImageFiles.filter(Boolean):[],
-  'Healthy Salads':Array.isArray(healthySaladImageFiles)?healthySaladImageFiles.filter(Boolean):[],
-  'Sweets & Desserts':Array.isArray(sweetsImageFiles)?sweetsImageFiles.filter(Boolean):[],
-  'Sweets & Deserts':Array.isArray(sweetsImageFiles)?sweetsImageFiles.filter(Boolean):[],
-  Beverages:Array.isArray(beverageImageFiles)?beverageImageFiles.filter(Boolean):[]
+  Breakfast:Array.isArray(imageCatalog.Breakfast)?imageCatalog.Breakfast:[],
+  Chinese:Array.isArray(imageCatalog.Chinese)?imageCatalog.Chinese:[],
+  'Main Course':Array.isArray(imageCatalog['Main Course'])?imageCatalog['Main Course']:[],
+  Snacks:Array.isArray(imageCatalog.Snacks)?imageCatalog.Snacks:[],
+  Parathas:Array.isArray(imageCatalog.Parathas)?imageCatalog.Parathas:[],
+  'Healthy Salads':Array.isArray(imageCatalog['Healthy Salads'])?imageCatalog['Healthy Salads']:[],
+  'Sweets & Desserts':Array.isArray(imageCatalog['Sweets & Deserts'])?imageCatalog['Sweets & Deserts']:[],
+  Beverages:Array.isArray(imageCatalog.Beverages)?imageCatalog.Beverages:[]
  };
  const imageFolders={
   Breakfast:'Breakfast',
@@ -1023,7 +1015,6 @@ async function loadCustomerMenu(){
   Parathas:'Parathas',
   'Healthy Salads':'Healthy%20Salads',
   'Sweets & Desserts':'Sweets%20%26%20Deserts',
-  'Sweets & Deserts':'Sweets%20%26%20Deserts',
   Beverages:'Beverages'
  };
  const levenshtein=(a,b)=>{
@@ -1040,7 +1031,7 @@ async function loadCustomerMenu(){
  };
  const findImage=(name,candidates,folder)=>{
   const target=normalizeImageName(name);
-  if(!target)return '';
+  if(!target||!candidates.length)return '';
   let best={file:'',score:0};
   candidates.forEach(file=>{
    const candidate=normalizeImageName(file);
@@ -1052,26 +1043,13 @@ async function loadCustomerMenu(){
   });
   return best.score>=0.68?'/images/'+folder+'/'+encodeURIComponent(best.file):'';
  };
- const findCategoryImage=(name,category)=>{
-  const candidates=imageCandidates[category];
-  const folder=imageFolders[category];
-  return candidates&&folder?findImage(name,candidates,folder):'';
- };
+ const findCategoryImage=(name,category)=>findImage(name,imageCandidates[category]||[],imageFolders[category]||'');
  const mapDish=d=>{
   const name=normalizeDishName(d.name);
   const category=menuGroup(d);
   const categoryImage=findCategoryImage(d.name,category);
   const fallback=d.image||fallbackFoodImage;
-  return {
-   id:Number(d.id),
-   name:d.name,
-   price:Number(d.price),
-   cat:d.category||'Other',
-   desc:breakfastDescriptions.get(name)||d.description||'',
-   img:categoryImage||fallback,
-   fallbackImg:fallback,
-   tag:'Kitchen special'
-  };
+  return {id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||fallback,fallbackImg:fallback,tag:'Kitchen special'};
  };
  dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
