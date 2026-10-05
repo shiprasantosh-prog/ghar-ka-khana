@@ -691,6 +691,47 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  #bulkEnquiryOverlay .bulk-form-grid{grid-template-columns:1fr}
  #bulkEnquiryOverlay .bulk-form-grid .field.full{grid-column:auto}
 }
+@media(min-width:761px){
+ #homeBulkOrders{padding:22px 24px 32px!important}
+ #homeBulkOrders .bulk-order-section{
+   max-width:1120px;
+   min-height:390px;
+   grid-template-columns:50% 50%;
+ }
+ #homeBulkOrders .bulk-order-copy{
+   padding:40px 48px;
+ }
+ #homeBulkOrders .bulk-order-copy h2{
+   font-size:clamp(30px,3vw,42px);
+   line-height:1.08;
+   letter-spacing:-.5px;
+   margin-bottom:13px;
+   max-width:500px;
+ }
+ #homeBulkOrders .bulk-order-copy>p{
+   font-size:14px;
+   line-height:1.45;
+   max-width:500px;
+   margin-bottom:9px;
+ }
+ #homeBulkOrders .bulk-occasions{
+   gap:7px;
+   margin:5px 0 11px;
+   max-width:510px;
+ }
+ #homeBulkOrders .bulk-occasion{
+   padding:8px 11px;
+   font-size:12px;
+   border-radius:10px;
+ }
+ #homeBulkOrders .bulk-occasion span{font-size:16px}
+ #homeBulkOrders .bulk-order-copy .btn{
+   padding:11px 19px;
+   font-size:14px;
+ }
+ #homeBulkOrders .bulk-order-photo{min-height:390px}
+}
+
 </style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
