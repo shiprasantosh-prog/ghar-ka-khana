@@ -56,12 +56,13 @@ const normalizeMenuImageName = value => String(value || "").toLowerCase()
   .replace(/\b(momos)\b/g, "momo").replace(/\b(pcs?|pieces?)\b/g, " ")
   .replace(/\b(serve|serves|serving)\s*\d+\b/g, " ").replace(/[^a-z0-9]/g, "");
 function getMenuImageCandidates(category) {
-  const canonicalCategory = canonicalMenuImageCategory(category);\n  const folder = MENU_IMAGE_FOLDERS[canonicalCategory]; if (!folder) return [];
+  const canonicalCategory = canonicalMenuImageCategory(category);
+  const folder = MENU_IMAGE_FOLDERS[canonicalCategory]; if (!folder) return [];
   if (menuImageCatalog[canonicalCategory]) return menuImageCatalog[canonicalCategory];
   try { menuImageCatalog[canonicalCategory] = require("fs").readdirSync(path.join(__dirname, "public", "images", folder), {withFileTypes:true})
     .filter(e => e.isFile() && /\.(jpe?g|png|webp)$/i.test(e.name)).map(e => e.name).sort((a,b)=>a.localeCompare(b));
-  } catch (error) { menuImageCatalog[category] = []; }
-  return menuImageCatalog[category];
+  } catch (error) { menuImageCatalog[canonicalCategory] = []; }
+  return menuImageCatalog[canonicalCategory];
 }
 function levenshteinMenuImage(a,b){
   const prev=Array.from({length:b.length+1},(_,i)=>i);
@@ -74,7 +75,8 @@ function canonicalMenuImageCategory(category) {
   return Object.keys(MENU_IMAGE_FOLDERS).find(key => key.toLowerCase() === value) || "";
 }
 function menuImagePath(name, category) {
-  const canonicalCategory = canonicalMenuImageCategory(category);\n  const candidates=getMenuImageCandidates(canonicalCategory), target=normalizeMenuImageName(name);
+  const canonicalCategory = canonicalMenuImageCategory(category);
+  const candidates=getMenuImageCandidates(canonicalCategory), target=normalizeMenuImageName(name);
   if(!target || !candidates.length) return ""; let best={file:"",score:0};
   for(const file of candidates){ const candidate=normalizeMenuImageName(file); if(!candidate) continue;
     let score=1-(levenshteinMenuImage(target,candidate)/Math.max(target.length,candidate.length));
@@ -1391,7 +1393,8 @@ app.get("/bulk-chat/:phone", (req, res) => {
 
 // Bulk & party order enquiries
 app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
-  const clean = (value, max = 1000) => String(value ?? "").trim().replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").slice(0, max);
+  const clean = (value, max = 1000) => String(value ?? "").trim().replace(/[\r
+\t]+/g, " ").replace(/\s{2,}/g, " ").slice(0, max);
   const customerName = clean(req.body?.name, 120);
   const rawPhone = clean(req.body?.phone, 30);
   const occasion = clean(req.body?.occasion, 80);
@@ -1424,7 +1427,8 @@ app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
     // not a Meta API identifier.
     customerWhatsappId = customerPhone;
   } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
-  const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  const cleanTemplate = value => String(value || "Not provided").replace(/[\r
+\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
   const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None"].map(value => ({ type: "text", text: cleanTemplate(value) }));
   // The approved Meta template contains a required dynamic URL button.
   // Pass Meta's canonical WhatsApp ID when available.
@@ -1462,7 +1466,8 @@ async function notifyWhatsApp(order) {
   // Remove line breaks, tabs and repeated spaces from WhatsApp template values.
   const cleanWhatsAppText = (value, fallback = "Not provided") =>
     String(value ?? fallback)
-      .replace(/[\r\n\t]+/g, " ")
+      .replace(/[\r
+\t]+/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim() || fallback;
   
