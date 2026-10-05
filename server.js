@@ -50,7 +50,7 @@ app.get("/api/menu-images", (req, res) => {
     const directory = path.join(__dirname, "public", "images", folder);
     try {
       result[folder] = require("fs").readdirSync(directory, { withFileTypes: true })
-        .filter(entry => entry.isFile() && /\\.(jpe?g|png|webp)$/i.test(entry.name))
+        .filter(entry => entry.isFile() && /\.(jpe?g|png|webp)$/i.test(entry.name))
         .map(entry => entry.name)
         .sort((a, b) => a.localeCompare(b));
     } catch (error) {
