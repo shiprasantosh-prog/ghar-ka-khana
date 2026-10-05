@@ -133,8 +133,10 @@ async function initializeDatabase() {
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await pool.query("INSERT INTO kitchen_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
-  await pool.query("CREATE TABLE IF NOT EXISTS delivery_area_settings (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), kitchen_address TEXT NOT NULL DEFAULT 'Brigade 7 Gardens, Paduka Madira Road, Subramanyapura, Uttarahalli, Bengaluru 560061', latitude DOUBLE PRECISION NOT NULL DEFAULT 12.89627, longitude DOUBLE PRECISION NOT NULL DEFAULT 77.528264, radius_km NUMERIC(5,2) NOT NULL DEFAULT 10 CHECK (radius_km > 0 AND radius_km <= 100), grace_meters INTEGER NOT NULL DEFAULT 300 CHECK (grace_meters >= 0 AND grace_meters <= 5000), updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("CREATE TABLE IF NOT EXISTS delivery_area_settings (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), kitchen_address TEXT NOT NULL DEFAULT 'Brigade 7 Gardens, Paduka Madira Road, Subramanyapura, Uttarahalli, Bengaluru 560061', latitude DOUBLE PRECISION NOT NULL DEFAULT 12.89627, longitude DOUBLE PRECISION NOT NULL DEFAULT 77.528264, radius_km NUMERIC(5,2) NOT NULL DEFAULT 12 CHECK (radius_km > 0 AND radius_km <= 100), grace_meters INTEGER NOT NULL DEFAULT 300 CHECK (grace_meters >= 0 AND grace_meters <= 5000), updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("INSERT INTO delivery_area_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
+  // Current delivery policy: 12 km radius. Keep existing installations in sync.
+  await pool.query("UPDATE delivery_area_settings SET radius_km=12 WHERE id=1");
 
   // Owner-curated dishes featured in the customer-facing Popular section.
   await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
@@ -867,7 +869,9 @@ async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinati
  if(!response.ok){console.error("[routes] Google Routes API HTTP",response.status,(await response.text().catch(()=>"")).slice(0,500));const e=new Error("We could not calculate the driving distance right now. Please try again.");e.status=502;throw e;}
  const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
 }
-function calculateDeliveryFee(distanceKm,address){if(String(address||"").toLowerCase().includes("brigade 7 gardens"))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=10?100:0;}
+function isKitchenSocietyAddress(address){const s=String(address||"").toLowerCase();return s.includes("brigade 7 gardens")&&(/560061/.test(s)||s.includes("bharath housing society"));}
+function calculateDeliveryFee(distanceKm,address){if(isKitchenSocietyAddress(address))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=12?100:0;}
+function deliveryDistanceForAddress(address){return isKitchenSocietyAddress(address)?{distanceKm:0,distanceType:"same-society"}:null;}
 
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
@@ -886,9 +890,10 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   if(!Number.isFinite(customerLat)||customerLat < -90||customerLat>90||!Number.isFinite(customerLng)||customerLng < -180||customerLng>180)return res.status(400).json({error:"Please select and verify a saved delivery address before placing an order."});
   const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");
   const area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured yet."});
-  const distanceKm=await getDrivingDistanceKm(area.latitude,area.longitude,customerLat,customerLng);
+  const sameSociety=deliveryDistanceForAddress(address);
+  const distanceKm=sameSociety?sameSociety.distanceKm:await getDrivingDistanceKm(area.latitude,area.longitude,customerLat,customerLng);
   const maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
-  if(distanceKm>maxDistanceKm)return res.status(400).json({error:"Your driving route is "+distanceKm.toFixed(1)+" km from our kitchen. We currently deliver up to "+maxDistanceKm.toFixed(1)+" km by road."});
+  if(!sameSociety&&distanceKm>maxDistanceKm)return res.status(400).json({error:"Your driving route is "+distanceKm.toFixed(1)+" km from our kitchen. We currently deliver up to "+maxDistanceKm.toFixed(1)+" km by road."});
   let subtotal=0; const validated=[];
   const deliveryFee=calculateDeliveryFee(distanceKm,address);
   for(const item of items){
@@ -981,9 +986,10 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  if(suppliedLat!==undefined||suppliedLng!==undefined){
   const latitude=Number(suppliedLat),longitude=Number(suppliedLng);
   if(suppliedLat===undefined||suppliedLng===undefined||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Please select a valid point on the map."});
-  const distanceKm=await getDrivingDistanceKm(area.latitude,area.longitude,latitude,longitude),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+  const sameSociety=deliveryDistanceForAddress(address);
+  const distanceKm=sameSociety?sameSociety.distanceKm:await getDrivingDistanceKm(area.latitude,area.longitude,latitude,longitude),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
   const deliveryFee=calculateDeliveryFee(distanceKm,address);
-  return res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:"Customer-selected map pin",distanceType:"driving"});
+  return res.json({latitude,longitude,distanceKm,maxDistanceKm,available:Boolean(sameSociety)||distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:sameSociety?"Brigade 7 Gardens — kitchen society":"Customer-selected map pin",distanceType:sameSociety?"same-society":"driving"});
  }
  const normalized=address.replace(/\bBangalore\b/ig,"Bengaluru").replace(/\bBengaluru\s*[-,]?\s*(\d{6})\b/ig,"Bengaluru $1").replace(/\s+/g," ").trim();
  const parts=normalized.split(",").map(x=>x.trim()).filter(Boolean);
@@ -1042,9 +1048,10 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
  }
  const {latitude,longitude,displayName}=match;
  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude>90||longitude < -180||longitude>180)return res.status(502).json({error:"The address service returned invalid coordinates. Please try again."});
- const distanceKm=await getDrivingDistanceKm(area.latitude,area.longitude,latitude,longitude),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+ const sameSociety=deliveryDistanceForAddress(address);
+ const distanceKm=sameSociety?sameSociety.distanceKm:await getDrivingDistanceKm(area.latitude,area.longitude,latitude,longitude),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
  const deliveryFee=calculateDeliveryFee(distanceKm,address);
- res.json({latitude,longitude,distanceKm,maxDistanceKm,available:distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:displayName,distanceType:"driving"});
+ res.json({latitude,longitude,distanceKm,maxDistanceKm,available:Boolean(sameSociety)||distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:sameSociety?"Brigade 7 Gardens — kitchen society":displayName,distanceType:sameSociety?"same-society":"driving"});
 }));
 app.put("/api/admin/delivery-area",auth,admin,asyncRoute(async(req,res)=>{
  const address=String(req.body.address||"").trim(),latitude=Number(req.body.latitude),longitude=Number(req.body.longitude),radiusKm=Number(req.body.radiusKm),graceMeters=Number(req.body.graceMeters);
