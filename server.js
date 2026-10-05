@@ -1277,23 +1277,36 @@ app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => 
 app.get("/bulk-chat/:phone", (req, res) => {
   let customerPhone = normalizePhone(req.params.phone);
 
-  // WhatsApp click-to-chat needs the full international number without
-  // +, spaces, brackets, dashes, or leading zeroes.
-  // For Indian mobile numbers, convert 10 digits to the 91 country-code form.
+  // Normalize common Indian phone formats for WhatsApp click-to-chat.
   if (customerPhone.length === 10) {
     customerPhone = "91" + customerPhone;
   } else if (customerPhone.length === 11 && customerPhone.startsWith("0")) {
     customerPhone = "91" + customerPhone.slice(1);
   }
 
-  // Keep this validation deliberately format-only. Do not reject a number
-  // based on the mobile prefix; Meta has already checked WhatsApp eligibility
-  // separately in the bulk enquiry flow.
   if (!/^\d{10,15}$/.test(customerPhone)) {
     return res.status(400).send("Invalid customer WhatsApp number.");
   }
 
-  res.redirect(302, `https://wa.me/${customerPhone}`);
+  // Open the final WhatsApp URL from the browser instead of relying on an
+  // HTTP redirect. This preserves the exact click-to-chat number.
+  const whatsappUrl = `https://wa.me/${customerPhone}`;
+  const safeUrl = whatsappUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chat with Customer</title>
+  <meta http-equiv="refresh" content="0;url=${safeUrl}">
+</head>
+<body style="font-family:Arial,sans-serif;padding:32px;text-align:center">
+  <p>Opening WhatsApp…</p>
+  <p><a href="${safeUrl}">Tap here if WhatsApp does not open</a></p>
+  <script>window.location.replace(${JSON.stringify(whatsappUrl)});</script>
+</body>
+</html>`);
 });
 
 // Bulk & party order enquiries
