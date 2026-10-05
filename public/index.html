@@ -497,8 +497,7 @@ main>#homePopular,main>#homeHow,main>#homeStory,main>#homeReviewPreview{padding-
  --line:#E5DCC8;
  --green:#1F5A3A;
 }
-body{background:#FBF6EA!important;color:#4A4A3F!important}header{background:rgba(251,246,234,.97)!important;border-bottom-color:#E5DCC8!important}
-.brand,.brand small{color:#1F5A3A}
+body{background:#FBF6EA!important;color:#4A4A3F!important}header{background:rgba(251,246,234,.97)!important;border-bottom-color:#E5DCC8!important}.brand,.brand small{color:#1F5A3A}
 .navlinks a{color:#4A4A3F!important}
 .sidebar{background:#FBF6EA!important;border-right-color:#E5DCC8!important}
 .sidebar-toggle{background:#E3EAD3!important;border-color:#d5dfc6!important;color:#1F5A3A!important}
@@ -997,8 +996,7 @@ function showPage(pageId){
     if(!allowed.includes(pageId))pageId="story";
     document.body.dataset.currentPage=pageId;
     document.querySelectorAll(".page-view").forEach(section=>{        section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
-    });
-    if(document.body.classList.contains("sidebar-expanded"))toggleSidebar();
+    });    if(document.body.classList.contains("sidebar-expanded"))toggleSidebar();
     document.querySelector(".cart-fab").style.display=pageId==="story"?"none":"block";
     window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -1353,7 +1351,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
  button.disabled=true;button.textContent="Preparing payment…";
  try{
   const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
-  const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:document.getElementById("promoCode").value.trim(),addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude})});
+  const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:document.getElementById("promoCode").value.trim(),addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude)})});
   await startRazorpayPayment(order,data,e.target,button);
  }catch(err){
   const success=document.getElementById("success");success.textContent=err.message;success.classList.add("show");
@@ -1497,8 +1495,7 @@ main > .hero.page-view.active-view .hero-brand svg{position:relative;top:9px}
 .address-step{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border-radius:50%;background:#e5efdf;color:#1b5a3a;font-weight:700}
 .saved-address-form .field{margin:0;min-width:0}
 .saved-address-form .field label{display:block;font-size:13px;font-weight:600;color:#52695a;margin-bottom:7px}
-.saved-address-form .field label span{font-weight:400;color:#879488}
-.saved-address-form .field input,.saved-address-form .field select{width:100%;min-width:0;min-height:48px;padding:12px 14px;border:1px solid #d3dfd1;border-radius:9px;background:#fff;color:#203b2e;font:inherit;outline:none}
+.saved-address-form .field label span{font-weight:400;color:#879488}.saved-address-form .field input,.saved-address-form .field select{width:100%;min-width:0;min-height:48px;padding:12px 14px;border:1px solid #d3dfd1;border-radius:9px;background:#fff;color:#203b2e;font:inherit;outline:none}
 .saved-address-form .field input:focus,.saved-address-form .field select:focus{border-color:#1b5a3a;box-shadow:0 0 0 3px rgba(27,90,58,.10)}
 .address-fields-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .address-field-house,.address-field-street{grid-column:1/-1}
