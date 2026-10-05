@@ -1275,11 +1275,24 @@ app.patch("/api/admin/reviews/:id", auth, admin, asyncRoute(async (req, res) => 
 // Meta does not allow direct wa.me links in template buttons, so the
 // template points to this route and the server redirects the owner to WhatsApp.
 app.get("/bulk-chat/:phone", (req, res) => {
-  const customerPhone = normalizePhone(req.params.phone);
-  if (customerPhone.length < 10 || customerPhone.length > 15) {
+  let customerPhone = normalizePhone(req.params.phone);
+
+  // Bulk enquiries are currently for India. Normalize common Indian
+  // formats to the WhatsApp click-to-chat international format:
+  // 6363891872 / 0916363891872 / +916363891872 -> 916363891872.
+  if (customerPhone.length === 10) {
+    customerPhone = "91" + customerPhone;
+  } else if (customerPhone.length === 11 && customerPhone.startsWith("0")) {
+    customerPhone = "91" + customerPhone.slice(1);
+  }
+
+  if (!/^91[6-9]\d{9}$/.test(customerPhone)) {
     return res.status(400).send("Invalid customer WhatsApp number.");
   }
-  res.redirect(302, `https://wa.me/${customerPhone}`);
+
+  // WhatsApp click-to-chat requires the full international number without
+  // a plus sign, spaces, brackets, or dashes.
+  res.redirect(302, `https://api.whatsapp.com/send?phone=${customerPhone}`);
 });
 
 // Bulk & party order enquiries
