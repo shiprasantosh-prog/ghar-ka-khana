@@ -1319,22 +1319,30 @@ app.post("/api/bulk-enquiries", asyncRoute(async (req, res) => {
     return res.status(503).json({ error: "Bulk enquiry WhatsApp delivery is not configured yet. The enquiry was saved." });
   }
   let customerWhatsappStatus = "unknown";
+  let customerWhatsappId = customerPhone;
   try {
     const contactResponse = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/contacts`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", blocking: "wait", contacts: [customerPhone] }) });
     const contactResult = await contactResponse.json().catch(() => ({}));
-    customerWhatsappStatus = contactResult.contacts?.[0]?.status === "valid" ? "valid" : "invalid";
+    const contact = contactResult.contacts?.[0];
+    customerWhatsappStatus = contact?.status === "valid" ? "valid" : "invalid";
+
+    // Meta returns the canonical WhatsApp ID (wa_id) for a valid contact.
+    // Use that ID for the chat link instead of assuming it always equals
+    // the customer's entered phone number.
+    if (customerWhatsappStatus === "valid" && contact?.wa_id) {
+      customerWhatsappId = normalizePhone(contact.wa_id);
+    }
   } catch (error) { console.warn("Bulk enquiry WhatsApp contact check failed:", error.message); }
   const cleanTemplate = value => String(value || "Not provided").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
   const templateParameters = [customerName, customerPhone, occasion, eventDate, String(guests), deliveryLocation, foodPreferences || "Not specified", notes || "None"].map(value => ({ type: "text", text: cleanTemplate(value) }));
-  // The approved Meta template always contains the dynamic "Chat with Customer"
-  // URL button, so its required parameter must always be supplied. The WhatsApp
-  // contact check is still used only to tell the customer whether the number is valid.
+  // The approved Meta template contains a required dynamic URL button.
+  // Pass Meta's canonical WhatsApp ID when available.
   const buttonParameters = [
     {
       type: "button",
       sub_type: "url",
       index: "0",
-      parameters: [{ type: "text", text: customerPhone }]
+      parameters: [{ type: "text", text: customerWhatsappId }]
     }
   ];
   const response = await fetch(`https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: WHATSAPP_TO_NUMBER, type: "template", template: { name: WHATSAPP_BULK_ENQUIRY_TEMPLATE, language: { code: "en" }, components: [{ type: "body", parameters: templateParameters }, ...buttonParameters] } }) });
