@@ -673,6 +673,25 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 
 
 <section class="wrap page-view active-view home-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Best Selling Items</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('menu')">View Full Menu</button></div></section>
+<section class="wrap page-view active-view home-section" id="homeBulkOrders">
+<div class="bulk-order-section">
+  <div class="bulk-order-copy">
+    <div class="eyebrow">Bulk &amp; Party Orders</div>
+    <h2>Planning a Celebration?<br>We’ve Got the Food Covered.</h2>
+    <p>Delicious homemade food for your special occasions. Bulk orders accepted for:</p>
+    <div class="bulk-occasions" aria-label="Bulk order occasions">
+      <span class="bulk-occasion"><span aria-hidden="true">🎂</span> Birthday Parties</span>
+      <span class="bulk-occasion"><span aria-hidden="true">☕</span> Kitty Parties</span>
+      <span class="bulk-occasion"><span aria-hidden="true">🥂</span> Get-Togethers</span>
+      <span class="bulk-occasion"><span aria-hidden="true">👨‍👩‍👧‍👦</span> Family Functions</span>
+      <span class="bulk-occasion"><span aria-hidden="true">🎉</span> Small Events</span>
+    </div>
+    <p>Tell us your requirements and we’ll help you plan the menu and quantities.</p>
+    <div><button class="btn" type="button" onclick="openBulkEnquiry()">✈ Enquire for Bulk Order <span aria-hidden="true">→</span></button></div>
+  </div>
+  <div class="bulk-order-photo" aria-label="Food spread for a party"></div>
+</div>
+</section>
 <section class="wrap page-view active-view home-section home-why" id="homeWhy"><div class="section-head"><div><div class="eyebrow">Made with care, every day</div><h2>Why People Choose Us</h2></div></div><div class="why-grid"><article><span class="why-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 31C12 17 22 9 37 8c0 15-8 25-22 25" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M10 39c7-10 14-16 24-23M20 26l-1-8m7 2 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 39c-1-4-1-7 1-10 4 1 6 4 7 8" fill="currentColor" opacity=".35"/></svg></span><h3>Fresh Ingredients</h3><p>Quality ingredients, always.</p></article><article><span class="why-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5 39 11v11c0 10-6 16-15 21C15 38 9 32 9 22V11z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m17 24 5 5 10-11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Hygienic Preparation</h3><p>Clean and safe kitchen practices.</p></article><article><span class="why-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="m6 22 18-15 18 15M11 20v21h26V20M20 41V27h8v14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Homemade Taste</h3><p>Just like home.</p></article><article><span class="why-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M5 16h24v19H5zM29 22h8l6 7v6H29z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="14" cy="37" r="4" fill="#f7f5e9" stroke="currentColor" stroke-width="2.2"/><circle cx="36" cy="37" r="4" fill="#f7f5e9" stroke="currentColor" stroke-width="2.2"/><path d="M9 11h15M12 7h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><h3>Timely Delivery</h3><p>Hot and fresh to your doorstep.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeHow"><div class="section-head"><div><h2>How Ordering Works</h2></div><p>Simple, and ready on time.</p></div><div class="steps"><article class="card" style="padding:24px"><span class="step-number">01</span><h3>Pick your meal</h3><p>Choose from our menu and add your favourites to your basket.</p></article><article class="card" style="padding:24px"><span class="step-number">02</span><h3>We cook it fresh</h3><p>Every meal is prepared with care in small batches, after your order.</p></article><article class="card" style="padding:24px"><span class="step-number">03</span><h3>Delivered to your door</h3><p>Your food is packed carefully and sent your way, ready to enjoy.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeStory"><div class="story-panel"><video class="story-photo" controls playsinline preload="metadata" aria-label="Ghar ka Khana story video"><source src="/images/story.mp4" type="video/mp4">Your browser does not support HTML video.</video><div><div class="eyebrow">Our Story</div><h2>A Home Kitchen with a Big Dream</h2><p>Ghar ka Khana began in 2025 in my home kitchen in Bengaluru with a simple thought: to bring the warmth and comfort of homemade food to more people. I started by cooking for family and friends, who kept asking for more. Today, we serve families across the city with the same recipes, love and care that inspired us from the beginning.</p><p>From litti chokha and paneer gravies to light, healthy everyday meals, we prepare everything fresh with thoughtful ingredients, less oil and no preservatives—just the way we like to eat at home.</p><p>For me, cooking has always been about more than putting a meal on the table. It is the familiar aroma of spices, the joy of sharing food and the little comforts that make an ordinary day feel special. I bring the flavours I grew up loving into every dish, with care and attention so each meal feels personal, wholesome and welcoming.</p><p><em>Every order is a little taste of home. Thank you for being part of the Ghar ka Khana family.</em></p><p><strong>Shipra Santosh</strong><br>Founder</p><div class="story-more" id="storyMore" hidden><p>What began as a small home kitchen has grown into a cloud kitchen serving wholesome, delicious meals to many happy customers. Whether you are looking for a comforting everyday meal, a traditional favourite or a lighter, healthier choice, our hope is to make you feel at home with every bite.</p><p>Every recipe carries the same intention we started with: honest food, familiar flavours and the warmth of a meal made with love.</p></div><button class="story-toggle" id="storyToggle" type="button" aria-expanded="false" aria-controls="storyMore" onclick="toggleStoryMore()">Read More <span aria-hidden="true">⌄</span></button></div></div></section>
@@ -720,11 +739,11 @@ function toggleSidebar(){
 function showPage(pageId){
     // Always dismiss the basket before switching sections, especially on mobile where the fixed drawer can cover navigation.
     closeCart();
-    const allowed=["story","homePopular","homeWhy","homeHow","homeStory","homeReviewPreview","menu","account","myorders","reviews","contact"];
+    const allowed=["story","homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview","menu","account","myorders","reviews","contact"];
     if(!allowed.includes(pageId))pageId="story";
     document.body.dataset.currentPage=pageId;
     document.querySelectorAll(".page-view").forEach(section=>{
-        section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
+        section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
     });
     if(document.body.classList.contains("sidebar-expanded"))toggleSidebar();
     document.querySelector(".cart-fab").style.display=pageId==="story"?"none":"block";
