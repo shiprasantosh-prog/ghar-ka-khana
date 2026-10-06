@@ -1687,7 +1687,8 @@ async function notifyWhatsApp(order) {
       const quantity = Number(item.quantity) || 0;
       const lineTotal = Number(item.price) * quantity;
       const name = cleanWhatsAppText(item.name, "Dish");
-      return `${name} x ${quantity} - Rs. ${lineTotal}`;
+      const variant = cleanWhatsAppText(item.variant, "");
+      return `${name}${variant ? " ("+variant+")" : ""} x ${quantity} - Rs. ${lineTotal}`;
     })
     .join("; ") || "No items found";
 
