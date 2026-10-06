@@ -41,7 +41,7 @@ pool.on("error", (err) => {
 app.set("trust proxy", 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: "3mb" }));
+app.use(express.json({ limit: "3mb", verify: (req, res, buf) => { req.rawBody = Buffer.from(buf); } }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -1073,6 +1073,70 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
     }
   }
   return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
+}));
+
+// Razorpay server-to-server webhook.
+// Configure RAZORPAY_WEBHOOK_SECRET in Render and use the same secret in Razorpay Dashboard.
+// The webhook is intentionally kept alongside the Checkout callback as a second confirmation path.
+app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
+  const webhookSecret = String(process.env.RAZORPAY_WEBHOOK_SECRET || "");
+  const signature = String(req.headers["x-razorpay-signature"] || "");
+  if (!webhookSecret || !signature || !req.rawBody) {
+    return res.status(400).json({ error: "Invalid webhook configuration." });
+  }
+
+  const expected = crypto.createHmac("sha256", webhookSecret).update(req.rawBody).digest("hex");
+  const valid = expected.length === signature.length &&
+    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  if (!valid) {
+    return res.status(400).json({ error: "Invalid webhook signature." });
+  }
+
+  const event = String(req.body?.event || "");
+  const payment = req.body?.payload?.payment?.entity;
+  if (!payment) return res.status(200).json({ ok: true });
+
+  const razorpayOrderId = String(payment.order_id || "");
+  const razorpayPaymentId = String(payment.id || "");
+  if (!razorpayOrderId || !razorpayPaymentId) return res.status(200).json({ ok: true });
+
+  const result = await pool.query(
+    "SELECT id,total,payment_status FROM orders WHERE razorpay_order_id=$1",
+    [razorpayOrderId]
+  );
+  const row = result.rows[0];
+  if (!row) {
+    console.warn("Razorpay webhook received for unknown order:", razorpayOrderId);
+    return res.status(200).json({ ok: true });
+  }
+
+  if (event === "payment.captured") {
+    if (Number(payment.amount) !== Number(row.total) * 100) {
+      console.error("Razorpay webhook amount mismatch for order:", row.id);
+      return res.status(400).json({ error: "Payment amount does not match the order." });
+    }
+
+    const updated = await pool.query(
+      "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND payment_status<>'paid' RETURNING id",
+      [razorpayPaymentId, row.id]
+    );
+
+    if (updated.rowCount) {
+      const order = await readOrder(row.id);
+      notifyWhatsApp(order).catch(error =>
+        console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
+      );
+    }
+  } else if (event === "payment.failed") {
+    // Keep the order available for another payment attempt. A later
+    // payment.captured event is allowed to move it from failed to paid.
+    await pool.query(
+      "UPDATE orders SET payment_status='failed',status='Payment Pending' WHERE id=$1 AND payment_status<>'paid'",
+      [row.id]
+    );
+  }
+
+  return res.status(200).json({ ok: true });
 }));
 
 app.post("/api/payments/cancel",auth,asyncRoute(async(req,res)=>{
