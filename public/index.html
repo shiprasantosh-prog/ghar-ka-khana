@@ -1127,6 +1127,64 @@ async function submitOrderReview(event,orderId){event.preventDefault();const for
 async function loadPublicReviews(){const summary=document.getElementById('reviewSummary'),host=document.getElementById('reviewList');try{const data=await api('/api/reviews');summary.textContent=data.summary.count?data.summary.average+' ★ · '+data.summary.count+' customer review(s)':'Be the first to share a review';host.innerHTML=data.reviews.length?data.reviews.map(r=>'<article class="card" style="padding:20px"><div style="color:var(--gold2);font-size:20px">'+('★'.repeat(r.rating))+'<span style="color:#5b5140">'+('★'.repeat(5-r.rating))+'</span></div><p style="color:var(--cream);line-height:1.7">'+escapeHTML(r.comment||'Rated their experience')+'</p><div class="tag">'+escapeHTML(r.customer_name)+' · Verified customer</div></article>').join(''):'<p class="empty">Customer reviews will appear here once approved.</p>';const preview=document.getElementById('homeReviewCards');if(preview)preview.innerHTML=data.reviews.length?data.reviews.slice().sort((a,b)=>Number(b.rating)-Number(a.rating)).slice(0,3).map(r=>'<article class="card home-review-card" style="padding:22px"><div class="review-stars">'+('★'.repeat(r.rating))+'<span>'+('★'.repeat(5-r.rating))+'</span></div><p>'+escapeHTML(r.comment||'Rated their experience')+'</p><div class="tag">'+escapeHTML(r.customer_name)+' · Verified customer</div></article>').join(''):'<p class="empty">Customer reviews will appear here once approved.</p>'}catch(error){host.innerHTML='<p class="empty">Reviews are temporarily unavailable.</p>';const preview=document.getElementById('homeReviewCards');if(preview)preview.innerHTML='<p class="empty">Reviews are temporarily unavailable.</p>';console.error(error)}}
 function menuGroup(d){const c=String(d.cat||'').trim().toLowerCase(),n=String(d.name||'').toLowerCase();if(c.includes('chinese')||/manchurian|chow ?mein|noodles|fried rice|schezwan|hakka|spring roll|momo|chilli paneer|chilly paneer|chilli baby ?corn|chilly baby ?corn|chilli potato|chilly potato/.test(n))return 'Chinese';if(['lunch','rice & biryani','rice and biryani','main course'].includes(c))return 'Main Course';return titleCase(d.cat||'Other')}
 function mainCourseSubgroup(d){const c=String(d.cat||'').toLowerCase(),n=String(d.name||'').toLowerCase();if(c.includes('rice')||c.includes('biryani')||/\b(rice|pulav|pulao|biryani|chawal)\b/.test(n))return 'Rice & Biryani';if(/\b(daal|dal|lentil)\b/.test(n))return 'Daal';if(/\b(roti|phulka|naan|paratha|kulcha|puri|poori|bhatura|thepla|chapati)\b/.test(n)||/extra pav/.test(n))return 'Breads';if(/\b(dry|kurkure|fry|fried|bhaja|sauteed|sautéed|roast|roasted)\b/.test(n))return 'Dry';return 'Gravy'}
+function menuItemOrder(items,group){
+ const rules={
+  'Snacks':[
+   /sandwich/,
+   /roll|wrap/,
+   /momo/,
+   /samosa(?!.*chat)|samosa$/,
+   /chat|chaat|tikki|vada pav/,
+   /pakoda|pakodi/,
+   /cutlet|nugget/,
+   /fries/,
+   /pav bhaji/,
+   /soup/,
+  ],
+  'Chinese':[
+   /momo/,
+   /manchurian|chilly|chilli|baby corn|lotus stem/,
+   /garlic bread|cheese garlic bread|cheese ball/,
+   /pasta|macaroni/,
+   /maggi|noodle|chow mein/,
+   /fried rice|rice/,
+  ],
+  'Breakfast':[
+   /poha|upma|vermicelli|sabudana/,
+   /chilla|pudla/,
+   /idli|uttapam/,
+   /puri|puri sabji/,
+   /oats/,
+   /sandwich|toast/,
+   /pudding/,
+  ],
+  'Sweets & Desserts':[
+   /halwa/,
+   /laddoo|laddu/,
+   /gujiya/,
+   /kheer/,
+   /peda|jalebi|laung latta|churma/,
+   /mathri|nimki|nimki|sakkarpara/,
+  ],
+  'Beverages':[
+   /juice/,
+   /shake/,
+   /lassi/,
+   /mojito/,
+   /tea|coffee|hot chocolate/,
+  ],
+  'Healthy Salads':[
+   /salad/,
+  ]
+ };
+ const patterns=rules[group]||[];
+ return [...items].sort((a,b)=>{
+  const na=String(a.name||'').toLowerCase(),nb=String(b.name||'').toLowerCase();
+  const ga=patterns.findIndex(re=>re.test(na)),gb=patterns.findIndex(re=>re.test(nb));
+  const pa=ga<0?patterns.length:ga,pb=gb<0?patterns.length:gb;
+  return pa-pb||na.localeCompare(nb);
+ });
+}
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
 function renderCats(){const cats=["All",...menuGroupOrder(new Set(dishes.map(menuGroup)))];document.getElementById("categories").innerHTML=cats.map(c=>'<button class="chip '+(category===c?'active':'')+'" onclick=\'category='+JSON.stringify(c)+';renderCats();renderMenu()\'>'+escapeHTML(c)+'</button>').join('')}
 function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
@@ -1182,7 +1240,7 @@ function renderMenu(){
  document.getElementById("menuSearchCount").textContent=q?'Found '+list.length+' matching dish(es)':'Showing '+list.length+' dish(es)';
  const grouped={};list.forEach(d=>{const g=menuGroup(d);(grouped[g]??=[]).push(d)});
  const ordered=menuGroupOrder(Object.keys(grouped));
- document.getElementById("menuGrid").innerHTML=list.length?ordered.map(g=>{const items=grouped[g];if(g==='Main Course'){const subs={};items.forEach(d=>(subs[mainCourseSubgroup(d)]??=[]).push(d));const order=['Gravy','Dry','Daal','Breads','Rice & Biryani'];return '<section class="menu-category"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">Main Course <span class="collapse-indicator">▾</span></h3>'+order.filter(sub=>subs[sub]?.length).map(sub=>'<div class="menu-subcategory"><h4 class="menu-subcategory-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+sub+' <span class="collapse-indicator">▾</span></h4><div class="grid">'+subs[sub].map(dishCardHTML).join('')+'</div></div>').join('')+'</section>'}return '<section class="menu-category"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+escapeHTML(g)+' <span class="collapse-indicator">▾</span></h3><div class="grid">'+items.map(dishCardHTML).join('')+'</div></section>'}).join(''):'<p class="empty">No matching dishes found.</p>';
+ document.getElementById("menuGrid").innerHTML=list.length?ordered.map(g=>{const items=grouped[g];if(g==='Main Course'){const subs={};items.forEach(d=>(subs[mainCourseSubgroup(d)]??=[]).push(d));const order=['Gravy','Dry','Daal','Breads','Rice & Biryani'];return '<section class="menu-category"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">Main Course <span class="collapse-indicator">▾</span></h3>'+order.filter(sub=>subs[sub]?.length).map(sub=>'<div class="menu-subcategory"><h4 class="menu-subcategory-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+sub+' <span class="collapse-indicator">▾</span></h4><div class="grid">'+subs[sub].map(dishCardHTML).join('')+'</div></div>').join('')+'</section>'}return '<section class="menu-category"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+escapeHTML(g)+' <span class="collapse-indicator">▾</span></h3><div class="grid">'+menuItemOrder(items,g).map(dishCardHTML).join('')+'</div></section>'}).join(''):'<p class="empty">No matching dishes found.</p>';
 }
 function updateMenuItem(id){
     document.querySelectorAll("[data-menu-card]").forEach(card=>{
