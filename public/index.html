@@ -1076,7 +1076,7 @@ async function loadCustomerMenu(){
   const category=menuGroup(d);
   const categoryImage=findCategoryImage(d.name,category);
   const fallback=d.image||fallbackFoodImage;
-  return {id:Number(d.id),name:d.name,price:Number(d.price),cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||d.image_url||fallback,fallbackImg:fallback,tag:'Kitchen special'};
+  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||d.image_url||fallback,fallbackImg:fallback,tag:'Kitchen special'};
  };
  dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
@@ -1129,18 +1129,50 @@ function menuGroup(d){const c=String(d.cat||'').trim().toLowerCase(),n=String(d.
 function mainCourseSubgroup(d){const c=String(d.cat||'').toLowerCase(),n=String(d.name||'').toLowerCase();if(c.includes('rice')||c.includes('biryani')||/\b(rice|pulav|pulao|biryani|chawal)\b/.test(n))return 'Rice & Biryani';if(/\b(daal|dal|lentil)\b/.test(n))return 'Daal';if(/\b(roti|phulka|naan|paratha|kulcha|puri|poori|bhatura|thepla|chapati)\b/.test(n)||/extra pav/.test(n))return 'Breads';if(/\b(dry|kurkure|fry|fried|bhaja|sauteed|sautéed|roast|roasted)\b/.test(n))return 'Dry';return 'Gravy'}
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
 function renderCats(){const cats=["All",...menuGroupOrder(new Set(dishes.map(menuGroup)))];document.getElementById("categories").innerHTML=cats.map(c=>'<button class="chip '+(category===c?'active':'')+'" onclick=\'category='+JSON.stringify(c)+';renderCats();renderMenu()\'>'+escapeHTML(c)+'</button>').join('')}
+function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
+function parseCartLineKey(key){const parts=String(key).split(":");return {menuId:Number(parts[0]),variantId:parts[1]?Number(parts[1]):0}}
+function getDishForCartLine(key){const parsed=parseCartLineKey(key);const dish=dishes.find(x=>Number(x.id)===parsed.menuId);const variant=dish?.variants?.find(v=>Number(v.id)===parsed.variantId);return {dish,variant,menuId:parsed.menuId,variantId:parsed.variantId,price:variant?Number(variant.price):Number(dish?.price||0),label:variant?.label||""}}
 function quantityControlHTML(d){
-    const qty=cart[d.id]||0;
-    const id=JSON.stringify(d.id);
+    const hasVariants=Array.isArray(d.variants)&&d.variants.length;
+    if(hasVariants)return '<button class="add" type="button" onclick="openVariantPicker('+JSON.stringify(d.id)+')">Customize</button>';
+    const qty=cart[d.id]||0,id=JSON.stringify(d.id);
     return qty>0
-        ? `<span style="display:flex;align-items:center;gap:10px">
-               <button class="add" type="button" onclick='change(${id},-1)'>−</button>
-               <strong>${qty}</strong>
-               <button class="add" type="button" onclick='change(${id},1)'>+</button>
-           </span>`
+        ? `<span style="display:flex;align-items:center;gap:10px"><button class="add" type="button" onclick='change(${id},-1)'>−</button><strong>${qty}</strong><button class="add" type="button" onclick='change(${id},1)'>+</button></span>`
         : `<button class="add" type="button" onclick='add(${id})'>+ Add</button>`;
 }
-function dishCardHTML(d){return `<article class="card" data-menu-card="${escapeHTML(d.id)}"><div class="food-img"><img loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 650px) 50vw, 190px" src="${escapeHTML(d.img)}" alt="${escapeHTML(titleCase(d.name))}" onerror="const img=this;const current=decodeURIComponent(img.src.split("/").pop().replace(/\\.jpg$/i,""));const candidates=[current.replace(/\\s*\\([^)]*\\)\\s*/g," ").trim(),current.replace(/chilla/gi,"chiila"),current.replace(/chiila/gi,"chilla"),current.replace(/chilla/gi,"cheela")];const next=(img.dataset.tryIndex?Number(img.dataset.tryIndex)+1:0);if(next<candidates.length){img.dataset.tryIndex=String(next);img.src="/images/Breakfast/"+encodeURIComponent(candidates[next])+".jpg";return}if(img.dataset.fallback){img.src=img.dataset.fallback;img.removeAttribute("data-fallback");}else{img.style.display="none"}} data-fallback="${escapeHTML(d.fallbackImg||fallbackFoodImage)}"></div><div class="card-body"><div class="tag">Kitchen special</div><div class="card-title"><h3>${escapeHTML(titleCase(d.name))}</h3><span class="price">${money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><span data-quantity-control>${quantityControlHTML(d)}</span></div></div></article>`}
+function openVariantPicker(id){
+    const dish=dishes.find(d=>String(d.id)===String(id))||todaySpecials.find(d=>String(d.id)===String(id));
+    if(!dish||!dish.variants?.length)return;
+    let overlay=document.getElementById('variantPickerOverlay');
+    if(!overlay){
+      overlay=document.createElement('div');overlay.id='variantPickerOverlay';
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(16,35,27,.42);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box';
+      document.body.appendChild(overlay);
+    }
+    const first=dish.variants[0];
+    overlay.innerHTML=`<div style="width:min(440px,100%);background:#FBF7EC;border:1px solid #D8DEC9;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:22px;box-sizing:border-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px"><h3 style="margin:0;color:#104D37;font:700 24px Georgia,serif">${escapeHTML(titleCase(dish.name))}</h3><button type="button" aria-label="Close" onclick="closeVariantPicker()" style="border:0;background:#E3EAD3;color:#104D37;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer">×</button></div>
+      <p style="margin:0 0 18px;color:#667267">Choose your size</p>
+      <div id="variantChoices">${dish.variants.map((v,i)=>`<label style="position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;margin:8px 0;border:1.5px solid ${i===0?'#104D37':'#D8DEC9'};border-radius:12px;background:${i===0?'#F4F8EE':'#FBFCF7'};cursor:pointer">
+        <input type="radio" name="gkkVariant" value="${Number(v.id)}" data-price="${Number(v.price)}" ${i===0?'checked':''} onchange="selectVariantOption(this)" style="width:18px;height:18px;accent-color:#104D37">
+        <span style="flex:1;color:#104D37;font-weight:600">${escapeHTML(v.label)}</span><strong style="color:#C99B36">${money(v.price)}</strong>
+      </label>`).join('')}</div>
+      <button id="variantAddButton" class="btn" type="button" style="width:100%;margin-top:12px" onclick="addSelectedVariant(${Number(dish.id)})">Add to Basket — ${money(first.price)}</button>
+    </div>`;
+    overlay.onclick=e=>{if(e.target===overlay)closeVariantPicker()};
+    overlay.style.display='flex';
+}
+function selectVariantOption(input){
+    document.querySelectorAll('#variantChoices label').forEach(label=>{label.style.border='1.5px solid #D8DEC9';label.style.background='#FBFCF7'});
+    const label=input.closest('label');if(label){label.style.border='1.5px solid #104D37';label.style.background='#F4F8EE'}
+    const button=document.getElementById('variantAddButton');if(button)button.textContent='Add to Basket — '+money(Number(input.dataset.price)||0);
+}
+function closeVariantPicker(){const overlay=document.getElementById('variantPickerOverlay');if(overlay)overlay.style.display='none'}
+function addSelectedVariant(menuId){
+    const selected=document.querySelector('input[name="gkkVariant"]:checked');if(!selected)return;
+    add(menuId,Number(selected.value));closeVariantPicker();
+}
+function dishCardHTML(d){return `<article class="card" data-menu-card="${escapeHTML(d.id)}"><div class="food-img"><img loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 650px) 50vw, 190px" src="${escapeHTML(d.img)}" alt="${escapeHTML(titleCase(d.name))}" onerror="const img=this;const current=decodeURIComponent(img.src.split("/").pop().replace(/\\.jpg$/i,""));const candidates=[current.replace(/\\s*\\([^)]*\\)\\s*/g," ").trim(),current.replace(/chilla/gi,"chiila"),current.replace(/chiila/gi,"chilla"),current.replace(/chilla/gi,"cheela")];const next=(img.dataset.tryIndex?Number(img.dataset.tryIndex)+1:0);if(next<candidates.length){img.dataset.tryIndex=String(next);img.src="/images/Breakfast/"+encodeURIComponent(candidates[next])+".jpg";return}if(img.dataset.fallback){img.src=img.dataset.fallback;img.removeAttribute("data-fallback");}else{img.style.display="none"}" data-fallback="${escapeHTML(d.fallbackImg||fallbackFoodImage)}"></div><div class="card-body"><div class="tag">Kitchen special</div><div class="card-title"><h3>${escapeHTML(titleCase(d.name))}</h3><span class="price">${d.variants?.length?'From '+money(Math.min(...d.variants.map(v=>Number(v.price)||0))):money(d.price)}</span></div><p>${escapeHTML(d.desc)}</p><div class="card-foot"><span style="color:var(--muted);font-size:12px">${escapeHTML(d.cat)}</span><span data-quantity-control>${quantityControlHTML(d)}</span></div></div></article>`}
 function toggleMenuSection(title){const section=title.closest('.menu-category,.menu-subcategory');if(!section)return;const collapsed=section.classList.toggle('collapsed');title.setAttribute('aria-expanded',String(!collapsed));const indicator=title.querySelector('.collapse-indicator');if(indicator)indicator.textContent=collapsed?'▸':'▾'}
 function renderMenu(){
  const specialsHost=document.getElementById('specialsGrid');
@@ -1160,61 +1192,32 @@ function updateMenuItem(id){
         if(dish&&host)host.innerHTML=quantityControlHTML(dish);
     });
 }
-function add(id){
-    const dish=dishes.find(d=>String(d.id)===String(id))||todaySpecials.find(d=>String(d.id)===String(id));
-    if(!dish)return;
-    cart[dish.id]=(cart[dish.id]||0)+1;
-    updateCart();
-    updateMenuItem(dish.id);
+function add(id,variantId=0){
+    const dish=dishes.find(d=>String(d.id)===String(id))||todaySpecials.find(d=>String(d.id)===String(id));if(!dish)return;
+    const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+1;updateCart();updateMenuItem(dish.id);
 }
-function change(id,n){
+function change(id,n,variantId=0){
     appliedPromo=null;const breakdown=document.getElementById("promoBreakdown");if(breakdown)breakdown.textContent="";const promoMessage=document.getElementById("promoMessage");if(promoMessage)promoMessage.textContent="Basket changed. Apply your promo code again.";
-    const dish=dishes.find(d=>String(d.id)===String(id))||todaySpecials.find(d=>String(d.id)===String(id));
-    if(!dish)return;
-    cart[dish.id]=(cart[dish.id]||0)+n;
-    if(cart[dish.id]<=0)delete cart[dish.id];
-    updateCart();
-    updateMenuItem(dish.id);
+    const dish=dishes.find(d=>String(d.id)===String(id))||todaySpecials.find(d=>String(d.id)===String(id));if(!dish)return;
+    const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
-function updateCart(){persistCart();
-    let count=Object.values(cart).reduce((a,b)=>a+b,0);
-    // The old header cart counter is not present in the sidebar layout.
-    // Update whichever counters exist without interrupting the rest of the cart refresh.
-    ["cartCount","fabCount","sideCartCount"].forEach(id=>{
-        const counter=document.getElementById(id);
-        if(counter)counter.textContent=count;
-    });
-
-    let entries=Object.entries(cart);
-
+function updateCart(){
+    persistCart();
+    const entries=Object.entries(cart);
+    let count=entries.reduce((a,[,q])=>a+(Number(q)||0),0);
+    ["cartCount","fabCount","sideCartCount"].forEach(id=>{const counter=document.getElementById(id);if(counter)counter.textContent=count});
     const cartItemsHost=document.getElementById("cartItems");
-    if(cartItemsHost)cartItemsHost.innerHTML=entries.length
-        ?entries.map(([id,q])=>{
-            let d=dishes.find(x=>String(x.id)===String(id));
-            if(!d)return "";
-
-            return `<div class="cart-line">
-                <div>
-                    <strong>${escapeHTML(d.name)}</strong>
-                    <small>${money(d.price)} each</small>
-                </div>
-                <div class="qty">
-                    <button onclick="change(${d.id},-1)">−</button>
-                    ${q}
-                    <button onclick="change(${d.id},1)">+</button>
-                </div>
-                <strong>${money(d.price*q)}</strong>
-            </div>`;
-        }).join("")
-        :'<div class="empty">Your basket is waiting for something delicious.</div>';
-
+    if(cartItemsHost)cartItemsHost.innerHTML=entries.length?entries.map(([key,q])=>{
+        const line=getDishForCartLine(key);if(!line.dish)return "";
+        const itemName=line.label?line.dish.name+' — '+line.label:line.dish.name;
+        const price=line.price;const qty=Number(q)||0;
+        return `<div class="cart-line"><div><strong>${escapeHTML(itemName)}</strong><small>${money(price)} each</small></div><div class="qty"><button onclick='change(${line.menuId},-1,${line.variantId})'>−</button>${qty}<button onclick='change(${line.menuId},1,${line.variantId})'>+</button></div><strong>${money(price*qty)}</strong></div>`;
+    }).join(""):'<div class="empty">Your basket is waiting for something delicious.</div>';
     document.getElementById("checkout").style.display=entries.length?"block":"none";
-
-    const subtotal=entries.reduce((sum,[id,q])=>{const d=dishes.find(x=>String(x.id)===String(id));return sum+(d?.price||0)*q},0);
+    const subtotal=entries.reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);
     document.getElementById("total").textContent=money(subtotal);
     const handlingFee=5,discount=appliedPromo?Number(appliedPromo.discount)||0:0;
-    document.getElementById("handlingFee").textContent=money(handlingFee); 
-    document.getElementById("deliveryFee").textContent=money(deliveryFee);
+    document.getElementById("handlingFee").textContent=money(handlingFee);document.getElementById("deliveryFee").textContent=money(deliveryFee);
     const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=appliedPromo&&discount>0?"flex":"none";
     if(appliedPromo&&discount>0){document.getElementById("promoDiscountLabel").textContent="Promo discount ("+appliedPromo.code+")";document.getElementById("promoDiscountAmount").textContent="−"+money(discount)}
     document.getElementById("payableTotal").textContent=money(Math.max(0,subtotal-discount)+handlingFee+deliveryFee);
@@ -1378,7 +1381,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
  e.preventDefault();
  if(!document.getElementById("checkoutAddressId").value||!document.getElementById("deliveryLatitude").value||!document.getElementById("deliveryLongitude").value||!deliveryVerifiedAddress){document.getElementById("deliveryLocationStatus").textContent="Please select a saved address and verify delivery availability before placing the order.";return}
  if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing an order.";return}
- const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity})),mode=data.orderMode||"now",paymentMethod=data.paymentMethod||"online",button=e.target.querySelector('button[type="submit"]');
+ const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}}),mode=data.orderMode||"now",paymentMethod=data.paymentMethod||"online",button=e.target.querySelector('button[type="submit"]');
  button.disabled=true;button.textContent=paymentMethod==="cod"?"Placing COD order…":"Preparing payment…";
  try{
   const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
@@ -1393,7 +1396,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
  }finally{button.disabled=false;button.textContent="Place order";}
 });
 async function toggleScheduledCheckout(){const show=document.querySelector('input[name="orderMode"]:checked')?.value==="scheduled",panel=document.getElementById("scheduledCheckout");panel.hidden=!show;const date=document.getElementById("scheduledDate"),time=document.getElementById("deliveryTime");date.required=show;time.required=show;date.min=new Date(Date.now()+60000).toLocaleDateString("en-CA");if(show&&!date.value)date.value=date.min;}
-async function applyPromoCode(){const button=document.getElementById("applyPromoButton"),message=document.getElementById("promoMessage");if(!currentUser){message.textContent="Please sign in to validate a promo code.";return}button.disabled=true;button.textContent="Applying…";try{const items=Object.entries(cart).map(([menuId,quantity])=>({menuId:Number(menuId),quantity}));const result=await api("/api/promo/validate",{method:"POST",body:JSON.stringify({items,promoCode:document.getElementById("promoCode").value.trim()})});appliedPromo=result;message.textContent="Promo code applied successfully.";updateCart()}catch(err){appliedPromo=null;document.getElementById("promoBreakdown").textContent="";message.textContent=err.message;updateCart()}finally{button.disabled=false;button.textContent="Apply"}}
+async function applyPromoCode(){const button=document.getElementById("applyPromoButton"),message=document.getElementById("promoMessage");if(!currentUser){message.textContent="Please sign in to validate a promo code.";return}button.disabled=true;button.textContent="Applying…";try{const items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}});const result=await api("/api/promo/validate",{method:"POST",body:JSON.stringify({items,promoCode:document.getElementById("promoCode").value.trim()})});appliedPromo=result;message.textContent="Promo code applied successfully.";updateCart()}catch(err){appliedPromo=null;document.getElementById("promoBreakdown").textContent="";message.textContent=err.message;updateCart()}finally{button.disabled=false;button.textContent="Apply"}}
 document.getElementById("customerMenuSearch").addEventListener("input",e=>{menuSearchQuery=e.target.value;renderMenu()});
 setAuthMode("login");loadPublicReviews();checkSession();loadCustomerMenu().catch(err=>{document.getElementById("menuGrid").innerHTML='<p class="empty">We could not load the menu right now. Please refresh the page.</p>';console.error(err)});
 
