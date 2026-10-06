@@ -946,12 +946,13 @@ async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinati
  const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
 }
 function isKitchenSocietyAddress(address){const s=String(address||"").toLowerCase();return s.includes("brigade 7 gardens")&&(/560061/.test(s)||s.includes("bharath housing society"));}
+function isCodEligibleAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens");}
 function calculateDeliveryFee(distanceKm,address){if(isKitchenSocietyAddress(address))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=12?100:0;}
 function deliveryDistanceForAddress(address){return isKitchenSocietyAddress(address)?{distanceKm:0,distanceType:"same-society"}:null;}
 
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
-  let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "" } = req.body || {};
+  let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "", paymentMethod = "online" } = req.body || {};
   if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
   let customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
   const savedAddressId=Number(req.body.addressId);
@@ -1009,11 +1010,16 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,payment_status) VALUES($1,$2,$3,$4,'Payment Pending',$5,$6,$7,$8,$9,'created') RETURNING id",[req.user.id,total,address,notes,scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,payment_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,isCod?"cod":"created"]);
     orderId=result.rows[0].id;
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
     await client.query("COMMIT");
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
+  if(isCod){
+    const order=await readOrder(orderId);
+    notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+    return res.status(201).json({...order,payment:{method:"cod"}});
+  }
   try{
     const rpOrder=await razorpay.orders.create({amount:total*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
     await pool.query("UPDATE orders SET razorpay_order_id=$1 WHERE id=$2",[rpOrder.id,orderId]);
