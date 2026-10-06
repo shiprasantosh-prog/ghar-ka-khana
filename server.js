@@ -203,6 +203,26 @@ async function initializeDatabase() {
       END IF;
     END $gkk$;
   `);
+  // Group regular Samosa and Mini Samosa as selectable variants.
+  // The existing prices are read from the menu table so this migration does not hard-code pricing.
+  await pool.query(`
+    DO $gkk_samosa$
+    DECLARE parent_id INTEGER; child_id INTEGER; parent_price INTEGER; child_price INTEGER;
+    BEGIN
+      SELECT id, price INTO parent_id, parent_price FROM menu WHERE LOWER(TRIM(name)) = 'samosa' AND (variant_parent_id IS NULL OR variant_parent_id = id) ORDER BY id LIMIT 1;
+      SELECT id, price INTO child_id, child_price FROM menu WHERE LOWER(TRIM(name)) = 'mini samosa' ORDER BY id LIMIT 1;
+      IF parent_id IS NOT NULL AND child_id IS NOT NULL AND child_id <> parent_id THEN
+        INSERT INTO menu_variants(menu_id, variant_label, price, available)
+          VALUES(parent_id, 'Regular', parent_price, TRUE)
+          ON CONFLICT(menu_id, variant_label) DO UPDATE SET price=EXCLUDED.price, available=TRUE;
+        INSERT INTO menu_variants(menu_id, variant_label, price, available)
+          VALUES(parent_id, 'Mini', child_price, TRUE)
+          ON CONFLICT(menu_id, variant_label) DO UPDATE SET price=EXCLUDED.price, available=TRUE;
+        UPDATE menu SET available=TRUE WHERE id=parent_id;
+        UPDATE menu SET variant_parent_id=parent_id, available=FALSE WHERE id=child_id;
+      END IF;
+    END $gkk_samosa$;
+  `);
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_delivery_minutes INTEGER");
