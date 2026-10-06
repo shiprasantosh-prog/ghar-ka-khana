@@ -175,6 +175,34 @@ async function initializeDatabase() {
     );
   `);
 
+  await pool.query("ALTER TABLE menu ADD COLUMN IF NOT EXISTS variant_parent_id INTEGER REFERENCES menu(id) ON DELETE SET NULL");
+  await pool.query("CREATE TABLE IF NOT EXISTS menu_variants (id SERIAL PRIMARY KEY, menu_id INTEGER NOT NULL REFERENCES menu(id) ON DELETE CASCADE, variant_label TEXT NOT NULL, price INTEGER NOT NULL CHECK (price > 0), available BOOLEAN NOT NULL DEFAULT TRUE, UNIQUE(menu_id, variant_label))");
+  await pool.query("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label TEXT DEFAULT ''");
+  // Pilot variant grouping: keep the 350 ml mango juice as the parent item and
+  // turn the existing 200 ml menu row into its second variant.
+  await pool.query(`
+    DO $
+    DECLARE parent_id INTEGER; child_id INTEGER;
+    BEGIN
+      SELECT id INTO parent_id FROM menu WHERE LOWER(name) LIKE '%fresh mango juice%350%' ORDER BY id LIMIT 1;
+      IF parent_id IS NULL THEN
+        SELECT id INTO parent_id FROM menu WHERE LOWER(name) = 'fresh mango juice' ORDER BY id LIMIT 1;
+      END IF;
+      SELECT id INTO child_id FROM menu WHERE LOWER(name) LIKE '%mango fresh juice%200%' ORDER BY id LIMIT 1;
+      IF parent_id IS NOT NULL THEN
+        UPDATE menu SET name='Fresh Mango Juice', price=70 WHERE id=parent_id;
+        INSERT INTO menu_variants(menu_id,variant_label,price,available)
+          VALUES(parent_id,'350 ml',70,TRUE)
+          ON CONFLICT(menu_id,variant_label) DO UPDATE SET price=EXCLUDED.price,available=TRUE;
+        IF child_id IS NOT NULL AND child_id <> parent_id THEN
+          UPDATE menu SET variant_parent_id=parent_id, available=FALSE WHERE id=child_id;
+          INSERT INTO menu_variants(menu_id,variant_label,price,available)
+            VALUES(parent_id,'200 ml',50,TRUE)
+            ON CONFLICT(menu_id,variant_label) DO UPDATE SET price=EXCLUDED.price,available=TRUE;
+        END IF;
+      END IF;
+    END $;
+  `);
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_delivery_minutes INTEGER");
@@ -511,6 +539,23 @@ app.patch("/api/auth/profile", auth, asyncRoute(async (req, res) => {
   }
 }));
 
+async function attachMenuVariants(rows) {
+  if (!rows.length) return rows.map(row => ({...row, variants: []}));
+  const ids = rows.map(row => Number(row.id));
+  const result = await pool.query(
+    "SELECT id,menu_id,variant_label,price,available FROM menu_variants WHERE menu_id = ANY($1::int[]) ORDER BY menu_id,id",
+    [ids]
+  );
+  const byMenu = new Map();
+  result.rows.forEach(v => {
+    if (!v.available) return;
+    const list = byMenu.get(Number(v.menu_id)) || [];
+    list.push({ id:Number(v.id), label:v.variant_label, price:Number(v.price) });
+    byMenu.set(Number(v.menu_id), list);
+  });
+  return rows.map(row => ({...row, variants:byMenu.get(Number(row.id)) || []}));
+}
+
 // Public menu
 // Customer favourites: top five dishes by quantity ordered, excluding cancelled orders.
 app.get("/api/popular-menu", asyncRoute(async (req, res) => {
@@ -551,11 +596,11 @@ app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT id, name, description, category, price, image, available
      FROM menu
-     WHERE available = TRUE
+     WHERE available = TRUE AND variant_parent_id IS NULL
      ORDER BY category, name`
   );
-
-  res.json(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) })));
+  const rows = result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) }));
+  res.json(await attachMenuVariants(rows));
 }));
 
 // Owner menu
@@ -974,10 +1019,20 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   let subtotal=0; const validated=[];
   const deliveryFee=calculateDeliveryFee(distanceKm,address);
   for(const item of items){
-    const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);
-    const dish=result.rows[0],quantity=Number(item.quantity);
+    const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE AND variant_parent_id IS NULL",[Number(item.menuId)]);
+    const dish=result.rows[0],quantity=Number(item.quantity),variantId=Number(item.variantId||0);
     if(!dish||!Number.isInteger(quantity)||quantity<1||quantity>50)return res.status(400).json({error:"Invalid cart item."});
-    subtotal+=dish.price*quantity;validated.push({...dish,quantity});
+    let unitPrice=Number(dish.price),variantLabel="";
+    const variants=await pool.query("SELECT id,variant_label,price FROM menu_variants WHERE menu_id=$1 AND available=TRUE ORDER BY id",[dish.id]);
+    if(variants.rowCount){
+      if(!Number.isInteger(variantId)||variantId<1)return res.status(400).json({error:"Please choose a size or option for "+dish.name+"."});
+      const selected=variants.rows.find(v=>Number(v.id)===variantId);
+      if(!selected)return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
+      unitPrice=Number(selected.price);variantLabel=selected.variant_label;
+    }else if(variantId){
+      return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
+    }
+    subtotal+=unitPrice*quantity;validated.push({...dish,quantity,price:unitPrice,variantId,variantLabel});
   }
   let scheduledDate=null;
   if(orderMode==="scheduled"){
@@ -1016,7 +1071,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     await client.query("BEGIN");
     const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,payment_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,isCod?"cod":"created"]);
     orderId=result.rows[0].id;
-    for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity) VALUES($1,$2,$3,$4,$5)",[orderId,item.id,item.name,item.price,item.quantity]);
+    for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity,variant_label) VALUES($1,$2,$3,$4,$5,$6)",[orderId,item.id,item.name,item.price,item.quantity,item.variantLabel||""]);
     await client.query("COMMIT");
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
   if(isCod){
@@ -1166,7 +1221,14 @@ app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
  if(!code.date_started)return res.status(400).json({error:"Promo code is not valid yet."});if(!code.date_not_expired)return res.status(400).json({error:"Promo code expired."});
  const user=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);const normalize=value=>String(value||"").replace(/\D/g,"").replace(/^0+/,"").replace(/^91(?=\d{10}$)/,"");if(normalize(user.rows[0]?.phone)!==normalize(code.customer_phone))return res.status(400).json({error:"This promo code is not assigned to your mobile number."});
  let subtotal=0,eligibleSubtotal=0;const excluded=Array.isArray(code.excluded_menu_ids)?code.excluded_menu_ids.map(Number):[];const excludedItems=[];
- for(const item of items){const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE",[Number(item.menuId)]);const dish=r.rows[0];if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});const amount=dish.price*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;}
+ for(const item of items){
+  const q=Number(item.quantity),r=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE AND variant_parent_id IS NULL",[Number(item.menuId)]),dish=r.rows[0],variantId=Number(item.variantId||0);
+  if(!dish||!Number.isInteger(q)||q<1||q>50)return res.status(400).json({error:"Invalid cart item."});
+  let unitPrice=Number(dish.price);
+  const variants=await pool.query("SELECT id,price FROM menu_variants WHERE menu_id=$1 AND available=TRUE",[dish.id]);
+  if(variants.rowCount){const selected=variants.rows.find(v=>Number(v.id)===variantId);if(!selected)return res.status(400).json({error:"Please choose a size or option for "+dish.name+"."});unitPrice=Number(selected.price);}
+  const amount=unitPrice*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;
+ }
  if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
  const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,handlingFee:5,deliveryFee:0,total:subtotal-discount+5,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
 }));
@@ -1295,7 +1357,7 @@ async function readOrder(id) {
   if (!order) return null;
 
   const itemsResult = await pool.query(
-    `SELECT item_name AS name, unit_price AS price, quantity
+    `SELECT item_name AS name, variant_label AS variant, unit_price AS price, quantity
      FROM order_items WHERE order_id = $1`,
     [id]
   );
