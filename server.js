@@ -1004,8 +1004,12 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;
   }
   const kitchenStatus=await getKitchenStatus();
-  if(!kitchenStatus.isOpen)return res.status(503).json({error:"Our kitchen is currently closed. Please check back later."});
-  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
+  if(!kitchenStatus.isOpen)return res.status(503).json({error:"Our kitchen is currently closed. Please try again later."});
+  const normalizedPaymentMethod=String(paymentMethod||"online").trim().toLowerCase();
+  if(!["online","cod"].includes(normalizedPaymentMethod))return res.status(400).json({error:"Please choose a valid payment method."});
+  const isCod=normalizedPaymentMethod==="cod";
+  if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for addresses containing Brigade 7 Gardens."});
+  if(!isCod&&!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
   const total=Number(subtotal-discount+5+deliveryFee);
   const client=await pool.connect();let orderId;
   try{
