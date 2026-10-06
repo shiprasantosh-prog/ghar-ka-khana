@@ -17,6 +17,8 @@ const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
 
 const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET }) : null;
+const razorpayEnvironment = String(process.env.RAZORPAY_KEY_ID || "").startsWith("rzp_test_") ? "TEST" : String(process.env.RAZORPAY_KEY_ID || "").startsWith("rzp_live_") ? "LIVE" : "UNKNOWN";
+console.log(`Razorpay environment: ${razorpayEnvironment}`);
 
 if (!SECRET) {
   console.warn("Set JWT_SECRET in environment variables before production use.");
