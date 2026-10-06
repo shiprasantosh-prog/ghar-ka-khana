@@ -1070,27 +1070,7 @@ async function loadCustomerMenu(){
   });
   return best.score>=0.68?'/images/'+folder+'/'+encodeURIComponent(best.file)+'?v=3':'';
  };
- const beverageImageFileMap={
-  'bluelagoon':'Blue Lagoon.jpg',
-  'coldcoffee':'Dry Fruit Lassi.jpg',
-  'dryfruitlassi':'Fresh Mango Juice(350Ml).jpg',
-  'freshmangojuice350ml':'Hot Chocolate.jpg',
-  'hotchocolate':'Kitkat Shake.jpg',
-  'kitkatshake':'Mango Fresh Juice (200Ml).jpg',
-  'mangofreshjuice200ml':'Tea (Ginger).jpg',
-  'oreoshake':'Oreo Shake.jpg',
-  'teaginger':'Vergin Mojito.jpg',
-  'virginmojito':'Cold Coffee.jpg',
-  'verginmojito':'Cold Coffee.jpg'
- };
- const findCategoryImage=(name,category)=>{
-  const target=normalizeImageName(name);
-  if(category==='Beverages'){
-   const mapped=beverageImageFileMap[target];
-   if(mapped)return '/images/Beverages/'+encodeURIComponent(mapped)+'?v=4';
-  }
-  return findImage(name,imageCandidates[category]||[],imageFolders[category]||'');
- };
+ const findCategoryImage=(name,category)=>findImage(name,imageCandidates[category]||[],imageFolders[category]||'');
  const mapDish=d=>{
   const name=normalizeDishName(d.name);
   const category=menuGroup(d);
