@@ -181,7 +181,7 @@ async function initializeDatabase() {
   // Pilot variant grouping: keep the 350 ml mango juice as the parent item and
   // turn the existing 200 ml menu row into its second variant.
   await pool.query(`
-    DO $
+    DO $gkk$
     DECLARE parent_id INTEGER; child_id INTEGER;
     BEGIN
       SELECT id INTO parent_id FROM menu WHERE LOWER(name) LIKE '%fresh mango juice%350%' ORDER BY id LIMIT 1;
@@ -201,7 +201,7 @@ async function initializeDatabase() {
             ON CONFLICT(menu_id,variant_label) DO UPDATE SET price=EXCLUDED.price,available=TRUE;
         END IF;
       END IF;
-    END $;
+    END $gkk$;
   `);
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
