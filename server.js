@@ -564,7 +564,7 @@ app.get("/api/popular-menu", asyncRoute(async (req, res) => {
      FROM popular_menu p JOIN menu m ON m.id = p.menu_id
      WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
-  res.json(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) })));
+  res.json(await attachMenuVariants(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) }))));
 }));
 
 app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
