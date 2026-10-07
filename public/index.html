@@ -1340,7 +1340,7 @@ function selectSavedAddress(id){
   }catch(e){
     deliveryAreaAvailable=false;deliveryCheckPending=false;deliveryVerifiedAddress="";
     detail.textContent="This address is outside our delivery area.";detail.style.color="#b42318";
-   status.textContent="This address is outside our delivery area.";
+   if(status)status.textContent="";
    updatePlaceOrderButton();
  }};
  check();
