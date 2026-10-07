@@ -1303,10 +1303,11 @@ function updatePaymentMethodOptions(){
  const houseText=String(selectedSavedAddress?.house||"").trim().toLowerCase();
  const fullAddress=(houseText+" "+addressText).replace(/\s+/g," ");
  const eligible=/\bbrigade\s+7\s+gardens\b/i.test(fullAddress);
- const option=document.getElementById("codPaymentOption"),hint=document.getElementById("codPaymentHint"),cod=document.querySelector('input[name="paymentMethod"][value="cod"]'),online=document.querySelector('input[name="paymentMethod"][value="online"]');
+ const option=document.getElementById("codPaymentOption"),hint=document.getElementById("codPaymentHint"),cod=document.querySelector('input[name="paymentMethod"][value="cod"]'),online=document.querySelector('input[name="paymentMethod"][value="online"]'),onlineLabel=online?.closest("label");
  if(option)option.style.display=eligible?"flex":"none";
+ if(onlineLabel)onlineLabel.style.display=eligible?"none":"flex";
  if(hint)hint.hidden=true;
- if(!eligible&&cod&&cod.checked&&online)online.checked=true;
+ if(eligible&&cod){cod.checked=true}else if(!eligible&&cod&&cod.checked&&online){online.checked=true}
  updatePlaceOrderButton();
 }
 function updatePlaceOrderButton(){
