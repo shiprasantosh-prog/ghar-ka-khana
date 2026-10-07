@@ -597,6 +597,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 /* Compact five-across layout for the curated Best Selling Items row. */
 #popularGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
 #popularGrid>.card{min-width:0;margin:0}
+.menu-category-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:60}.menu-category-overlay.show{display:flex}.menu-category-pop{width:min(560px,94vw);max-height:min(720px,88vh);overflow:auto;background:#050b14;color:#fff;border-radius:28px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,.35)}.menu-category-pop-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}.menu-category-pop-head h2{margin:0;font-size:34px}.menu-category-close{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-size:30px;line-height:1;cursor:pointer;position:absolute;margin:-12px 0 0 470px}.menu-category-list{display:grid;gap:6px}.menu-category-choice{width:100%;border:0;border-bottom:1px solid rgba(255,255,255,.1);background:transparent;color:#ddd;padding:18px 0;text-align:left;display:flex;justify-content:space-between;align-items:center;font:inherit;font-size:21px;cursor:pointer}.menu-category-choice:hover{color:#fff}.menu-category-choice span:last-child{font-size:28px;color:#aaa}@media(max-width:650px){.menu-category-pop{padding:22px;border-radius:24px}.menu-category-choice{font-size:18px;padding:16px 0}.menu-category-close{right:20px;top:20px;position:absolute;margin:0}}
 .home-menu-section{position:relative}
 .home-menu-tile{position:fixed;right:24px;bottom:92px;width:118px;height:118px;padding:0;border:0;border-radius:50%;background:#050b14;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.24);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:24;transition:transform .2s ease,box-shadow .2s ease}
 .home-menu-tile:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(0,0,0,.3)}
@@ -995,7 +996,24 @@ function toggleSidebar(){
     toggle.setAttribute("aria-expanded",String(expanded));
     toggle.setAttribute("aria-label",expanded?"Collapse navigation":"Expand navigation");
 }
-function openMenuCategories(){showPage("menu");setTimeout(()=>document.getElementById("categories")?.scrollIntoView({behavior:"smooth",block:"start"}),80)}
+function openMenuCategories(){
+ showPage("menu");
+ let overlay=document.getElementById("menuCategoryOverlay");
+ if(!overlay){
+  overlay=document.createElement("div");overlay.id="menuCategoryOverlay";overlay.className="menu-category-overlay";
+  overlay.innerHTML='<div class="menu-category-pop" role="dialog" aria-modal="true" aria-label="Choose a menu category"><button class="menu-category-close" type="button" aria-label="Close">×</button><div class="menu-category-pop-head"><div><div class="eyebrow">Explore our menu</div><h2>Items</h2></div></div><div class="menu-category-list"></div></div>';
+  document.body.appendChild(overlay);
+  overlay.querySelector(".menu-category-close").onclick=()=>overlay.classList.remove("show");
+  overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.classList.remove("show")});
+ }
+ const cats=["Breakfast","Main Course","Chinese","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages"];
+ overlay.querySelector(".menu-category-list").innerHTML=cats.map(cat=>'<button type="button" class="menu-category-choice" data-category="'+escapeHTML(cat)+'"><span>'+escapeHTML(cat)+'</span><span>›</span></button>').join("");
+ overlay.querySelectorAll(".menu-category-choice").forEach(btn=>btn.onclick=()=>{
+  const cat=btn.dataset.category;overlay.classList.remove("show");setMenuCategory(cat);
+  setTimeout(()=>{const target=[...document.querySelectorAll("#menuGrid .menu-category")].find(el=>el.dataset.menuCategory===cat);if(target)target.scrollIntoView({behavior:"smooth",block:"start"});},60);
+ });
+ overlay.classList.add("show");
+}
 function showPage(pageId){
     // Always dismiss the basket before switching sections, especially on mobile where the fixed drawer can cover navigation.
     closeCart();
@@ -1258,7 +1276,7 @@ function renderMenu(){
  document.getElementById("menuSearchCount").textContent=q?'Found '+list.length+' matching dish(es)':'Showing '+list.length+' dish(es)';
  const grouped={};list.forEach(d=>{const g=menuGroup(d);(grouped[g]??=[]).push(d)});
  const ordered=menuGroupOrder(Object.keys(grouped));
- document.getElementById("menuGrid").innerHTML=list.length?ordered.map(g=>{const items=grouped[g];if(g==='Main Course'){const subs={};items.forEach(d=>(subs[mainCourseSubgroup(d)]??=[]).push(d));const order=['Gravy','Dry','Daal','Breads','Rice & Biryani'];return '<section class="menu-category"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">Main Course <span class="collapse-indicator">▾</span></h3>'+order.filter(sub=>subs[sub]?.length).map(sub=>'<div class="menu-subcategory"><h4 class="menu-subcategory-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+sub+' <span class="collapse-indicator">▾</span></h4><div class="grid">'+subs[sub].map(dishCardHTML).join('')+'</div></div>').join('')+'</section>'}return '<section class="menu-category"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+escapeHTML(g)+' <span class="collapse-indicator">▾</span></h3><div class="grid">'+menuItemOrder(items,g).map(dishCardHTML).join('')+'</div></section>'}).join(''):'<p class="empty">No matching dishes found.</p>';
+ document.getElementById("menuGrid").innerHTML=list.length?ordered.map(g=>{const items=grouped[g];if(g==='Main Course'){const subs={};items.forEach(d=>(subs[mainCourseSubgroup(d)]??=[]).push(d));const order=['Gravy','Dry','Daal','Breads','Rice & Biryani'];return '<section class="menu-category" data-menu-category="'+escapeHTML(g)+'"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">Main Course <span class="collapse-indicator">▾</span></h3>'+order.filter(sub=>subs[sub]?.length).map(sub=>'<div class="menu-subcategory"><h4 class="menu-subcategory-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+sub+' <span class="collapse-indicator">▾</span></h4><div class="grid">'+subs[sub].map(dishCardHTML).join('')+'</div></div>').join('')+'</section>'}return '<section class="menu-category" data-menu-category="'+escapeHTML(g)+'"><h3 class="menu-group-title collapsible-title" role="button" tabindex="0" aria-expanded="true" onclick="toggleMenuSection(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleMenuSection(this)}">'+escapeHTML(g)+' <span class="collapse-indicator">▾</span></h3><div class="grid">'+menuItemOrder(items,g).map(dishCardHTML).join('')+'</div></section>'}).join(''):'<p class="empty">No matching dishes found.</p>';
 }
 function updateMenuItem(id){
     document.querySelectorAll("[data-menu-card]").forEach(card=>{
