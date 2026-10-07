@@ -1189,7 +1189,8 @@ function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Di
 function renderCats(){const cats=["All",...menuGroupOrder(new Set(dishes.map(menuGroup)))];document.getElementById("categories").innerHTML=cats.map(c=>'<button class="chip '+(category===c?'active':'')+'" onclick=\'category='+JSON.stringify(c)+';renderCats();renderMenu()\'>'+escapeHTML(c)+'</button>').join('')}
 function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
 function parseCartLineKey(key){const parts=String(key).split(":");return {menuId:Number(parts[0]),variantId:parts[1]?Number(parts[1]):0}}
-function findCustomerDish(id){return dishes.find(x=>Number(x.id)===Number(id))||popularDishes.find(x=>Number(x.id)===Number(id))||todaySpecials.find(x=>Number(x.id)===Number(id))||null}\nfunction getDishForCartLine(key){const parsed=parseCartLineKey(key);const dish=findCustomerDish(parsed.menuId);const variant=dish?.variants?.find(v=>Number(v.id)===parsed.variantId);return {dish,variant,menuId:parsed.menuId,variantId:parsed.variantId,price:variant?Number(variant.price):Number(dish?.price||0),label:variant?.label||""}}
+function findCustomerDish(id){return dishes.find(x=>Number(x.id)===Number(id))||popularDishes.find(x=>Number(x.id)===Number(id))||todaySpecials.find(x=>Number(x.id)===Number(id))||null}
+function getDishForCartLine(key){const parsed=parseCartLineKey(key);const dish=findCustomerDish(parsed.menuId);const variant=dish?.variants?.find(v=>Number(v.id)===parsed.variantId);return {dish,variant,menuId:parsed.menuId,variantId:parsed.variantId,price:variant?Number(variant.price):Number(dish?.price||0),label:variant?.label||""}}
 function quantityControlHTML(d){
     const hasVariants=Array.isArray(d.variants)&&d.variants.length;
     if(hasVariants)return '<button class="add" type="button" onclick="openVariantPicker('+JSON.stringify(d.id)+')">Customize</button>';
