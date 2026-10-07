@@ -997,7 +997,7 @@ function showPage(pageId){
     document.body.dataset.currentPage=pageId;
     document.querySelectorAll(".page-view").forEach(section=>{        section.classList.toggle("active-view",section.id===pageId || (pageId==="story" && ["homePopular","homeBulkOrders","homeWhy","homeHow","homeStory","homeReviewPreview"].includes(section.id)));
     });    if(document.body.classList.contains("sidebar-expanded"))toggleSidebar();
-    document.querySelector(".cart-fab").style.display=pageId==="story"?"none":"block";
+    document.querySelector(".cart-fab").style.display=Object.keys(cart).length?"block":"none";
     window.scrollTo({top:0,behavior:"smooth"});
 }
 document.querySelectorAll(".side-links a").forEach(link=>link.addEventListener("click",()=>{
@@ -1265,6 +1265,7 @@ function updateCart(){
     const entries=Object.entries(cart);
     let count=entries.reduce((a,[,q])=>a+(Number(q)||0),0);
     ["cartCount","fabCount","sideCartCount"].forEach(id=>{const counter=document.getElementById(id);if(counter)counter.textContent=count});
+    const cartFab=document.querySelector(".cart-fab");if(cartFab)cartFab.style.display=count>0?"block":"none";
     const cartItemsHost=document.getElementById("cartItems");
     if(cartItemsHost)cartItemsHost.innerHTML=entries.length?entries.map(([key,q])=>{
         const line=getDishForCartLine(key);if(!line.dish)return "";
@@ -1306,7 +1307,7 @@ function updatePaymentMethodOptions(){
  const eligible=/\bbrigade\s+7\s+gardens\b/i.test(fullAddress);
  const option=document.getElementById("codPaymentOption"),hint=document.getElementById("codPaymentHint"),cod=document.querySelector('input[name="paymentMethod"][value="cod"]'),online=document.querySelector('input[name="paymentMethod"][value="online"]'),onlineLabel=online?.closest("label");
  if(option)option.style.display=eligible?"flex":"none";
- if(onlineLabel)onlineLabel.style.display=eligible?"none":"flex";
+ if(onlineLabel)onlineLabel.style.display="flex";
  if(hint)hint.hidden=true;
  if(eligible&&cod){cod.checked=true}else if(!eligible&&cod&&cod.checked&&online){online.checked=true}
  updatePlaceOrderButton();
