@@ -990,7 +990,6 @@ function toggleSidebar(){
     toggle.setAttribute("aria-label",expanded?"Collapse navigation":"Expand navigation");
 }
 function openMenuCategories(){
- showPage("menu");
  document.body.classList.add("menu-category-open");
  let overlay=document.getElementById("menuCategoryOverlay");
  if(!overlay){
@@ -999,6 +998,9 @@ function openMenuCategories(){
   document.body.appendChild(overlay);
   const close=()=>{overlay.classList.remove("show");document.body.classList.remove("menu-category-open")};
   overlay.querySelector(".menu-category-close").onclick=close;
+  overlay.addEventListener("click",e=>{
+    if(e.target===overlay) close();
+  });
  }
  const cats=["Breakfast","Main Course","Chinese","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages"];
  overlay.querySelector(".menu-category-list").innerHTML=cats.map(cat=>'<button type="button" class="menu-category-choice" data-category="'+escapeHTML(cat)+'"><span>'+escapeHTML(cat)+'</span><span>›</span></button>').join("");
