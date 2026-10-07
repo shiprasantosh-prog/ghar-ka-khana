@@ -1192,7 +1192,8 @@ function menuItemOrder(items,group){
  });
 }
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
-function renderCats(){const cats=["All","Breakfast","Main Course","Chinese","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages"];document.getElementById("categories").innerHTML=cats.map(c=>'<button class="chip '+(category===c?'active':'')+'" onclick='\'category='+JSON.stringify(c)+';renderCats();renderMenu()\'>\'+escapeHTML(c)+'\</button>').join('')}
+function setMenuCategory(value){category=value;renderCats();renderMenu()}
+function renderCats(){const cats=["All","Breakfast","Main Course","Chinese","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages"];document.getElementById("categories").innerHTML=cats.map(c=>'<button class="chip '+(category===c?'active':'')+'" onclick="setMenuCategory('+JSON.stringify(c)+')">'+escapeHTML(c)+'</button>').join('')}
 function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
 function parseCartLineKey(key){const parts=String(key).split(":");return {menuId:Number(parts[0]),variantId:parts[1]?Number(parts[1]):0}}
 function findCustomerDish(id){return dishes.find(x=>Number(x.id)===Number(id))||popularDishes.find(x=>Number(x.id)===Number(id))||todaySpecials.find(x=>Number(x.id)===Number(id))||null}
