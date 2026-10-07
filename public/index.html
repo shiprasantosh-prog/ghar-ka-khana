@@ -1340,9 +1340,6 @@ function selectSavedAddress(id){
   }catch(e){
     deliveryAreaAvailable=false;deliveryCheckPending=false;deliveryVerifiedAddress="";
     detail.textContent="This address is outside our delivery area.";detail.style.color="#b42318";
-    if(status)status.textContent="";
-    updatePlaceOrderButton();
-   detail.textContent=e.message;detail.style.color="#b42318";
    status.textContent="This address is outside our delivery area.";
    updatePlaceOrderButton();
  }};
@@ -1483,6 +1480,7 @@ async function applyPromoCode(){
  const button=document.getElementById("applyPromoButton"),message=document.getElementById("promoMessage"),input=document.getElementById("promoCode"),promoCode=input?.value.trim()||"";
  if(!promoCode){appliedPromo=null;message.textContent="";updateCart();return}
  if(!currentUser){appliedPromo=null;message.textContent="Invalid Promo Code/ Promo Code expired";updateCart();return}
+ button.disabled=true;button.textContent="Applying…";
  try{
    const items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}});
    const result=await api("/api/promo/validate",{method:"POST",body:JSON.stringify({items,promoCode:document.getElementById("promoCode").value.trim()})});
