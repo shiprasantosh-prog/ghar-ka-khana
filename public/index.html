@@ -601,8 +601,8 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 .home-menu-tile{position:fixed;right:24px;bottom:92px;width:118px;height:118px;padding:0;border:0;border-radius:50%;background:#050b14;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.24);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:24;transition:transform .2s ease,box-shadow .2s ease}
 .home-menu-tile:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(0,0,0,.3)}
 .home-menu-tile .menu-tile-label{font-size:15px;letter-spacing:1.5px;font-weight:800;line-height:1}
-.home-menu-tile .menu-tile-icon{width:39px;height:39px;display:flex;align-items:center;justify-content:center;font-size:34px;line-height:1;filter:grayscale(1) brightness(1.8)}
-@media(max-width:650px){.home-menu-tile{right:16px;bottom:84px;width:92px;height:92px}.home-menu-tile .menu-tile-label{font-size:12px;letter-spacing:1.2px}.home-menu-tile .menu-tile-icon{width:32px;height:32px;font-size:27px}}
+.home-menu-tile .menu-tile-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff}.home-menu-tile .menu-tile-icon svg{width:40px;height:40px;display:block}
+@media(max-width:650px){.home-menu-tile{right:16px;bottom:84px;width:92px;height:92px}.home-menu-tile .menu-tile-label{font-size:12px;letter-spacing:1.2px}.home-menu-tile .menu-tile-icon{width:32px;height:32px}.home-menu-tile .menu-tile-icon svg{width:32px;height:32px}}
 #popularGrid .food-img{height:145px;overflow:hidden}
 #popularGrid .food-img img{width:100%;height:100%;object-fit:cover}
 #popularGrid .card-body{padding:13px}
@@ -913,7 +913,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </section>
 
 
-<section class="wrap page-view active-view home-section home-menu-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Best Selling Items</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><button class="home-menu-tile" type="button" onclick="showPage('menu')" aria-label="Open full menu" title="Open full menu"><span class="menu-tile-icon" aria-hidden="true">◫</span><span class="menu-tile-label">ITEMS</span></button></section>
+<section class="wrap page-view active-view home-section home-menu-section" id="homePopular"><div class="section-head"><div><div class="eyebrow">Customer favourites</div><h2>Best Selling Items</h2></div><p>Some of the dishes our customers love.</p></div><div id="popularGrid" class="grid"><p class="empty">Loading popular dishes…</p></div><button class="home-menu-tile" type="button" onclick="showPage('menu')" aria-label="Open full menu" title="Open full menu"><span class="menu-tile-icon" aria-hidden="true"><svg viewBox="0 0 40 40" focusable="false"><rect x="11" y="6" width="18" height="28" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-12 20 20)"/><path d="M15 25h10M16 29h7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" transform="rotate(-12 20 20)"/></svg></span><span class="menu-tile-label">ITEMS</span></button></section>
 <section class="wrap page-view active-view home-section" id="homeBulkOrders">
 <div class="bulk-order-section">
   <div class="bulk-order-copy">
