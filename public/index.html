@@ -1200,7 +1200,7 @@ function quantityControlHTML(d){
         : `<button class="add" type="button" onclick='add(${id})'>+ Add</button>`;
 }
 function openVariantPicker(id){
-    const dish=dishes.find(d=>String(d.id)===String(id))||todaySpecials.find(d=>String(d.id)===String(id));
+    const dish=findCustomerDish(id);
     if(!dish||!dish.variants?.length)return;
     let overlay=document.getElementById('variantPickerOverlay');
     if(!overlay){
@@ -1256,7 +1256,7 @@ function add(id,variantId=0){
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+1;updateCart();updateMenuItem(dish.id);
 }
 function change(id,n,variantId=0){
-    appliedPromo=null;const breakdown=document.getElementById("promoBreakdown");if(breakdown)breakdown.textContent="";const promoMessage=document.getElementById("promoMessage");if(promoMessage)promoMessage.textContent="Invalid Promo Code/ Promo Code expired";
+    appliedPromo=null;const breakdown=document.getElementById("promoBreakdown");if(breakdown)breakdown.textContent="";const promoMessage=document.getElementById("promoMessage"),promoInput=document.getElementById("promoCode"),promoCode=promoInput?.value.trim()||"";if(promoMessage)promoMessage.textContent=promoCode?"Invalid Promo Code/ Promo Code expired":"";
     const dish=findCustomerDish(id);if(!dish)return;
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
@@ -1332,13 +1332,16 @@ function selectSavedAddress(id){
    deliveryAreaAvailable=Boolean(result.available);
    deliveryCheckPending=false;
    deliveryFee=deliveryAreaAvailable?(Number(result.deliveryFee)||0):0;
-   deliveryVerifiedAddress=deliveryAreaAvailable?address.value:"";
-   detail.textContent=deliveryAreaAvailable?"Delivery available · "+result.distanceKm.toFixed(2)+" km by road from kitchen.":"This address is outside our delivery area.";
-   detail.style.color=deliveryAreaAvailable?"#18734b":"#b42318";
-   status.textContent=deliveryAreaAvailable?"Delivery address verified.":"This address is outside our delivery area.";
-   updatePaymentMethodOptions();updatePlaceOrderButton();updateCart();
- }catch(e){
-   deliveryAreaAvailable=false;deliveryCheckPending=false;deliveryVerifiedAddress="";
+    deliveryVerifiedAddress=deliveryAreaAvailable?address.value:"";
+    detail.textContent=deliveryAreaAvailable?"":"This address is outside our delivery area.";
+    detail.style.color=deliveryAreaAvailable?"":"#b42318";
+    if(status)status.textContent="";
+    updatePaymentMethodOptions();updatePlaceOrderButton();updateCart();
+  }catch(e){
+    deliveryAreaAvailable=false;deliveryCheckPending=false;deliveryVerifiedAddress="";
+    detail.textContent="This address is outside our delivery area.";detail.style.color="#b42318";
+    if(status)status.textContent="";
+    updatePlaceOrderButton();
    detail.textContent=e.message;detail.style.color="#b42318";
    status.textContent="This address is outside our delivery area.";
    updatePlaceOrderButton();
@@ -1477,9 +1480,9 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
 });
 async function toggleScheduledCheckout(){const show=document.querySelector('input[name="orderMode"]:checked')?.value==="scheduled",panel=document.getElementById("scheduledCheckout");panel.hidden=!show;const date=document.getElementById("scheduledDate"),time=document.getElementById("deliveryTime");date.required=show;time.required=show;date.min=new Date(Date.now()+60000).toLocaleDateString("en-CA");if(show&&!date.value)date.value=date.min;}
 async function applyPromoCode(){
- const button=document.getElementById("applyPromoButton"),message=document.getElementById("promoMessage");
+ const button=document.getElementById("applyPromoButton"),message=document.getElementById("promoMessage"),input=document.getElementById("promoCode"),promoCode=input?.value.trim()||"";
+ if(!promoCode){appliedPromo=null;message.textContent="";updateCart();return}
  if(!currentUser){appliedPromo=null;message.textContent="Invalid Promo Code/ Promo Code expired";updateCart();return}
- button.disabled=true;button.textContent="Applying…";
  try{
    const items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}});
    const result=await api("/api/promo/validate",{method:"POST",body:JSON.stringify({items,promoCode:document.getElementById("promoCode").value.trim()})});
