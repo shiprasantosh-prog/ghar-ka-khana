@@ -1288,7 +1288,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
       <span>Homemade taste, made with care.</span>
     </div>
     <div class="business-details-info">
-      <div><span class="business-details-label">Location</span><span>Brigade 7 Gardens, Bengaluru, Karnataka – 560061</span></div>
+      <div><span class="business-details-label">Location</span><span>Bengaluru, Karnataka</span></div>
       <div><span class="business-details-label">GSTIN</span><span>29ENQPS3057L1Z2</span></div>
       <div><span class="business-details-label">FSSAI Lic. No.</span><span>212251860001525</span></div>
     </div>
@@ -1630,7 +1630,7 @@ function renderOrderDetail(order){
  const host=document.getElementById("orderDetailBody");
  host.innerHTML=`<div class="customer-bill">
   <header class="customer-bill-head"><h2>Ghar ka Khana</h2><div class="bill-tagline">Homemade with Love</div>
-   <div>C824, Brigade 7 Gardens, Karnataka, 560061</div>
+   <div>Bengaluru, Karnataka</div>
    <div>GSTIN: 29ENQPS3057L1Z2</div><div>FSSAI Lic. No.: 212251860001525</div>
   </header>
   <div class="customer-bill-meta"><div><span>Bill No.</span><strong>GKK-${String(order.id).padStart(4,"0")}</strong></div><div><span>Bill Date</span><strong>${formatOrderDate(order.created_at)}</strong></div><div><span>Status</span><strong>${escapeHTML(order.status||"")}</strong></div>${scheduled?`<div><span>Scheduled delivery</span><strong>${escapeHTML(scheduled)}</strong></div>`:""}</div>
@@ -1650,7 +1650,7 @@ async function downloadOrderReceipt(orderId){
   const handling=5,delivery=Number(order.delivery_fee)||0,discount=Number(order.discount)||0;
   const scheduled=order.scheduled_at?new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"}):"";
   document.getElementById("orderReceiptPrint").innerHTML=`<div class="receipt-print-sheet customer-bill">
-   <header class="customer-bill-head"><h1>Ghar ka Khana</h1><div class="bill-tagline">Homemade with Love</div><div>C824, Brigade 7 Gardens, Karnataka, 560061</div><div>GSTIN: 29ENQPS3057L1Z2</div><div>FSSAI Lic. No.: 212251860001525</div></header>
+   <header class="customer-bill-head"><h1>Ghar ka Khana</h1><div class="bill-tagline">Homemade with Love</div><div>Bengaluru, Karnataka</div><div>GSTIN: 29ENQPS3057L1Z2</div><div>FSSAI Lic. No.: 212251860001525</div></header>
    <h2 class="bill-title">Customer Bill</h2>
    <div class="customer-bill-meta"><div><span>Bill No.</span><strong>GKK-${String(order.id).padStart(4,"0")}</strong></div><div><span>Bill Date</span><strong>${formatOrderDate(order.created_at)}</strong></div><div><span>Status</span><strong>${escapeHTML(order.status||"")}</strong></div>${scheduled?`<div><span>Scheduled delivery</span><strong>${escapeHTML(scheduled)}</strong></div>`:""}</div>
    <div class="customer-bill-customer"><strong>Bill To:</strong> ${escapeHTML(order.customer_name||"Customer")}${order.customer_phone?`<br><strong>Phone:</strong> ${escapeHTML(order.customer_phone)}`:""}<br><strong>Delivery address:</strong> ${escapeHTML(order.address||"Not provided")}</div>
