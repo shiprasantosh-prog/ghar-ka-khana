@@ -894,13 +894,6 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <a href="#myorders" onclick="showPage(&quot;myorders&quot;);return false" title="My Orders"><span class="nav-icon">▤</span><span class="nav-label">My Orders</span></a>
  <a href="#reviews" onclick="showPage(&quot;reviews&quot;);return false" title="Customer Reviews"><span class="nav-icon">★</span><span class="nav-label">Customer Reviews</span></a>
 <button type="button" class="help-nav-toggle" onclick="openHelpPage()" title="Help &amp; Support"><span class="nav-icon">?</span><span class="nav-label">Help &amp; Support</span></button>
-<div class="help-subnav" id="helpSubnav" aria-label="Help &amp; Support">
-<button type="button" onclick="openHelpSection('help-faq')"><span class="nav-icon">?</span><span class="nav-label">FAQ</span></button>
-<button type="button" onclick="openHelpSection('help-guide')"><span class="nav-icon">▣</span><span class="nav-label">User Guide</span></button>
-<button type="button" onclick="openHelpSection('help-privacy')"><span class="nav-icon">⌕</span><span class="nav-label">Privacy Policy</span></button>
-<button type="button" onclick="openHelpSection('help-terms')"><span class="nav-icon">✓</span><span class="nav-label">Terms &amp; Conditions</span></button>
-<button type="button" onclick="openHelpSection('help-contact')"><span class="nav-icon">☎</span><span class="nav-label">Contact Us</span></button>
-</div>
 <button type="button" onclick="openCart()" title="My Basket"><span class="nav-icon">🛒</span><span class="nav-label">My Basket</span><b id="sideCartCount">0</b></button>
 </nav><div class="sidebar-bottom"><p>Good Food<br>Brings People Together <span>♥</span></p><div class="follow-label">Follow us</div>
 <div class="social-links" aria-label="Social media links">
@@ -1025,13 +1018,6 @@ function openMenuCategories(){
 }
 function openHelpPage(){
  showPage("help");
-}
-function openHelpSection(sectionId){
- showPage("help");
- setTimeout(()=>{
-  const target=document.getElementById(sectionId);
-  if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
- },100);
 }
 function showPage(pageId){
     // Always dismiss the basket before switching sections, especially on mobile where the fixed drawer can cover navigation.
