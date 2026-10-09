@@ -2098,6 +2098,12 @@ main > .hero.page-view.active-view .hero-brand svg{position:relative;top:9px}
 #bulkEnquiryOverlay .bulk-location-result span{display:block;margin-top:3px;font-size:11px;line-height:1.4;color:#68796d}
 #bulkEnquiryOverlay .bulk-location-hint{display:block;margin-top:6px;color:#68796d;font-size:11px}
 </style>
-<script src="https://checkout.razorpay.com/v1/checkout.js">initMovableItems();
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",initMovableItems,{once:true});
+}else{
+  initMovableItems();
+}
 </script>
 </body></html>
