@@ -2395,4 +2395,59 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
   }
 }
 </style>
+
+<style id="help-support-single-section-view">
+#help .help-detail{display:none!important}
+#help .help-detail.active-help-detail{display:block!important}
+#help.help-subsection-open .help-grid{display:none!important}
+#help .help-back-button{margin:0 0 18px!important}
+</style>
+<script id="help-support-single-section-behavior">
+(function(){
+ function initHelpSingleSection(){
+  const help=document.getElementById("help");
+  if(!help||help.dataset.singleSectionReady==="true")return;
+  help.dataset.singleSectionReady="true";
+  const details=[...help.querySelectorAll(".help-detail")];
+  function showLanding(){
+   help.classList.remove("help-subsection-open");
+   details.forEach(el=>el.classList.remove("active-help-detail"));
+   help.querySelectorAll(".help-back-button").forEach(el=>el.remove());
+   history.replaceState(null,"",location.pathname+location.search);
+  }
+  function showSubsection(id,updateHash){
+   const target=details.find(el=>el.id===id);
+   if(!target)return;
+   help.classList.add("help-subsection-open");
+   details.forEach(el=>el.classList.toggle("active-help-detail",el===target));
+   help.querySelectorAll(".help-back-button").forEach(el=>el.remove());
+   const back=document.createElement("button");
+   back.type="button";
+   back.className="btn ghost help-back-button";
+   back.textContent="← Back to Help & Support";
+   back.addEventListener("click",showLanding);
+   target.insertBefore(back,target.firstChild);
+   if(updateHash)history.replaceState(null,"","#"+id);
+   target.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  help.addEventListener("click",event=>{
+   const link=event.target.closest('a[href^="#help-"]');
+   if(!link)return;
+   const id=link.getAttribute("href").slice(1);
+   if(details.some(el=>el.id===id)){
+    event.preventDefault();
+    showSubsection(id,true);
+   }
+  });
+  if(details.some(el=>el.id===location.hash.slice(1)))showSubsection(location.hash.slice(1),false);
+  else showLanding();
+  window.addEventListener("hashchange",()=>{
+   const id=location.hash.slice(1);
+   if(details.some(el=>el.id===id))showSubsection(id,false);
+  });
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initHelpSingleSection,{once:true});
+ else initHelpSingleSection();
+})();
+</script>
 </body></html>
