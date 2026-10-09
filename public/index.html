@@ -1157,7 +1157,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Expand navigation" aria-expanded="false" onclick="toggleSidebar()">☰</button><div class="mobile-quality-ticker" aria-label="Ghar ka Khana highlights"><div class="mobile-quality-track"><span>Freshly Prepared</span><b>✦</b><span>Homemade with Love</span><b>✦</b><span>No Preservatives</span><b>✦</b><span>Pure Vegetarian</span><b>✦</b><span>Kid Friendly</span><b>✦</b><span>Fresh Ingredients</span><b>✦</b><span>Made Fresh for Every Order</span><b>✦</b><span>Freshly Prepared</span><b>✦</b><span>Homemade with Love</span><b>✦</b><span>No Preservatives</span><b>✦</b><span>Pure Vegetarian</span><b>✦</b><span>Kid Friendly</span><b>✦</b><span>Fresh Ingredients</span><b>✦</b><span>Made Fresh for Every Order</span><b>✦</b></div></div>
 <a class="logo sidebar-brand" href="#story" onclick="showPage('story');return false" aria-label="Ghar ka Khana home">
 <svg viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana house and cooking pot logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg>
-<span class="logo-name">Ghar ka Khana</span><span class="logo-tag">Homemade with love</span></a>
+<span class="logo-name">Ghar ka Khana</span><span class="logo-tag">Homemade with love</span><span class="pure-veg-badge"><span aria-hidden="true">●</span> PURE VEGETARIAN</span></a>
 <nav class="side-links">
 <a href="#story" onclick="showPage(&quot;story&quot;);return false" title="Home"><span class="nav-icon">⌂</span><span class="nav-label">Home</span></a>
 <a href="#menu" onclick="showPage(&quot;menu&quot;);return false" title="Order Food"><span class="nav-icon">♨</span><span class="nav-label">Order Food</span></a>
@@ -1179,7 +1179,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="section-brand-bar" aria-label="Ghar ka Khana home link">
 <a class="section-brand-link" href="#story" onclick="showPage('story');return false" aria-label="Ghar ka Khana - Go to Home">
 <svg viewBox="0 0 180 130" aria-hidden="true"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/></svg>
-<span class="section-brand-copy"><strong>Ghar ka Khana</strong><small>Homemade with Love</small></span>
+<span class="section-brand-copy"><strong>Ghar ka Khana</strong><small>Homemade with Love</small><span class="pure-veg-badge"><span aria-hidden="true">●</span> PURE VEGETARIAN</span></span>
 </a>
 </div>
 <section class="hero page-view active-view" id="story">
@@ -2121,4 +2121,73 @@ if(document.readyState==="loading"){
   initMovableItems();
 }
 </script>
+
+<style id="pure-veg-logo-final-fix">
+/* Final brand-logo pass: keep the complete homepage logo visible and use the same darker vegetarian badge everywhere. */
+.pure-veg-badge{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  margin-top:6px!important;
+  padding:5px 10px!important;
+  min-height:24px!important;
+  box-sizing:border-box!important;
+  border:2px solid #063d24!important;
+  border-radius:5px!important;
+  background:#f3f7e9!important;
+  color:#063d24!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  letter-spacing:1px!important;
+  white-space:nowrap!important;
+  text-transform:uppercase!important;
+}
+.pure-veg-badge>span{
+  display:inline-grid!important;
+  place-items:center!important;
+  width:12px!important;
+  height:12px!important;
+  flex:0 0 12px!important;
+  box-sizing:border-box!important;
+  border:2px solid #063d24!important;
+  border-radius:2px!important;
+  color:#063d24!important;
+  font-size:7px!important;
+  line-height:1!important;
+}
+/* Homepage: do not shift the entire hero upward. This was clipping the Ghar ka Khana word at the top. */
+@media(min-width:701px){
+  main > .hero.page-view.active-view .hero-copy{
+    transform:translateY(-50%)!important;
+  }
+}
+@media(max-width:700px){
+  main > .hero.page-view.active-view .hero-copy{
+    transform:translateY(-50%)!important;
+  }
+}
+/* Section logos: make the badge part of the same stacked brand lockup. */
+.section-brand-copy{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:2px!important;
+  min-width:0!important;
+}
+.section-brand-copy .pure-veg-badge{
+  margin-top:4px!important;
+  font-size:10px!important;
+  padding:4px 8px!important;
+  min-height:22px!important;
+}
+/* Expanded sidebar logo also carries the same badge; keep it hidden in the collapsed icon rail. */
+.sidebar .logo .pure-veg-badge{display:none!important}
+body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!important;margin-top:7px!important;font-size:10px!important;padding:4px 8px!important}
+@media(max-width:900px){
+  body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!important}
+}
+</style>
 </body></html>
