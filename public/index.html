@@ -1399,14 +1399,35 @@ function initMovableItems(){
    }
  });
 }
+function positionMenuCategoryPopup(anchorRect){
+ const overlay=document.getElementById("menuCategoryOverlay");
+ const pop=overlay?.querySelector(".menu-category-pop");
+ if(!overlay||!pop||!anchorRect)return;
+ const gap=12,edge=16;
+ const popRect=pop.getBoundingClientRect();
+ const popWidth=popRect.width||330;
+ const popHeight=popRect.height||300;
+ let left=anchorRect.left+(anchorRect.width/2)-(popWidth/2);
+ left=Math.max(edge,Math.min(left,window.innerWidth-popWidth-edge));
+ let top=anchorRect.top-popHeight-gap;
+ if(top<edge) top=anchorRect.bottom+gap;
+ if(top+popHeight>window.innerHeight-edge) top=Math.max(edge,window.innerHeight-popHeight-edge);
+ pop.style.left=Math.round(left)+"px";
+ pop.style.top=Math.round(top)+"px";
+ pop.style.right="auto";
+ pop.style.bottom="auto";
+}
+let menuCategoryAnchorRect=null;
 function openMenuCategories(){
+ const itemsTile=document.querySelector(".global-items-tile");
+ menuCategoryAnchorRect=itemsTile?.getBoundingClientRect()||null;
  document.body.classList.add("menu-category-open");
  let overlay=document.getElementById("menuCategoryOverlay");
  if(!overlay){
   overlay=document.createElement("div");overlay.id="menuCategoryOverlay";overlay.className="menu-category-overlay";
   overlay.innerHTML='<div class="menu-category-pop" role="dialog" aria-modal="true" aria-label="Choose a menu category"><button class="menu-category-close" type="button" aria-label="Close">×</button><div class="menu-category-pop-head"><div><div class="eyebrow">Explore our menu</div><h2>Items</h2></div></div><div class="menu-category-list"></div></div>';
   document.body.appendChild(overlay);
-  const close=()=>{overlay.classList.remove("show");document.body.classList.remove("menu-category-open")};
+  const close=()=>{overlay.classList.remove("show");document.body.classList.remove("menu-category-open");menuCategoryAnchorRect=null};
   overlay.querySelector(".menu-category-close").onclick=close;
   overlay.addEventListener("click",e=>{
     if(e.target===overlay) close();
@@ -1418,6 +1439,7 @@ function openMenuCategories(){
   const cat=btn.dataset.category;
   overlay.classList.remove("show");
   document.body.classList.remove("menu-category-open");
+  menuCategoryAnchorRect=null;
   showPage("menu");
   setMenuCategory(cat);
   setTimeout(()=>{
@@ -1426,7 +1448,12 @@ function openMenuCategories(){
   },180);
  });
  overlay.classList.add("show");
+ requestAnimationFrame(()=>positionMenuCategoryPopup(menuCategoryAnchorRect));
 }
+window.addEventListener("resize",()=>{
+ const overlay=document.getElementById("menuCategoryOverlay");
+ if(overlay?.classList.contains("show")&&menuCategoryAnchorRect) positionMenuCategoryPopup(menuCategoryAnchorRect);
+});
 function openHelpPage(){
  showPage("help");
 }
