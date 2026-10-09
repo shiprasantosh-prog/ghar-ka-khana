@@ -73,7 +73,7 @@ header{background:rgba(251,248,239,.98)!important}.navlinks a{color:#203b2e!impo
 .sidebar .logo{display:flex!important;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:10px 0 14px;margin:0 0 12px;border-bottom:1px solid #d2dfd1;text-decoration:none;overflow:hidden;flex-shrink:0}.sidebar .logo svg{width:42px;height:36px;flex-shrink:0}.sidebar .logo-name,.sidebar .logo-tag{display:none!important}body.sidebar-expanded .sidebar .logo{align-items:flex-start;padding:10px 0 18px;margin-bottom:14px}body.sidebar-expanded .sidebar .logo svg{width:100px;height:74px}body.sidebar-expanded .sidebar .logo-name,body.sidebar-expanded .sidebar .logo-tag{display:block!important}.hero-brand{display:flex;flex-direction:column;align-items:flex-start;text-decoration:none;margin:0 0 24px;width:max-content}.hero-brand svg{width:150px;height:125px}.hero-brand .logo-name{font:bold 27px Georgia,serif;white-space:nowrap;color:#1b5a3a;margin-top:-3px}.hero-brand .logo-tag{font-size:10px;letter-spacing:2.5px;color:#a77b2b;margin-top:4px}
 
 .home-section{padding-top:54px;padding-bottom:54px;border-top:1px solid var(--line)}.home-section .section-head{margin-bottom:24px}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.steps h3{color:var(--cream);margin:14px 0 8px}.steps p{color:var(--muted);line-height:1.7;margin:0}.step-number{font:700 28px Georgia,serif;color:var(--gold)}.story-panel{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px}.story-photo{min-height:320px;border-radius:12px;background:linear-gradient(0deg,rgba(20,50,33,.08),rgba(20,50,33,.08)),url('https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85') center/cover}.story-panel h2{font:clamp(28px,4vw,42px) Georgia,serif;color:var(--cream);margin:10px 0 16px}.story-panel p,.home-review-card p{color:var(--muted);line-height:1.8}.review-stars{color:#b58a3b;font-size:20px}.review-stars span{color:#d7d9ce}@media(max-width:700px){.steps,.story-panel{grid-template-columns:1fr}.story-photo{min-height:220px}.home-section{padding-top:35px;padding-bottom:35px}}
-.help-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.help-card{padding:22px}.help-subnav{display:none;flex-direction:column;gap:5px;margin:-3px 0 2px 9px;padding-left:12px;border-left:2px solid #c7d8c7}.help-nav-toggle{position:relative}.help-nav-chevron{display:none;margin-left:auto;font-size:15px}.help-nav-toggle[aria-expanded="true"] .help-nav-chevron{transform:rotate(180deg)}body.sidebar-expanded .help-subnav{display:flex}body.sidebar-expanded .help-subnav button{min-height:40px;padding:9px 10px;font-size:13px;gap:11px;background:transparent;color:#52695a}body.sidebar-expanded .help-subnav button:hover{background:#dcebdc;color:#155333}.help-subnav .nav-icon{font-size:16px!important;min-width:20px!important}.help-nav-toggle .help-nav-chevron{display:none}body.sidebar-expanded .help-nav-toggle .help-nav-chevron{display:inline-flex}@media(max-width:900px){body.sidebar-expanded .help-subnav{margin:0;padding-left:10px;border-left:2px solid #c7d8c7}body.sidebar-expanded .help-subnav button{font-size:12px;padding:9px 8px;min-height:38px}}.help-card h3{margin:0 0 8px;color:#124f39;font:700 22px Georgia,serif}.help-card p{color:var(--muted);line-height:1.55;margin:0 0 16px}.help-card a{text-decoration:none}.help-detail{margin-top:18px;padding:20px}.help-detail h3{margin-top:0;color:#124f39}@media(max-width:700px){.help-grid{grid-template-columns:1fr 1fr;gap:12px}.help-card{padding:16px}.help-card h3{font-size:18px}.help-card p{font-size:13px}}@media(max-width:480px){.help-grid{grid-template-columns:1fr}}</style>
+.help-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.help-card{padding:22px}.help-grid{grid-template-columns:1fr 1fr;gap:12px}.help-card{padding:16px}.help-card h3{font-size:18px}.help-card p{font-size:13px}}@media(max-width:480px){.help-grid{grid-template-columns:1fr}}</style>
 <style>
 /* Keep homepage-only content hidden on every other sidebar destination */
 body[data-current-page]:not([data-current-page="story"]) #homeWhy,body[data-current-page]:not([data-current-page="story"]) #homePopular,body[data-current-page]:not([data-current-page="story"]) #homeBulkOrders,body[data-current-page]:not([data-current-page="story"]) #homeHow,body[data-current-page]:not([data-current-page="story"]) #homeStory,body[data-current-page]:not([data-current-page="story"]) #homeReviewPreview{display:none!important}
@@ -893,7 +893,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <a href="#account" onclick="showPage(&quot;account&quot;);return false" title="Sign Up / Login"><span class="nav-icon">♙</span><span class="nav-label">Sign Up / Login</span></a>
 <a href="#myorders" onclick="showPage(&quot;myorders&quot;);return false" title="My Orders"><span class="nav-icon">▤</span><span class="nav-label">My Orders</span></a>
  <a href="#reviews" onclick="showPage(&quot;reviews&quot;);return false" title="Customer Reviews"><span class="nav-icon">★</span><span class="nav-label">Customer Reviews</span></a>
-<button type="button" class="help-nav-toggle" onclick="toggleHelpNav()" title="Help &amp; Support" aria-expanded="false"><span class="nav-icon">?</span><span class="nav-label">Help &amp; Support</span><span class="help-nav-chevron">⌄</span></button>
+<button type="button" class="help-nav-toggle" onclick="openHelpPage()" title="Help &amp; Support"><span class="nav-icon">?</span><span class="nav-label">Help &amp; Support</span></button>
 <div class="help-subnav" id="helpSubnav" aria-label="Help &amp; Support">
 <button type="button" onclick="openHelpSection('help-faq')"><span class="nav-icon">?</span><span class="nav-label">FAQ</span></button>
 <button type="button" onclick="openHelpSection('help-guide')"><span class="nav-icon">▣</span><span class="nav-label">User Guide</span></button>
@@ -1023,12 +1023,8 @@ function openMenuCategories(){
  });
  overlay.classList.add("show");
 }
-function toggleHelpNav(){
- const button=document.querySelector(".help-nav-toggle"),nav=document.getElementById("helpSubnav");
- if(!button||!nav)return;
- const expanded=button.getAttribute("aria-expanded")==="true";
- button.setAttribute("aria-expanded",String(!expanded));
- nav.classList.toggle("open",!expanded);
+function openHelpPage(){
+ showPage("help");
 }
 function openHelpSection(sectionId){
  showPage("help");
