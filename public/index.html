@@ -1472,8 +1472,12 @@ function openMenuCategories(){
   showPage("menu");
   setMenuCategory(cat);
   setTimeout(()=>{
-    const target=[...document.querySelectorAll("#menuGrid .menu-category")].find(el=>el.dataset.menuCategory===cat);
-    if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+    // Re-measure only after the hidden menu becomes visible; otherwise the sticky
+    // search threshold can be incorrectly calculated as zero.
+    document.dispatchEvent(new Event("gkk:menu-layout-ready"));
+    const heading=[...document.querySelectorAll("#menu .section-head h2")]
+      .find(el=>el.textContent.trim()==="Full Menu");
+    if(heading)heading.closest(".section-head").scrollIntoView({behavior:"smooth",block:"start"});
   },180);
  });
  overlay.classList.add("show");
@@ -2943,19 +2947,25 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  const menu=document.getElementById('menu');
  if(!search||!menu)return;
  let threshold=0;
- function measure(){threshold=search.getBoundingClientRect().top+window.scrollY;}
+ function measure(){
+   search.classList.remove('menu-search-fixed');
+   threshold=search.getBoundingClientRect().top+window.scrollY;
+ }
  function update(){
    const menuRect=menu.getBoundingClientRect();
    const shouldFix=document.body.dataset.currentPage==='menu'&&window.scrollY>threshold-12&&menuRect.bottom>120;
    search.classList.toggle('menu-search-fixed',shouldFix);
  }
+ function refreshAfterMenuShows(){
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{measure();update();}));
+ }
  window.addEventListener('scroll',update,{passive:true});
- window.addEventListener('resize',()=>{search.classList.remove('menu-search-fixed');measure();update();});
+ window.addEventListener('resize',()=>{measure();update();});
+ document.addEventListener('gkk:menu-layout-ready',refreshAfterMenuShows);
  document.addEventListener('click',event=>{
    const nav=event.target.closest('[onclick*="showPage"]');
    if(nav){search.classList.remove('menu-search-fixed');setTimeout(()=>{measure();update();},0);}
  });
  measure();update();
-})();
-</script>
+})();</script>
 </body></html>
