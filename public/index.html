@@ -1028,6 +1028,77 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
   }
 }
 </style>
+
+<style id="mobile-sidebar-overlay-final-fix">
+@media(max-width:900px){
+  /* Collapsed header */
+  .sidebar{
+    position:fixed!important;
+    top:0!important;
+    left:0!important;
+    right:0!important;
+    bottom:auto!important;
+    width:100%!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    z-index:1000!important;
+    padding:8px 12px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+    background:#fffdf4!important;
+  }
+
+  /* Expanded navigation must cover the entire mobile viewport. */
+  body.sidebar-expanded .sidebar{
+    position:fixed!important;
+    top:0!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    width:100%!important;
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:none!important;
+    z-index:1000!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding:8px 12px 20px!important;
+    box-sizing:border-box!important;
+    background:#fffdf4!important;
+  }
+
+  /* Keep the moving ticker at the top and keep the hamburger above it. */
+  .sidebar .mobile-quality-ticker{
+    position:absolute!important;
+    top:0!important;
+    left:68px!important;
+    right:0!important;
+    height:58px!important;
+    z-index:1001!important;
+  }
+  .sidebar .sidebar-toggle{
+    position:relative!important;
+    z-index:1003!important;
+  }
+
+  /* When expanded, place the brand/navigation below the header strip. */
+  body.sidebar-expanded .sidebar .logo{
+    display:flex!important;
+    margin-top:58px!important;
+  }
+
+  /* The page never changes position because of mobile navigation. */
+  main,
+  body.sidebar-expanded main{
+    position:relative!important;
+    width:100%!important;
+    margin:0!important;
+    padding-top:58px!important;
+    box-sizing:border-box!important;
+  }
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
