@@ -313,6 +313,7 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER NOT NULL DEFAULT 0");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS handling_fee INTEGER NOT NULL DEFAULT 5");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT");
@@ -1166,11 +1167,12 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const isCod=normalizedPaymentMethod==="cod";
   if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for addresses containing Brigade 7 Gardens."});
   if(!isCod&&!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
-  const total=Number(subtotal-discount+5+deliveryFee);
+  const handlingFee=Math.round(subtotal*0.02);
+   const total=Number(subtotal-discount+handlingFee+deliveryFee);
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,payment_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,isCod?"cod":"created"]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,handling_fee,payment_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,handlingFee,isCod?"cod":"created"]);
     orderId=result.rows[0].id;
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity,variant_label) VALUES($1,$2,$3,$4,$5,$6)",[orderId,item.id,item.name,item.price,item.quantity,item.variantLabel||""]);
     await client.query("COMMIT");
@@ -1331,7 +1333,7 @@ app.post("/api/promo/validate",auth,asyncRoute(async(req,res)=>{
   const amount=unitPrice*q;subtotal+=amount;if(excluded.includes(Number(dish.id)))excludedItems.push({name:dish.name,amount});else eligibleSubtotal+=amount;
  }
  if(subtotal<code.minimum_order)return res.status(400).json({error:"This code requires a minimum order of Rs. "+code.minimum_order+"."});if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
- const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,handlingFee:5,deliveryFee:0,total:subtotal-discount+5,excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
+ const discount=Math.min(eligibleSubtotal,code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value);res.json({code:code.code,discount,subtotal,eligibleSubtotal,handlingFee:Math.round(subtotal*0.02),deliveryFee:0,total:subtotal-discount+Math.round(subtotal*0.02),excludedItems,discountType:code.discount_type,discountValue:code.discount_value});
 }));
 
 app.get("/api/checkout/options", asyncRoute(async(req,res)=>{
