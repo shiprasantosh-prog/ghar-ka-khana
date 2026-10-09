@@ -2190,4 +2190,29 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
   body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!important}
 }
 </style>
+
+<style id="brand-badge-and-desktop-hero-final">
+/* Keep the vegetarian symbol and text together on every section logo. */
+.section-brand-copy .pure-veg-badge{
+  display:inline-flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  white-space:nowrap!important;
+}
+.section-brand-copy .pure-veg-badge>span{
+  display:inline-grid!important;
+  flex:0 0 12px!important;
+  flex-direction:row!important;
+  width:12px!important;
+  height:12px!important;
+}
+/* The extra badge made the desktop hero lockup taller; lift the whole hero copy so Explore the Menu stays fully visible. */
+@media(min-width:901px){
+  main > .hero.page-view.active-view .hero-copy{
+    transform:translateY(calc(-50% - 30px))!important;
+  }
+}
+</style>
 </body></html>
