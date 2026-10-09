@@ -2725,6 +2725,39 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 }
 </style>
 
+<style id="breakfast-menu-list-layout">
+/* Trial layout: Breakfast items use compact image-and-details rows; all other categories keep their current cards. */
+#menuGrid [data-menu-category="Breakfast"]>.grid{display:grid;grid-template-columns:1fr;gap:12px}
+#menuGrid [data-menu-category="Breakfast"] .card{display:grid;grid-template-columns:168px minmax(0,1fr);align-items:stretch;border:1px solid #e2ddca;border-radius:14px;background:#fffdf7;box-shadow:0 3px 12px rgba(28,65,43,.05);min-width:0}
+#menuGrid [data-menu-category="Breakfast"] .card:hover{transform:none;border-color:#b9c8ad}
+#menuGrid [data-menu-category="Breakfast"] .food-img{height:100%;min-height:150px;max-height:190px;background:#edf0e4}
+#menuGrid [data-menu-category="Breakfast"] .food-img img{min-height:150px}
+#menuGrid [data-menu-category="Breakfast"] .card-body{display:flex;flex-direction:column;justify-content:center;padding:16px 18px;min-width:0}
+#menuGrid [data-menu-category="Breakfast"] .tag{margin-bottom:7px;color:#9a762f!important}
+#menuGrid [data-menu-category="Breakfast"] .card-title{align-items:flex-start;gap:10px}
+#menuGrid [data-menu-category="Breakfast"] .card h3{font-size:21px;line-height:1.25;margin:0 0 6px}
+#menuGrid [data-menu-category="Breakfast"] .price{color:#18563c!important;font-size:15px}
+#menuGrid [data-menu-category="Breakfast"] .card p{min-height:0;margin:0 0 12px;font-size:13px;line-height:1.5}
+#menuGrid [data-menu-category="Breakfast"] .card-foot{gap:10px;flex-wrap:wrap}
+#menuGrid [data-menu-category="Breakfast"] .card-foot>span:first-child{font-size:11px!important}
+#menuGrid [data-menu-category="Breakfast"] .add{background:#18563c!important;border:1px solid #18563c!important;color:#fff!important;border-radius:8px;padding:8px 15px;font-weight:700}
+#menuGrid [data-menu-category="Breakfast"] [data-quantity-control]>span{gap:8px!important}
+@media(max-width:600px){
+ #menuGrid [data-menu-category="Breakfast"] .card{grid-template-columns:112px minmax(0,1fr);border-radius:12px}
+ #menuGrid [data-menu-category="Breakfast"] .food-img{min-height:132px;max-height:170px}
+ #menuGrid [data-menu-category="Breakfast"] .food-img img{min-height:132px}
+ #menuGrid [data-menu-category="Breakfast"] .card-body{padding:11px 10px}
+ #menuGrid [data-menu-category="Breakfast"] .tag{font-size:9px;letter-spacing:.7px;margin-bottom:5px}
+ #menuGrid [data-menu-category="Breakfast"] .card-title{display:block}
+ #menuGrid [data-menu-category="Breakfast"] .card h3{font-size:16px;margin:0 0 5px}
+ #menuGrid [data-menu-category="Breakfast"] .price{display:block;font-size:13px;margin-bottom:7px}
+ #menuGrid [data-menu-category="Breakfast"] .card p{font-size:11px;line-height:1.4;margin-bottom:8px}
+ #menuGrid [data-menu-category="Breakfast"] .card-foot{align-items:center;gap:6px}
+ #menuGrid [data-menu-category="Breakfast"] .card-foot>span:first-child{display:none}
+ #menuGrid [data-menu-category="Breakfast"] .add{padding:7px 11px;font-size:12px}
+}
+</style>
+
 <style id="customer-bill-receipt-style">
 .customer-bill{background:#fffdf7;color:#242820;border:1px solid #e4ddc9;border-radius:12px;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}
 .customer-bill-head{text-align:center;border-bottom:1px dashed #9a9a8c;padding-bottom:12px;margin-bottom:12px;font-size:12px;line-height:1.55}
