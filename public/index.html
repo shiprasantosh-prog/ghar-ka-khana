@@ -1281,6 +1281,33 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <h4>10. Contact &amp; support</h4><p>For questions, order issues or support, please contact Ghar ka Khana through the support/contact option provided on the website.</p>
 <p class="help-note">These terms are a general customer-facing draft and should be reviewed by a qualified legal professional before being treated as the final legal terms for the business.</p>
 </div></section></main>
+<footer id="businessDetailsFooter" class="business-details-footer">
+  <div class="business-details-inner">
+    <div class="business-details-brand">
+      <strong>Ghar ka Khana</strong>
+      <span>Homemade taste, made with care.</span>
+    </div>
+    <div class="business-details-info">
+      <div><span class="business-details-label">Location</span><span>Brigade 7 Gardens, Bengaluru, Karnataka – 560061</span></div>
+      <div><span class="business-details-label">GSTIN</span><span>29ENQPS3057L1Z2</span></div>
+      <div><span class="business-details-label">FSSAI Lic. No.</span><span>212251860001525</span></div>
+    </div>
+    <div class="business-details-bottom">© <span id="businessDetailsYear">2026</span> Ghar ka Khana. All rights reserved.</div>
+  </div>
+</footer>
+<style id="business-details-footer-style">
+.business-details-footer{background:#f3f0e3!important;border-top:1px solid #e3dac3!important;color:#52695a!important;padding:28px 24px 20px!important;text-align:left!important;font-size:13px!important}
+.business-details-inner{max-width:1180px;margin:0 auto}
+.business-details-brand{display:flex;flex-direction:column;gap:4px;margin-bottom:18px}
+.business-details-brand strong{font:700 24px/1.2 Georgia,serif;color:#18563c;letter-spacing:.2px}
+.business-details-brand span{color:#667568;font-size:13px}
+.business-details-info{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 24px;padding:15px 0;border-top:1px solid #e3dac3;border-bottom:1px solid #e3dac3}
+.business-details-info>div{display:flex;flex-direction:column;gap:5px;min-width:0;overflow-wrap:anywhere}
+.business-details-label{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#9a762f}
+.business-details-info>div>span:last-child{color:#344c3d;font-size:13px;line-height:1.5}
+.business-details-bottom{padding-top:15px;color:#7a7c6e;font-size:11px}
+@media(max-width:650px){.business-details-footer{padding:23px 18px 18px!important}.business-details-brand strong{font-size:22px}.business-details-info{grid-template-columns:1fr;gap:13px;padding:14px 0}.business-details-info>div{gap:3px}}
+</style>
 <div id="orderDetailOverlay" class="order-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="orderDetailTitle" onclick="if(event.target===this)closeOrderDetail()"><div class="order-detail-modal"><div class="order-detail-head"><div><h2 id="orderDetailTitle">Order details</h2><div id="orderDetailStatus" class="order-detail-status"></div></div><button class="order-detail-close" type="button" aria-label="Close" onclick="closeOrderDetail()">×</button></div><div id="orderDetailBody"></div></div></div><div id="orderReceiptPrint" style="display:none"></div><div id="bulkEnquiryOverlay" role="dialog" aria-modal="true" aria-labelledby="bulkEnquiryTitle" onclick="if(event.target===this)closeBulkEnquiry()">
 <div class="bulk-enquiry-modal">
 <div class="bulk-modal-head"><h2 id="bulkEnquiryTitle">Bulk Order Enquiry</h2><button class="bulk-modal-close" type="button" aria-label="Close" onclick="closeBulkEnquiry()">×</button></div>
