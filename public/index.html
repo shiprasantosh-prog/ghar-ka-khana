@@ -2758,6 +2758,135 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 }
 </style>
 
+<style id="unified-menu-list-layout">
+/* Use the approved one-item-per-row layout for the full menu, today's specials, and homepage best sellers. */
+#menuGrid .menu-category>.grid,
+#menuGrid .menu-subcategory>.grid,
+#specialsGrid>.grid,
+#popularGrid{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ grid-auto-flow:row!important;
+ grid-auto-columns:auto!important;
+ gap:12px!important;
+ width:100%!important;
+ max-width:100%!important;
+ align-items:stretch!important;
+}
+#menuGrid .menu-category>.grid>.card,
+#menuGrid .menu-subcategory>.grid>.card,
+#specialsGrid>.grid>.card,
+#popularGrid>.card{
+ display:grid!important;
+ grid-template-columns:168px minmax(0,1fr)!important;
+ align-items:stretch!important;
+ min-width:0!important;
+ width:100%!important;
+ margin:0!important;
+ border:1px solid #e2ddca!important;
+ border-radius:14px!important;
+ background:#fffdf7!important;
+ box-shadow:0 3px 12px rgba(28,65,43,.05)!important;
+}
+#menuGrid .menu-category>.grid>.card:hover,
+#menuGrid .menu-subcategory>.grid>.card:hover,
+#specialsGrid>.grid>.card:hover,
+#popularGrid>.card:hover{transform:none!important;border-color:#b9c8ad!important}
+#menuGrid .menu-category>.grid>.card .food-img,
+#menuGrid .menu-subcategory>.grid>.card .food-img,
+#specialsGrid>.grid>.card .food-img,
+#popularGrid>.card .food-img{height:100%!important;min-height:150px!important;max-height:190px!important;background:#edf0e4!important}
+#menuGrid .menu-category>.grid>.card .food-img img,
+#menuGrid .menu-subcategory>.grid>.card .food-img img,
+#specialsGrid>.grid>.card .food-img img,
+#popularGrid>.card .food-img img{min-height:150px!important;height:100%!important;object-fit:cover!important}
+#menuGrid .menu-category>.grid>.card .card-body,
+#menuGrid .menu-subcategory>.grid>.card .card-body,
+#specialsGrid>.grid>.card .card-body,
+#popularGrid>.card .card-body{display:flex!important;flex-direction:column!important;justify-content:center!important;padding:16px 18px!important;min-width:0!important}
+#menuGrid .menu-category>.grid>.card .tag,
+#menuGrid .menu-subcategory>.grid>.card .tag,
+#specialsGrid>.grid>.card .tag,
+#popularGrid>.card .tag{margin-bottom:7px!important;color:#9a762f!important}
+#menuGrid .menu-category>.grid>.card .card-title,
+#menuGrid .menu-subcategory>.grid>.card .card-title,
+#specialsGrid>.grid>.card .card-title,
+#popularGrid>.card .card-title{align-items:flex-start!important;gap:10px!important;flex-wrap:wrap!important}
+#menuGrid .menu-category>.grid>.card h3,
+#menuGrid .menu-subcategory>.grid>.card h3,
+#specialsGrid>.grid>.card h3,
+#popularGrid>.card h3{font-size:20px!important;line-height:1.25!important;margin:0 0 6px!important;overflow-wrap:anywhere!important}
+#menuGrid .menu-category>.grid>.card .price,
+#menuGrid .menu-subcategory>.grid>.card .price,
+#specialsGrid>.grid>.card .price,
+#popularGrid>.card .price{color:#18563c!important;font-size:15px!important}
+#menuGrid .menu-category>.grid>.card p,
+#menuGrid .menu-subcategory>.grid>.card p,
+#specialsGrid>.grid>.card p,
+#popularGrid>.card p{min-height:0!important;margin:0 0 12px!important;font-size:13px!important;line-height:1.5!important}
+#menuGrid .menu-category>.grid>.card .card-foot,
+#menuGrid .menu-subcategory>.grid>.card .card-foot,
+#specialsGrid>.grid>.card .card-foot,
+#popularGrid>.card .card-foot{gap:10px!important;flex-wrap:wrap!important}
+#menuGrid .menu-category>.grid>.card .add,
+#menuGrid .menu-subcategory>.grid>.card .add,
+#specialsGrid>.grid>.card .add,
+#popularGrid>.card .add{background:#18563c!important;border:1px solid #18563c!important;color:#fff!important;border-radius:8px!important;padding:8px 15px!important;font-weight:700!important}
+#menuGrid .menu-category.collapsed>.grid,
+#menuGrid .menu-subcategory.collapsed>.grid,
+#menuGrid .menu-category.collapsed>.menu-subcategory{display:none!important}
+/* Ensure the Breakfast-specific grid rule does not override its collapsed state. */
+#menuGrid .menu-category.collapsed[data-menu-category="Breakfast"]>.grid{display:none!important}
+@media(max-width:650px){
+ #menuGrid .menu-category>.grid>.card,
+ #menuGrid .menu-subcategory>.grid>.card,
+ #specialsGrid>.grid>.card,
+ #popularGrid>.card{grid-template-columns:112px minmax(0,1fr)!important;border-radius:12px!important}
+ #menuGrid .menu-category>.grid>.card .food-img,
+ #menuGrid .menu-subcategory>.grid>.card .food-img,
+ #specialsGrid>.grid>.card .food-img,
+ #popularGrid>.card .food-img{min-height:132px!important;max-height:170px!important}
+ #menuGrid .menu-category>.grid>.card .food-img img,
+ #menuGrid .menu-subcategory>.grid>.card .food-img img,
+ #specialsGrid>.grid>.card .food-img img,
+ #popularGrid>.card .food-img img{min-height:132px!important}
+ #menuGrid .menu-category>.grid>.card .card-body,
+ #menuGrid .menu-subcategory>.grid>.card .card-body,
+ #specialsGrid>.grid>.card .card-body,
+ #popularGrid>.card .card-body{padding:11px 10px!important}
+ #menuGrid .menu-category>.grid>.card .tag,
+ #menuGrid .menu-subcategory>.grid>.card .tag,
+ #specialsGrid>.grid>.card .tag,
+ #popularGrid>.card .tag{font-size:9px!important;letter-spacing:.7px!important;margin-bottom:5px!important}
+ #menuGrid .menu-category>.grid>.card .card-title,
+ #menuGrid .menu-subcategory>.grid>.card .card-title,
+ #specialsGrid>.grid>.card .card-title,
+ #popularGrid>.card .card-title{display:block!important}
+ #menuGrid .menu-category>.grid>.card h3,
+ #menuGrid .menu-subcategory>.grid>.card h3,
+ #specialsGrid>.grid>.card h3,
+ #popularGrid>.card h3{font-size:16px!important;margin:0 0 5px!important}
+ #menuGrid .menu-category>.grid>.card .price,
+ #menuGrid .menu-subcategory>.grid>.card .price,
+ #specialsGrid>.grid>.card .price,
+ #popularGrid>.card .price{display:block!important;font-size:13px!important;margin-bottom:7px!important}
+ #menuGrid .menu-category>.grid>.card p,
+ #menuGrid .menu-subcategory>.grid>.card p,
+ #specialsGrid>.grid>.card p,
+ #popularGrid>.card p{font-size:11px!important;line-height:1.4!important;margin-bottom:8px!important}
+ #menuGrid .menu-category>.grid>.card .card-foot,
+ #menuGrid .menu-subcategory>.grid>.card .card-foot,
+ #specialsGrid>.grid>.card .card-foot,
+ #popularGrid>.card .card-foot{align-items:center!important;gap:6px!important}
+ #menuGrid .menu-category>.grid>.card .card-foot>span:first-child,
+ #menuGrid .menu-subcategory>.grid>.card .card-foot>span:first-child{display:none!important}
+ #menuGrid .menu-category>.grid>.card .add,
+ #menuGrid .menu-subcategory>.grid>.card .add,
+ #specialsGrid>.grid>.card .add,
+ #popularGrid>.card .add{padding:7px 11px!important;font-size:12px!important}
+}
+</style>
+
 <style id="customer-bill-receipt-style">
 .customer-bill{background:#fffdf7;color:#242820;border:1px solid #e4ddc9;border-radius:12px;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}
 .customer-bill-head{text-align:center;border-bottom:1px dashed #9a9a8c;padding-bottom:12px;margin-bottom:12px;font-size:12px;line-height:1.55}
