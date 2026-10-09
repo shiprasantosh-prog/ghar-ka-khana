@@ -1246,12 +1246,14 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="help-faq-item"><h4>Are the food images exactly the same as the delivered food?</h4><p><strong>No.</strong> The dish images displayed on this website are AI-generated for illustrative and presentation purposes. They are intended to represent the dish and may not exactly match the appearance, portion presentation, garnish or plating of the food delivered.</p></div>
 </div>
 <div id="help-guide" class="card help-detail"><h3>User Guide</h3>
-<div class="help-guide-steps"><div><b>1</b><span><strong>Browse the menu</strong><small>Open Order Food and explore the available categories and dishes.</small></span></div>
-<div><b>2</b><span><strong>Select your dishes</strong><small>Choose the quantity and add items to your basket.</small></span></div>
-<div><b>3</b><span><strong>Review your basket</strong><small>Check items, quantities, promo code, processing fee and delivery charges before checkout.</small></span></div>
-<div><b>4</b><span><strong>Select your address</strong><small>Choose a saved delivery address or add a new address to your profile.</small></span></div>
-<div><b>5</b><span><strong>Choose delivery timing</strong><small>Select an immediate order or a scheduled date and exact delivery time when available.</small></span></div>
-<div><b>6</b><span><strong>Pay &amp; confirm</strong><small>Select an available payment method and complete the order. Keep your order confirmation for reference.</small></span></div></div>
+<div class="help-guide-steps help-guide-visual-steps">
+<div class="help-guide-step"><div class="guide-step-title"><b>1</b><span><strong>Browse the menu</strong><small>Open Order Food and explore the available categories and dishes.</small></span></div><div class="guide-preview"><div class="guide-window-bar"><i></i><i></i><i></i><span>Explore Menu</span></div><div class="guide-categories"><span>Breakfast</span><span class="selected">Main Course</span><span>Snacks</span><span>Beverages</span></div><div class="guide-preview-caption">Choose a category to explore dishes</div></div></div>
+<div class="help-guide-step"><div class="guide-step-title"><b>2</b><span><strong>Select your dishes</strong><small>Choose the quantity and add items to your basket.</small></span></div><div class="guide-preview"><div class="guide-window-bar"><i></i><i></i><i></i><span>Popular dishes</span></div><div class="guide-dish-row"><span class="guide-food-dot">✦</span><span><strong>Paneer dish</strong><small>Freshly prepared</small></span><b>− 1 +</b></div><div class="guide-dish-row"><span class="guide-food-dot">✦</span><span><strong>Veg pulav</strong><small>Served with raita</small></span><b>ADD</b></div></div></div>
+<div class="help-guide-step"><div class="guide-step-title"><b>3</b><span><strong>Review your basket</strong><small>Check items, quantities, promo code, processing fee and delivery charges before checkout.</small></span></div><div class="guide-preview"><div class="guide-window-bar"><i></i><i></i><i></i><span>Your basket</span></div><div class="guide-summary-line"><span>Food items</span><b>Rs. 320</b></div><div class="guide-summary-line"><span>Handling fee</span><b>Rs. 5</b></div><div class="guide-summary-line total"><span>Total</span><b>Rs. 325</b></div></div></div>
+<div class="help-guide-step"><div class="guide-step-title"><b>4</b><span><strong>Select your address</strong><small>Choose a saved delivery address or add a new address to your profile.</small></span></div><div class="guide-preview"><div class="guide-window-bar"><i></i><i></i><i></i><span>Delivery address</span></div><div class="guide-address selected"><b>⌂</b><span><strong>Home</strong><small>Your saved delivery address</small></span><em>✓</em></div><div class="guide-address"><b>＋</b><span><strong>Add new address</strong><small>Save another delivery location</small></span></div></div></div>
+<div class="help-guide-step"><div class="guide-step-title"><b>5</b><span><strong>Choose delivery timing</strong><small>Select an immediate order or a scheduled date and exact delivery time when available.</small></span></div><div class="guide-preview"><div class="guide-window-bar"><i></i><i></i><i></i><span>Delivery timing</span></div><div class="guide-timing-options"><span class="selected">As soon as possible</span><span>Schedule for later</span></div><div class="guide-summary-line"><span>Date &amp; time</span><b>Choose slot ›</b></div></div></div>
+<div class="help-guide-step"><div class="guide-step-title"><b>6</b><span><strong>Pay &amp; confirm</strong><small>Select an available payment method and complete the order. Keep your order confirmation for reference.</small></span></div><div class="guide-preview"><div class="guide-window-bar"><i></i><i></i><i></i><span>Payment</span></div><div class="guide-payment-option selected"><span>◉</span><strong>Online payment</strong><em>✓</em></div><div class="guide-payment-option"><span>○</span><strong>Cash on Delivery (if available)</strong></div><div class="guide-confirm-button">Place order</div></div></div>
+</div>
 <div class="help-note"><strong>Food image disclaimer:</strong> Images shown for menu items are AI-generated and are for illustration only. The delivered food may differ in appearance and presentation.</div>
 </div>
 <div id="help-privacy" class="card help-detail"><h3>Privacy Policy</h3>
@@ -2439,8 +2441,8 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
     showSubsection(id,true);
    }
   });
-  if(details.some(el=>el.id===location.hash.slice(1)))showSubsection(location.hash.slice(1),false);
-  else showLanding();
+  // Always open Help & Support on its overview; a previously visited subsection hash must not reopen automatically.
+  showLanding();
   window.addEventListener("hashchange",()=>{
    const id=location.hash.slice(1);
    if(details.some(el=>el.id===id))showSubsection(id,false);
@@ -2450,4 +2452,42 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  else initHelpSingleSection();
 })();
 </script>
+
+<style id="help-guide-visual-previews">
+#help .help-guide-visual-steps{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+#help .help-guide-visual-steps>.help-guide-step{display:flex;flex-direction:column;gap:14px;padding:16px;background:#fffdf6;border:1px solid #e6dfca;border-radius:13px;min-width:0}
+#help .guide-step-title{display:flex;align-items:flex-start;gap:12px}
+#help .guide-step-title>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+#help .guide-step-title strong{color:#33443a}
+#help .guide-step-title small{color:#52695a;line-height:1.5}
+#help .guide-preview{border:1px solid #dce6d9;border-radius:9px;background:#f7f8f0;padding:10px;min-width:0;overflow:hidden}
+#help .guide-window-bar{display:flex;align-items:center;gap:4px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid #e0e5d8;color:#617064;font-size:10px}
+#help .guide-window-bar i{width:6px;height:6px;border-radius:50%;background:#b9c8b1;display:block}
+#help .guide-window-bar span{margin-left:5px;font-weight:700}
+#help .guide-categories{display:flex;gap:5px;flex-wrap:wrap}
+#help .guide-categories span,#help .guide-timing-options span{font-size:10px;border:1px solid #dce3d5;border-radius:5px;padding:5px 7px;color:#52695a;background:#fff}
+#help .guide-categories .selected,#help .guide-timing-options .selected{background:#1b5a3a;color:#fff;border-color:#1b5a3a}
+#help .guide-preview-caption{font-size:10px;color:#68756a;margin-top:9px}
+#help .guide-dish-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e2e7dc}
+#help .guide-dish-row:last-child{border-bottom:0}
+#help .guide-food-dot{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:7px;background:#e0ead6;color:#1b5a3a}
+#help .guide-dish-row>span:nth-child(2){display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+#help .guide-dish-row strong,#help .guide-address strong{font-size:10px;color:#33443a}
+#help .guide-dish-row small,#help .guide-address small{font-size:9px;color:#68756a}
+#help .guide-dish-row>b{font-size:9px;color:#1b5a3a;white-space:nowrap}
+#help .guide-summary-line{display:flex;justify-content:space-between;gap:8px;padding:5px 0;color:#617064;font-size:10px}
+#help .guide-summary-line b{color:#33443a}
+#help .guide-summary-line.total{border-top:1px solid #dce3d5;margin-top:3px;padding-top:8px;font-weight:700}
+#help .guide-address{display:flex;align-items:center;gap:8px;padding:7px;margin-top:5px;border:1px solid transparent;border-radius:6px}
+#help .guide-address.selected{border-color:#b6cdb3;background:#edf4e8}
+#help .guide-address> b{color:#1b5a3a}
+#help .guide-address>span{display:flex;flex-direction:column;gap:2px;flex:1}
+#help .guide-address em,#help .guide-payment-option em{font-style:normal;color:#1b5a3a;font-size:11px}
+#help .guide-timing-options{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+#help .guide-payment-option{display:flex;align-items:center;gap:7px;padding:6px 2px;font-size:10px;color:#52695a}
+#help .guide-payment-option strong{font-size:10px;font-weight:600;flex:1}
+#help .guide-payment-option.selected{color:#1b5a3a}
+#help .guide-confirm-button{margin-top:5px;border-radius:5px;background:#1b5a3a;color:white;text-align:center;padding:7px;font-size:10px;font-weight:700}
+@media(max-width:650px){#help .help-guide-visual-steps{grid-template-columns:1fr}}
+</style>
 </body></html>
