@@ -2727,7 +2727,7 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 
 <style id="breakfast-menu-list-layout">
 /* Trial layout: Breakfast items use compact image-and-details rows; all other categories keep their current cards. */
-#menuGrid [data-menu-category="Breakfast"]>.grid{display:grid;grid-template-columns:1fr;gap:12px}
+#menuGrid .menu-category[data-menu-category="Breakfast"] > .grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-auto-flow:row!important;grid-auto-columns:auto!important;gap:12px!important;width:100%!important;max-width:100%!important;align-items:stretch!important}
 #menuGrid [data-menu-category="Breakfast"] .card{display:grid;grid-template-columns:168px minmax(0,1fr);align-items:stretch;border:1px solid #e2ddca;border-radius:14px;background:#fffdf7;box-shadow:0 3px 12px rgba(28,65,43,.05);min-width:0}
 #menuGrid [data-menu-category="Breakfast"] .card:hover{transform:none;border-color:#b9c8ad}
 #menuGrid [data-menu-category="Breakfast"] .food-img{height:100%;min-height:150px;max-height:190px;background:#edf0e4}
