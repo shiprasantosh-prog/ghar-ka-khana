@@ -1796,7 +1796,8 @@ async function notifyWhatsApp(order) {
     .join("; ") || "No items found";
 
   const deliveryFee=Number(order.delivery_fee)||0;
-  const totalAmount = `Items subtotal Rs. ${(Number(order.total)||0)-5-deliveryFee+(Number(order.discount)||0)}; Handling & processing fee Rs. 5; Delivery Charge Rs. ${deliveryFee}; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
+  const handlingFee=Number(order.handling_fee??5);
+  const totalAmount = `Items subtotal Rs. ${(Number(order.total)||0)-handlingFee-deliveryFee+(Number(order.discount)||0)}; Handling & processing fee Rs. ${handlingFee}; Delivery Charge Rs. ${deliveryFee}; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
   const scheduledInfo = order.scheduled_at ? `Scheduled: ${new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})}${order.delivery_slot ? " ("+order.delivery_slot+")" : ""}. ` : "";
   const deliveryAddress = cleanWhatsAppText(scheduledInfo + order.address);
 
