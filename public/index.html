@@ -2490,4 +2490,61 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 #help .guide-confirm-button{margin-top:5px;border-radius:5px;background:#1b5a3a;color:white;text-align:center;padding:7px;font-size:10px;font-weight:700}
 @media(max-width:650px){#help .help-guide-visual-steps{grid-template-columns:1fr}}
 </style>
+
+<style id="home-highlights-hover-explanations">
+#homeWhy .why-grid article{
+ position:relative;
+ cursor:default!important;
+}
+#homeWhy .why-grid article::after{
+ content:attr(data-hover-explanation);
+ position:absolute;
+ left:50%;
+ bottom:calc(100% - 2px);
+ transform:translate(-50%,6px);
+ width:min(260px,calc(100vw - 40px));
+ padding:11px 14px;
+ border:1px solid #d9dfc8;
+ border-radius:9px;
+ background:#fffdf5;
+ color:#31513f;
+ box-shadow:0 8px 24px rgba(24,55,38,.14);
+ font:500 13px/1.45 system-ui,-apple-system,sans-serif;
+ text-align:center;
+ white-space:normal;
+ opacity:0;
+ visibility:hidden;
+ pointer-events:none;
+ z-index:20;
+ transition:opacity .16s ease,transform .16s ease,visibility .16s ease;
+}
+#homeWhy .why-grid article:hover::after,
+#homeWhy .why-grid article:focus-within::after{
+ opacity:1;
+ visibility:visible;
+ transform:translate(-50%,0);
+}
+@media(hover:none){
+ #homeWhy .why-grid article::after{display:none!important}
+}
+</style>
+<script id="home-highlights-hover-explanations-data">
+(function(){
+ const explanations=[
+  "We choose quality ingredients to make every meal fresh, flavourful and satisfying.",
+  "We take care with cleanliness and safe food handling throughout preparation.",
+  "Comforting, familiar flavours inspired by the warmth of a home-cooked meal.",
+  "We prepare orders with care and aim to deliver them hot and fresh to your doorstep."
+ ];
+ function applyExplanations(){
+  const section=document.getElementById("homeWhy");
+  if(!section)return;
+  section.querySelectorAll(".why-grid article").forEach((card,index)=>{
+   if(explanations[index])card.setAttribute("data-hover-explanation",explanations[index]);
+  });
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",applyExplanations,{once:true});
+ else applyExplanations();
+})();
+</script>
 </body></html>
