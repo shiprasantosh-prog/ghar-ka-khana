@@ -1825,7 +1825,7 @@ function updateCart(){
     document.getElementById("checkout").style.display=entries.length?"block":"none";
     const subtotal=entries.reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);
     document.getElementById("total").textContent=money(subtotal);
-    const handlingFee=5,discount=appliedPromo?Number(appliedPromo.discount)||0:0;
+    const handlingFee=subtotal < 250 ? 5 : Math.round(subtotal*0.02),discount=appliedPromo?Number(appliedPromo.discount)||0:0;
     document.getElementById("handlingFee").textContent=money(handlingFee);document.getElementById("deliveryFee").textContent=money(deliveryFee);
     const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=appliedPromo&&discount>0?"flex":"none";
     if(appliedPromo&&discount>0){document.getElementById("promoDiscountLabel").textContent="Promo discount ("+appliedPromo.code+")";document.getElementById("promoDiscountAmount").textContent="−"+money(discount)}
