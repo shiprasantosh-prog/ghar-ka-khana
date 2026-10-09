@@ -2215,4 +2215,18 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
   }
 }
 </style>
+
+<style id="desktop-hero-brand-final-position">
+/* Give the desktop hero enough vertical room for the full brand + badge + CTA. */
+@media(min-width:901px){
+  main > .hero.page-view.active-view{
+    height:470px!important;
+    min-height:470px!important;
+  }
+  main > .hero.page-view.active-view .hero-copy{
+    top:50%!important;
+    transform:translateY(-50%)!important;
+  }
+}
+</style>
 </body></html>
