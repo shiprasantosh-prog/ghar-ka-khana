@@ -892,6 +892,16 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
   border-color:#104D37!important;
 }
 </style>
+
+<style id="mobile-sidebar-spacing-fix">
+@media(max-width:900px){
+  /* The home hero already carries the main Ghar ka Khana logo, so don't reserve sidebar space for a duplicate logo on mobile. */
+  .sidebar .logo{display:none!important}
+  .sidebar{padding:8px 12px 6px!important}
+  .sidebar-toggle{margin-bottom:0!important}
+  main > .hero.page-view.active-view{margin-top:0!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
