@@ -1167,7 +1167,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const isCod=normalizedPaymentMethod==="cod";
   if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for addresses containing Brigade 7 Gardens."});
   if(!isCod&&!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
-  const handlingFee=Math.round(subtotal*0.02);
+  const handlingFee=(subtotal < 250 ? 5 : Math.round(subtotal*0.02));
    const total=Number(subtotal-discount+handlingFee+deliveryFee);
   const client=await pool.connect();let orderId;
   try{
