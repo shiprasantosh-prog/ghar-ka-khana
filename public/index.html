@@ -923,6 +923,19 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
   }
 }
 </style>
+
+<style id="mobile-hero-top-spacing-final">
+@media(max-width:700px){
+  /* Align the Home hero content close to the navigation, like the reference mobile layout. */
+  main > .hero.page-view.active-view .hero-copy{
+    top:27%!important;
+    transform:translateY(0)!important;
+  }
+  main > .hero.page-view.active-view .hero-brand svg{
+    top:0!important;
+  }
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
