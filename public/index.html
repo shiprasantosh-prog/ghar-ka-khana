@@ -613,8 +613,8 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 .menu-category-overlay{position:fixed;inset:0;background:transparent;display:none;align-items:flex-end;justify-content:flex-end;padding:0;z-index:60;pointer-events:auto}.menu-category-overlay.show{display:flex}.menu-category-pop{position:fixed;right:24px;bottom:92px;width:min(330px,calc(100vw - 32px));max-height:min(520px,calc(100vh - 120px));overflow:auto;background:#050b14;color:#fff;border-radius:18px;padding:18px 20px;box-shadow:0 16px 45px rgba(0,0,0,.28);pointer-events:auto}.menu-category-pop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px;padding-right:38px}.menu-category-pop-head .eyebrow{font-size:10px;letter-spacing:2.5px;margin-bottom:4px}.menu-category-pop-head h2{margin:0;font-size:25px;line-height:1.1}.menu-category-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-size:21px;line-height:1;cursor:pointer;position:absolute;right:14px;top:14px;margin:0}.menu-category-list{display:grid;gap:0}.menu-category-choice{width:100%;border:0;border-bottom:1px solid rgba(255,255,255,.1);background:transparent;color:#ddd;padding:11px 0;text-align:left;display:flex;justify-content:space-between;align-items:center;font:inherit;font-size:15px;cursor:pointer;pointer-events:auto}.menu-category-choice:hover{color:#fff}.menu-category-choice span:last-child{font-size:22px;color:#aaa}@media(max-width:650px){.menu-category-pop{right:16px;bottom:84px;width:min(300px,calc(100vw - 32px));max-height:calc(100vh - 108px);padding:16px 18px;border-radius:16px}.menu-category-choice{font-size:14px;padding:10px 0}.menu-category-close{right:12px;top:12px}}
 .home-menu-section{position:relative}
 .global-items-tile{display:flex!important}
-.home-menu-tile{position:fixed;right:24px;bottom:92px;width:118px;height:118px;padding:0;border:0;border-radius:50%;background:#050b14;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.24);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:24;transition:transform .2s ease,box-shadow .2s ease}
-.home-menu-tile:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(0,0,0,.3)}
+.home-menu-tile{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;position:fixed;right:24px;bottom:92px;width:118px;height:118px;padding:0;border:0;border-radius:50%;background:#050b14;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.24);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:24;transition:transform .2s ease,box-shadow .2s ease}
+.home-menu-tile:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(0,0,0,.3)}.home-menu-tile.items-dragging{cursor:grabbing;transform:none!important;transition:none!important}
 .home-menu-tile .menu-tile-label{font-size:15px;letter-spacing:1.5px;font-weight:800;line-height:1}
 .home-menu-tile .menu-tile-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#fff}
 .home-menu-tile .menu-tile-icon svg{width:40px;height:40px;display:block}
@@ -1158,7 +1158,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <a class="social-icon zomato" href="#" onclick="event.preventDefault()" aria-label="Zomato link coming soon" title="Zomato"><span>zomato</span></a>
 <a class="social-icon threads" href="#" onclick="event.preventDefault()" aria-label="Threads link coming soon" title="Threads"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.5 9.2c-.6-4-3.1-6.2-7-6.2-4.8 0-7.8 3.5-7.8 9s3 9 7.8 9c4 0 6.7-2.2 6.7-5.7 0-2.8-1.8-4.4-4.5-4.4-2.3 0-3.8 1.2-3.8 3 0 1.5 1.1 2.5 2.7 2.5 2.8 0 4.6-2.5 4.6-6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a>
 </div><a class="whatsapp-link" href="https://wa.me/918017503518" target="_blank" rel="noopener noreferrer"><span class="whatsapp-mark" aria-hidden="true">◉</span> Chat on WhatsApp</a></div></aside>
-<button class="home-menu-tile global-items-tile" type="button" onclick="openMenuCategories()" aria-label="Open menu categories" title="Menu categories"><span class="menu-tile-icon" aria-hidden="true"><svg viewBox="0 0 40 40" focusable="false"><rect x="11" y="6" width="18" height="28" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-12 20 20)"/><path d="M15 25h10M16 29h7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" transform="rotate(-12 20 20)"/></svg></span><span class="menu-tile-label">ITEMS</span></button>
+<button class="home-menu-tile global-items-tile" type="button" onclick="handleItemsTap(event)" aria-label="Open menu categories" title="Tap to open • Drag to move"><span class="menu-tile-icon" aria-hidden="true"><svg viewBox="0 0 40 40" focusable="false"><rect x="11" y="6" width="18" height="28" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-12 20 20)"/><path d="M15 25h10M16 29h7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" transform="rotate(-12 20 20)"/></svg></span><span class="menu-tile-label">ITEMS</span></button>
 
 <main>
 <div class="section-brand-bar" aria-label="Ghar ka Khana home link">
@@ -1297,6 +1297,92 @@ function toggleSidebar(){
     const toggle=document.getElementById("sidebarToggle");
     toggle.setAttribute("aria-expanded",String(expanded));
     toggle.setAttribute("aria-label",expanded?"Collapse navigation":"Expand navigation");
+}
+let itemsDragMoved=false;
+let itemsDragState=null;
+function clampItemsPosition(left,top){
+ const btn=document.querySelector(".global-items-tile");
+ if(!btn)return {left,top};
+ const margin=8;
+ return {
+   left:Math.max(margin,Math.min(left,window.innerWidth-btn.offsetWidth-margin)),
+   top:Math.max(margin,Math.min(top,window.innerHeight-btn.offsetHeight-margin))
+ };
+}
+function restoreItemsPosition(){
+ const btn=document.querySelector(".global-items-tile");
+ if(!btn)return;
+ try{
+   const saved=JSON.parse(localStorage.getItem("gkk_items_position")||"null");
+   if(saved&&Number.isFinite(saved.left)&&Number.isFinite(saved.top)){
+     const p=clampItemsPosition(saved.left,saved.top);
+     btn.style.left=p.left+"px";
+     btn.style.top=p.top+"px";
+     btn.style.right="auto";
+     btn.style.bottom="auto";
+   }
+ }catch(e){}
+}
+function saveItemsPosition(left,top){
+ try{localStorage.setItem("gkk_items_position",JSON.stringify({left,top}))}catch(e){}
+}
+function startItemsDrag(event){
+ const btn=event.currentTarget;
+ if(event.pointerType==="mouse"&&event.button!==0)return;
+ const rect=btn.getBoundingClientRect();
+ itemsDragMoved=false;
+ itemsDragState={startX:event.clientX,startY:event.clientY,left:rect.left,top:rect.top,pointerId:event.pointerId};
+ btn.setPointerCapture?.(event.pointerId);
+}
+function moveItemsDrag(event){
+ if(!itemsDragState||event.pointerId!==itemsDragState.pointerId)return;
+ const dx=event.clientX-itemsDragState.startX;
+ const dy=event.clientY-itemsDragState.startY;
+ if(!itemsDragMoved&&(Math.abs(dx)>5||Math.abs(dy)>5)){
+   itemsDragMoved=true;
+   event.currentTarget.classList.add("items-dragging");
+ }
+ if(!itemsDragMoved)return;
+ event.preventDefault();
+ const p=clampItemsPosition(itemsDragState.left+dx,itemsDragState.top+dy);
+ const btn=event.currentTarget;
+ btn.style.left=p.left+"px";
+ btn.style.top=p.top+"px";
+ btn.style.right="auto";
+ btn.style.bottom="auto";
+}
+function endItemsDrag(event){
+ if(!itemsDragState||event.pointerId!==itemsDragState.pointerId)return;
+ const btn=event.currentTarget;
+ if(itemsDragMoved){
+   saveItemsPosition(btn.getBoundingClientRect().left,btn.getBoundingClientRect().top);
+ }
+ btn.classList.remove("items-dragging");
+ itemsDragState=null;
+}
+function handleItemsTap(event){
+ if(itemsDragMoved){
+   event.preventDefault();
+   itemsDragMoved=false;
+   return;
+ }
+ openMenuCategories();
+}
+function initMovableItems(){
+ const btn=document.querySelector(".global-items-tile");
+ if(!btn)return;
+ btn.addEventListener("pointerdown",startItemsDrag);
+ btn.addEventListener("pointermove",moveItemsDrag);
+ btn.addEventListener("pointerup",endItemsDrag);
+ btn.addEventListener("pointercancel",endItemsDrag);
+ restoreItemsPosition();
+ window.addEventListener("resize",()=>{
+   if(btn.style.left&&btn.style.top){
+     const p=clampItemsPosition(btn.getBoundingClientRect().left,btn.getBoundingClientRect().top);
+     btn.style.left=p.left+"px";btn.style.top=p.top+"px";
+     saveItemsPosition(p.left,p.top);
+   }
+ });
 }
 function openMenuCategories(){
  document.body.classList.add("menu-category-open");
@@ -2012,5 +2098,6 @@ main > .hero.page-view.active-view .hero-brand svg{position:relative;top:9px}
 #bulkEnquiryOverlay .bulk-location-result span{display:block;margin-top:3px;font-size:11px;line-height:1.4;color:#68796d}
 #bulkEnquiryOverlay .bulk-location-hint{display:block;margin-top:6px;color:#68796d;font-size:11px}
 </style>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js">initMovableItems();
+</script>
 </body></html>
