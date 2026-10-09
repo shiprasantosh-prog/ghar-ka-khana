@@ -926,13 +926,13 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 
 <style id="mobile-hero-top-spacing-final">
 @media(max-width:700px){
-  /* Align the Home hero content close to the navigation, like the reference mobile layout. */
+  /* Keep the complete brand and hero copy visible while removing the sidebar gap. */
   main > .hero.page-view.active-view .hero-copy{
-    top:27%!important;
-    transform:translateY(0)!important;
+    top:40%!important;
+    transform:translateY(calc(-50% - 18px))!important;
   }
   main > .hero.page-view.active-view .hero-brand svg{
-    top:0!important;
+    top:9px!important;
   }
 }
 </style>
