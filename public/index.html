@@ -2597,7 +2597,21 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 .hero-benefits .hero-benefit:hover::after,.hero-benefits .hero-benefit:focus-visible::after{
  opacity:1;visibility:visible;transform:translate(-50%,0)
 }
-@media(max-width:900px){.hero-benefits .hero-benefit::after{display:none!important}}
+@media(max-width:900px){
+ .hero-benefits .hero-benefit{cursor:default!important;-webkit-tap-highlight-color:transparent}
+ .hero-benefits .hero-benefit:focus::after,
+ .hero-benefits .hero-benefit:active::after{
+   display:block!important;
+   opacity:1!important;
+   visibility:visible!important;
+   transform:translate(-50%,0)!important;
+ }
+ .hero-benefits .hero-benefit::after{
+   width:min(230px,calc(100vw - 36px))!important;
+   white-space:normal!important;
+   bottom:calc(100% + 8px)!important;
+ }
+}
 </style>
 
 <style id="mobile-hero-cta-not-clipped">
