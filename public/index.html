@@ -147,6 +147,16 @@ body[data-current-page]:not([data-current-page="story"]) #homeWhy,body[data-curr
 #homeStory .eyebrow{color:#477b58}
 @media(max-width:1100px){.home-category-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.home-category img{height:125px}}
 @media(max-width:700px){.hero.page-view.active-view{height:480px;min-height:480px;background-position:58% center}.hero.page-view.active-view:before{background:linear-gradient(90deg,rgba(251,247,232,.97),rgba(251,247,232,.75) 65%,rgba(251,247,232,.2))}.hero-copy{left:22px;top:40%;width:calc(100% - 44px)}.hero-copy h1{font-size:46px}.hero-copy p{font-size:15px;max-width:90%}.hero-benefits{height:auto;min-height:46px;gap:12px;padding:8px 14px;flex-wrap:wrap}.hero-benefits span{font-size:10px}.hero-photo-credit{right:10px;top:12px;font-size:16px}.home-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-category img{height:130px}.home-why{margin:0 8px 12px;padding:15px 8px}.home-why .section-head h2{font-size:26px}.why-grid article{padding:12px 5px}.why-grid h3{font-size:15px}.why-grid p{font-size:12px}#homeStory .story-panel{grid-template-columns:1fr;gap:15px;padding:12px}#homeStory .story-photo{min-height:200px}}
+
+/* Mobile: reduce the gap between the navigation bar and the home hero content. */
+@media(max-width:900px){
+  .sidebar{margin-bottom:0!important}
+  main > .hero.page-view.active-view{margin-top:0!important;padding-top:0!important}
+}
+@media(max-width:700px){
+  main > .hero.page-view.active-view .hero-copy{top:37%!important}
+  main > .hero.page-view.active-view .hero-brand{margin-top:0!important}
+}
 </style>
 <style>
 /* Fast first paint and closer match to the approved home-page reference */
