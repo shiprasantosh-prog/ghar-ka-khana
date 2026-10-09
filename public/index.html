@@ -2332,4 +2332,67 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
   line-height:1!important;
 }
 </style>
+
+<style id="traditional-veg-symbol-final">
+/* Traditional vegetarian mark: green square outline enclosing a solid green circle. */
+.pure-veg-badge{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-direction:row!important;
+  gap:8px!important;
+  margin-top:6px!important;
+  padding:0!important;
+  min-height:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:#a77b2b!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  line-height:1.2!important;
+  letter-spacing:1px!important;
+  white-space:nowrap!important;
+  text-transform:uppercase!important;
+  box-shadow:none!important;
+}
+.pure-veg-badge>span{
+  display:inline-block!important;
+  position:relative!important;
+  width:17px!important;
+  height:17px!important;
+  flex:0 0 17px!important;
+  box-sizing:border-box!important;
+  border:2px solid #063d24!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:transparent!important;
+  font-size:0!important;
+  line-height:0!important;
+}
+.pure-veg-badge>span::after{
+  content:""!important;
+  position:absolute!important;
+  width:8px!important;
+  height:8px!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  border-radius:50%!important;
+  background:#063d24!important;
+}
+@media(max-width:900px){
+  .pure-veg-badge{
+    gap:7px!important;
+    font-size:clamp(11px,3.1vw,14px)!important;
+    letter-spacing:1.1px!important;
+  }
+  .pure-veg-badge>span{
+    width:17px!important;
+    height:17px!important;
+    flex-basis:17px!important;
+  }
+}
+</style>
 </body></html>
