@@ -1213,7 +1213,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <section class="wrap page-view active-view home-section" id="homeHow"><div class="section-head"><div><h2>How Ordering Works</h2></div><p>Simple, and ready on time.</p></div><div class="steps"><article class="card" style="padding:24px"><span class="step-number">01</span><h3>Pick your meal</h3><p>Choose from our menu and add your favourites to your basket.</p></article><article class="card" style="padding:24px"><span class="step-number">02</span><h3>We cook it fresh</h3><p>Every meal is prepared with care in small batches, after your order.</p></article><article class="card" style="padding:24px"><span class="step-number">03</span><h3>Delivered to your door</h3><p>Your food is packed carefully and sent your way, ready to enjoy.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeStory"><div class="story-panel"><video class="story-photo" controls playsinline preload="metadata" aria-label="Ghar ka Khana story video"><source src="/images/story.mp4" type="video/mp4">Your browser does not support HTML video.</video><div><div class="eyebrow">Our Story</div><h2>A Home Kitchen with a Big Dream</h2><p>Ghar ka Khana began in 2025 in my home kitchen in Bengaluru with a simple thought: to bring the warmth and comfort of homemade food to more people. I started by cooking for family and friends, who kept asking for more. Today, we serve families across the city with the same recipes, love and care that inspired us from the beginning.</p><p>From litti chokha and paneer gravies to light, healthy everyday meals, we prepare everything fresh with thoughtful ingredients, less oil and no preservatives—just the way we like to eat at home.</p><p>For me, cooking has always been about more than putting a meal on the table. It is the familiar aroma of spices, the joy of sharing food and the little comforts that make an ordinary day feel special. I bring the flavours I grew up loving into every dish, with care and attention so each meal feels personal, wholesome and welcoming.</p><p><em>Every order is a little taste of home. Thank you for being part of the Ghar ka Khana family.</em></p><p><strong>Shipra Santosh</strong><br>Founder</p><div class="story-more" id="storyMore" hidden><p>What began as a small home kitchen has grown into a cloud kitchen serving wholesome, delicious meals to many happy customers. Whether you are looking for a comforting everyday meal, a traditional favourite or a lighter, healthier choice, our hope is to make you feel at home with every bite.</p><p>Every recipe carries the same intention we started with: honest food, familiar flavours and the warmth of a meal made with love.</p></div><button class="story-toggle" id="storyToggle" type="button" aria-expanded="false" aria-controls="storyMore" onclick="toggleStoryMore()">Read More <span aria-hidden="true">⌄</span></button></div></div></section>
 <section class="wrap page-view active-view home-section" id="homeReviewPreview"><div class="section-head"><div><div class="eyebrow">Kind words from our customers</div><h2>What Our Customers Say</h2></div><p>Real experiences from our Ghar ka Khana family.</p></div><div id="homeReviewCards" class="grid"><p class="empty">Loading customer reviews…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('reviews')">Read All Reviews</button></div></section>
-<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div><p>Simple ingredients. Memorable meals.</p></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="categories" id="categories"></div><div class="field menu-search-sticky" style="max-width:620px;margin:14px 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#fffdf7;border:1px solid #d9cfb6;border-radius:10px;color:#203b2e;font:inherit"></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
+<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="categories" id="categories"></div><div class="field menu-search-sticky" style="max-width:620px;margin:14px 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#fffdf7;border:1px solid #d9cfb6;border-radius:10px;color:#203b2e;font:inherit"></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
 
 <section class="wrap page-view" id="account" style="border-top:1px solid #332b1d;padding-top:35px">
 <div class="section-head"><div><div class="eyebrow">Customer account</div><h2 id="accountTitle">Sign in or create an account</h2></div><p>Secure access to your orders</p></div>
@@ -2935,9 +2935,32 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 </style>
 
 <style id="sticky-menu-search-and-home-highlights">
-/* Search stays in the menu flow like a frozen spreadsheet header row, without covering dish content. */
-#menu .menu-search-sticky{position:relative!important;top:auto!important;left:auto!important;transform:none!important;z-index:auto!important;padding:10px 12px 12px!important;margin:8px 0 16px!important;background:transparent!important;border:0!important;outline:0!important;border-radius:12px!important;box-shadow:none!important;max-width:620px;box-sizing:border-box}
+/* Search behaves like a frozen spreadsheet header after category chips scroll away. */
+#menu .menu-search-sticky{position:relative!important;top:auto!important;left:auto!important;transform:none!important;z-index:1!important;padding:10px 12px 12px!important;margin:8px 0 16px!important;background:transparent!important;border:0!important;outline:0!important;border-radius:12px!important;box-shadow:none!important;max-width:620px;box-sizing:border-box}
 #menu .menu-search-sticky label{color:#385644!important}
 #menu .menu-search-sticky input{background:#fffdf7!important;border:1px solid #d9cfb6!important;box-shadow:none!important;outline:0!important}
+#menu .menu-search-sticky.menu-search-pinned{position:sticky!important;top:0!important;z-index:50!important;width:min(620px,100%)!important;max-width:620px!important;margin:0 0 16px!important;padding-top:10px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.10)!important}
+#menu .menu-search-sticky.menu-search-pinned label{display:none!important}
 </style>
+<script id="menu-search-non-overlap-sticky">
+(function(){
+ const search=document.querySelector('#menu .menu-search-sticky');
+ const menu=document.getElementById('menu');
+ const categories=document.getElementById('categories');
+ if(!search||!menu||!categories)return;
+ let start=0;
+ function measure(){start=search.getBoundingClientRect().top+window.scrollY;}
+ function update(){
+   const active=document.body.dataset.currentPage==='menu';
+   const menuRect=menu.getBoundingClientRect();
+   const categoriesRect=categories.getBoundingClientRect();
+   const pinned=active&&window.scrollY>start&&menuRect.bottom>search.offsetHeight+24&&categoriesRect.bottom<8;
+   search.classList.toggle('menu-search-pinned',pinned);
+ }
+ window.addEventListener('scroll',update,{passive:true});
+ window.addEventListener('resize',()=>{search.classList.remove('menu-search-pinned');measure();update();});
+ document.addEventListener('click',event=>{if(event.target.closest('[onclick*="showPage"]'))setTimeout(()=>{measure();update();},0);});
+ measure();update();
+})();
+</script>
 </body></html>
