@@ -2916,4 +2916,18 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  #orderReceiptPrint .customer-bill-totals .bill-grand-total{font-size:15px}
 }
 </style>
+
+<style id="homepage-best-sellers-side-by-side">
+/* Homepage best sellers only: restore compact image-first cards side by side. */
+#popularGrid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:14px!important;align-items:stretch!important}
+#popularGrid>.card{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;width:auto!important;min-width:0!important;overflow:hidden!important}
+#popularGrid>.card .food-img{width:100%!important;height:150px!important;min-height:150px!important;max-height:150px!important;flex:0 0 150px!important}
+#popularGrid>.card .food-img img{width:100%!important;height:100%!important;min-height:0!important;object-fit:cover!important}
+#popularGrid>.card .card-body{padding:12px!important}
+#popularGrid>.card h3{font-size:15px!important}
+#popularGrid>.card p{font-size:12px!important}
+@media(max-width:900px){#popularGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:11px!important}#popularGrid>.card .food-img{height:135px!important;min-height:135px!important;max-height:135px!important;flex-basis:135px!important}}
+@media(max-width:650px){#popularGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}#popularGrid>.card{grid-template-columns:none!important}#popularGrid>.card .food-img{height:125px!important;min-height:125px!important;max-height:125px!important;flex-basis:125px!important}#popularGrid>.card .card-body{padding:11px!important}#popularGrid>.card h3{font-size:14px!important;line-height:1.25!important}#popularGrid>.card p{font-size:11px!important;line-height:1.35!important;margin:6px 0!important}}
+</style>
+
 </body></html>
