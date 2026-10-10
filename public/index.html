@@ -3149,7 +3149,7 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindOrderDetailClose);
  else bindOrderDetailClose();
 })();
-(function(){if(new URLSearchParams(window.location.search).has("resetToken")){document.getElementById("authForm").hidden=true;document.getElementById("forgotPasswordForm").hidden=false;document.getElementById("resetEmail").closest(".field").hidden=true;document.getElementById("sendResetLink").hidden=true;document.getElementById("resetPasswordFields").hidden=false;document.getElementById("resetPasswordMessage").textContent="Choose a new password below.";document.getElementById("accountTitle").textContent="Choose a new password";}})();
+(function(){if(new URLSearchParams(window.location.search).has("resetToken")){document.getElementById("authForm").hidden=true;document.getElementById("forgotPasswordForm").hidden=false;document.getElementById("resetEmail").closest(".field").hidden=true;document.getElementById("sendResetLink").hidden=true;document.getElementById("resetPasswordFields").hidden=false;document.querySelector("#forgotPasswordForm [name=\"newPassword\"]").required=true;document.querySelector("#forgotPasswordForm [name=\"confirmPassword\"]").required=true;document.getElementById("resetEmail").disabled=true;document.getElementById("resetPasswordMessage").textContent="Choose a new password below.";document.getElementById("accountTitle").textContent="Choose a new password";}})();
 </script>
 
 
