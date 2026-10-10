@@ -1464,11 +1464,12 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
       }
     }
   } else if (event === "payment.failed") {
-    // Keep the order available for another payment attempt. A later
-    // payment.captured event is allowed to move it from failed to paid.
+    // Mark this specific attempt failed. An older attempt's delayed failure
+    // must not overwrite the status of a newer retry attempt.
+    await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE razorpay_order_id=$1 AND status<>'paid'",[razorpayOrderId]);
     await pool.query(
-      "UPDATE orders SET payment_status='failed',status='Payment Pending' WHERE id=$1 AND payment_status<>'paid'",
-      [row.id]
+      "UPDATE orders SET payment_status='failed',status='Payment Pending' WHERE id=$1 AND razorpay_order_id=$2 AND payment_status<>'paid'",
+      [row.id,razorpayOrderId]
     );
   }
 
