@@ -1880,7 +1880,7 @@ function updateCart(){
     document.getElementById("total").textContent=money(subtotal);
     const handlingFee=subtotal < 250 ? 5 : Math.round(subtotal*0.02),autoDiscount=!appliedPromo&&referralInfo?(referralInfo.firstOrderEligible?Math.min(Math.floor(subtotal*0.10),100):(Number(referralInfo.availableRewards)>0?Math.min(Math.floor(subtotal*0.10),75):0)):0,discount=appliedPromo?Number(appliedPromo.discount)||0:autoDiscount;
     document.getElementById("handlingFee").textContent=money(handlingFee);document.getElementById("deliveryFee").textContent=money(deliveryFee);
-    const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=appliedPromo&&discount>0?"flex":"none";
+    const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=discount>0?"flex":"none";
     if(discount>0){document.getElementById("promoDiscountLabel").textContent=appliedPromo?"Promo discount ("+appliedPromo.code+")":(referralInfo?.firstOrderEligible?"First order offer (10% off)":"Referral reward (10% off)");document.getElementById("promoDiscountAmount").textContent="−"+money(discount)}
     document.getElementById("payableTotal").textContent=money(Math.max(0,subtotal-discount)+handlingFee+deliveryFee);
     if(appliedPromo){const line=document.getElementById("promoBreakdown");line.innerHTML="<strong>"+escapeHTML(appliedPromo.code)+" applied</strong>"+(appliedPromo.excludedItems.length?"<br>Excluded from discount: "+appliedPromo.excludedItems.map(x=>escapeHTML(x.name)).join(", "):"")}else if(discount>0){const line=document.getElementById("promoBreakdown");if(line)line.textContent=referralInfo?.firstOrderEligible?"Your first-order offer is automatically applied.": "One available referral reward is automatically applied."}
