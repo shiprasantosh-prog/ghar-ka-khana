@@ -1914,9 +1914,6 @@ async function loadGooglePlacesLibrary(){
   if(!config.apiKey)throw new Error("Google Maps API key is missing.");
   if(!window.google?.maps?.importLibrary){
    // Load the Maps JavaScript API as an external script to avoid inline-bootstrap/CSP failures.
-
-   // Load the Maps JavaScript API as an external script. This avoids relying on
-   // execution of an injected inline bootstrap, which can be blocked by CSP.
    await new Promise((resolve,reject)=>{
     const script=document.createElement("script");
     script.src="https://maps.googleapis.com/maps/api/js?"+new URLSearchParams({
