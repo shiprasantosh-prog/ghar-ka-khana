@@ -359,6 +359,15 @@ async function initializeDatabase() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Track a customer's WhatsApp rating while waiting for optional written feedback.
+  await pool.query(`CREATE TABLE IF NOT EXISTS whatsapp_pending_reviews (
+    customer_phone TEXT PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   await pool.query(`CREATE TABLE IF NOT EXISTS customer_addresses (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1906,7 +1915,7 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
   const customerMessage = status === "Accepted"
     ? (order.estimated_delivery_minutes ? `Your estimated delivery time is ${order.estimated_delivery_minutes} minutes.` : "We'll keep you updated.")
     : status === "Delivered"
-      ? "Thank you for choosing us! We hope you enjoy your meal."
+      ? "Thank you for choosing us! We hope you enjoy your meal. Reply with a rating from 1 to 5 to share your experience; we'll ask for optional feedback next."
       : cancellationReason === "Kitchen Closed"
         ? "Your order has been cancelled — our kitchen is closed. We apologise for the inconvenience."
         : cancellationReason === "Cancelled by owner via WhatsApp"
@@ -1999,7 +2008,69 @@ async function sendWhatsAppActionList(to, orderId) {
   }
 }
 
-// Incoming owner WhatsApp replies update the order status shown in customer order history.
+// Accept customer WhatsApp ratings and optional feedback for their latest eligible delivered order.
+async function handleCustomerWhatsAppReview(message) {
+  if (message.type !== "text") return;
+  const phone = normalizePhone(message.from);
+  const textBody = String(message.text?.body || "").trim();
+  if (!phone || !textBody) return;
+
+  const pending = await pool.query(
+    "SELECT order_id, user_id, rating FROM whatsapp_pending_reviews WHERE customer_phone = $1",
+    [phone]
+  );
+
+  if (pending.rowCount) {
+    const pendingReview = pending.rows[0];
+    const comment = /^(SKIP|NO|NONE)$/i.test(textBody) ? "" : textBody.slice(0, 1000);
+    try {
+      await pool.query(
+        "INSERT INTO reviews (order_id, user_id, rating, comment) VALUES ($1, $2, $3, $4)",
+        [pendingReview.order_id, pendingReview.user_id, pendingReview.rating, comment]
+      );
+      await pool.query("DELETE FROM whatsapp_pending_reviews WHERE customer_phone = $1", [phone]);
+      await sendWhatsAppText(message.from, `Thank you for rating Ghar ka Khana ${pendingReview.rating}/5! Your review has been submitted and will appear on our website after review approval.`);
+    } catch (error) {
+      await pool.query("DELETE FROM whatsapp_pending_reviews WHERE customer_phone = $1", [phone]);
+      if (error.code === "23505") {
+        await sendWhatsAppText(message.from, "Thank you! This order already has a review recorded.");
+        return;
+      }
+      throw error;
+    }
+    return;
+  }
+
+  if (!/^[1-5]$/.test(textBody)) return;
+  const latest = await pool.query(
+    `SELECT o.id AS order_id, o.user_id
+     FROM orders o
+     JOIN users u ON u.id = o.user_id
+     LEFT JOIN reviews r ON r.order_id = o.id
+     WHERE o.status = 'Delivered'
+       AND r.id IS NULL
+       AND RIGHT(REGEXP_REPLACE(COALESCE(u.phone, ''), '[^0-9]', '', 'g'), 10) = RIGHT($1, 10)
+     ORDER BY o.created_at DESC
+     LIMIT 1`,
+    [phone]
+  );
+  if (!latest.rowCount) {
+    await sendWhatsAppText(message.from, "Thanks for reaching out to Ghar ka Khana. Ratings are available after an order is delivered. Please reply 1 to 5 after delivery.");
+    return;
+  }
+
+  await pool.query(
+    `INSERT INTO whatsapp_pending_reviews (customer_phone, order_id, user_id, rating)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (customer_phone) DO UPDATE
+       SET order_id = EXCLUDED.order_id, user_id = EXCLUDED.user_id,
+           rating = EXCLUDED.rating, created_at = CURRENT_TIMESTAMP`,
+    [phone, latest.rows[0].order_id, latest.rows[0].user_id, Number(textBody)]
+  );
+  await sendWhatsAppText(message.from, "Thank you for your " + textBody + "/5 rating! You can now send optional written feedback in your next message, or reply SKIP.");
+}
+
+// Incoming owner WhatsApp replies update order status; customer replies can submit ratings.
 app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
   // Log delivery metadata only; never log phone numbers or message contents.
   const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];
@@ -2032,7 +2103,11 @@ app.post("/webhooks/whatsapp", asyncRoute(async (req, res) => {
         for (const message of change.value?.messages || []) {
           const ownerMatch = Boolean(expectedOwner) && normalizePhone(message.from) === expectedOwner;
           if (!ownerMatch) {
-            console.warn("WhatsApp webhook message ignored: sender did not match configured owner.");
+            try {
+              await handleCustomerWhatsAppReview(message);
+            } catch (error) {
+              console.error("Customer WhatsApp review processing failed:", error.message);
+            }
             continue;
           }
 
