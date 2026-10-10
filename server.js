@@ -1827,7 +1827,8 @@ async function notifyWhatsApp(order) {
                 { type: "text", text: customerPhone },
                 { type: "text", text: itemList },
                 { type: "text", text: totalAmount },
-                { type: "text", text: deliveryAddress }
+                { type: "text", text: deliveryAddress },
+                { type: "text", text: cleanWhatsAppText(order.notes, "None") }
               ]
             },
             ...(process.env.WHATSAPP_ORDER_BUTTONS_ENABLED === "true" ? [
