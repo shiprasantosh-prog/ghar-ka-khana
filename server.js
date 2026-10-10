@@ -353,6 +353,12 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE kitchen_settings ADD COLUMN IF NOT EXISTS daily_schedule_enabled BOOLEAN NOT NULL DEFAULT FALSE");
   await pool.query("ALTER TABLE kitchen_settings ADD COLUMN IF NOT EXISTS daily_open_time TIME");
   await pool.query("ALTER TABLE kitchen_settings ADD COLUMN IF NOT EXISTS daily_close_time TIME");
+  await pool.query(`CREATE TABLE IF NOT EXISTS category_availability_settings (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    schedules JSONB NOT NULL DEFAULT '{"Breakfast":{"enabled":true,"windows":[{"start":"08:00","end":"11:00"}]},"Snacks":{"enabled":true,"windows":[{"start":"16:00","end":"19:00"}]},"Main Course":{"enabled":true,"windows":[{"start":"11:00","end":"15:00"},{"start":"19:00","end":"21:30"}]}}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await pool.query("INSERT INTO category_availability_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
   await pool.query("CREATE TABLE IF NOT EXISTS delivery_area_settings (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), kitchen_address TEXT NOT NULL DEFAULT 'Brigade 7 Gardens, Paduka Madira Road, Subramanyapura, Uttarahalli, Bengaluru 560061', latitude DOUBLE PRECISION NOT NULL DEFAULT 12.89627, longitude DOUBLE PRECISION NOT NULL DEFAULT 77.528264, radius_km NUMERIC(5,2) NOT NULL DEFAULT 12 CHECK (radius_km > 0 AND radius_km <= 100), grace_meters INTEGER NOT NULL DEFAULT 300 CHECK (grace_meters >= 0 AND grace_meters <= 5000), updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("INSERT INTO delivery_area_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
   // Current delivery policy: 12 km radius. Keep existing installations in sync.
@@ -804,6 +810,58 @@ app.put("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
     res.json({ ok: true, menuIds: ids, message: "Popular items saved." });
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
+}));
+
+
+const DEFAULT_CATEGORY_SCHEDULES = {
+  "Breakfast": { enabled: true, windows: [{ start: "08:00", end: "11:00" }] },
+  "Snacks": { enabled: true, windows: [{ start: "16:00", end: "19:00" }] },
+  "Main Course": { enabled: true, windows: [{ start: "11:00", end: "15:00" }, { start: "19:00", end: "21:30" }] }
+};
+function categoryScheduleMinuteOfDay() {
+  const value = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+function readCategorySchedules(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const result = {};
+  for (const category of Object.keys(DEFAULT_CATEGORY_SCHEDULES)) {
+    const row = source[category] || DEFAULT_CATEGORY_SCHEDULES[category];
+    result[category] = { enabled: row.enabled !== false, windows: Array.isArray(row.windows) ? row.windows : DEFAULT_CATEGORY_SCHEDULES[category].windows };
+  }
+  return result;
+}
+app.get("/api/category-availability", asyncRoute(async (req, res) => {
+  const result = await pool.query("SELECT schedules FROM category_availability_settings WHERE id = 1");
+  res.set("Cache-Control", "no-store");
+  res.json({ schedules: readCategorySchedules(result.rows[0]?.schedules), minuteOfDay: categoryScheduleMinuteOfDay(), timeZone: "Asia/Kolkata" });
+}));
+app.get("/api/admin/category-availability", auth, admin, asyncRoute(async (req, res) => {
+  const result = await pool.query("SELECT schedules, updated_at FROM category_availability_settings WHERE id = 1");
+  res.json({ schedules: readCategorySchedules(result.rows[0]?.schedules), updatedAt: result.rows[0]?.updated_at || null });
+}));
+app.put("/api/admin/category-availability", auth, admin, asyncRoute(async (req, res) => {
+  const incoming = req.body?.schedules;
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return res.status(400).json({ error: "Provide category availability schedules." });
+  const validTime = value => typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+  const clean = {};
+  for (const [category, defaults] of Object.entries(DEFAULT_CATEGORY_SCHEDULES)) {
+    const row = incoming[category];
+    if (!row || typeof row.enabled !== "boolean" || !Array.isArray(row.windows) || row.windows.length !== defaults.windows.length) {
+      return res.status(400).json({ error: "Please complete all availability windows for " + category + "." });
+    }
+    const windows = [];
+    for (const window of row.windows) {
+      if (!validTime(window.start) || !validTime(window.end) || window.start === window.end) {
+        return res.status(400).json({ error: "Choose valid start and end times for " + category + "." });
+      }
+      windows.push({ start: window.start, end: window.end });
+    }
+    clean[category] = { enabled: row.enabled, windows };
+  }
+  const result = await pool.query("UPDATE category_availability_settings SET schedules = $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = 1 RETURNING schedules, updated_at", [JSON.stringify(clean)]);
+  res.json({ ok: true, schedules: readCategorySchedules(result.rows[0].schedules), updatedAt: result.rows[0].updated_at });
 }));
 
 app.get("/api/menu", asyncRoute(async (req, res) => {
