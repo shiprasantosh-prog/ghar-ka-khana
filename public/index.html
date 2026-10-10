@@ -2083,7 +2083,7 @@ function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,c
 async function startRazorpayPayment(order,checkoutData,form,button){
  const success=document.getElementById("success");
  return new Promise(resolve=>{
-  if(!window.Razorpay){showPaymentRetry(order,checkoutData,form);success.textContent="Razorpay could not load. Your order is still pending and has not been sent to the kitchen. Refresh the page or try opening secure payment again.";success.classList.add("show");resolve(false);return}
+  if(!window.Razorpay){showPaymentRetry(order,checkoutData,form);success.textContent="Razorpay could not load. Your order is still pending and has not been sent to the kitchen. Refresh the page, then use Retry Payment in My Orders.";success.classList.add("show");resolve(false);return}
   let verifyingPayment=false,finished=false;
   const finish=value=>{if(finished)return;finished=true;resolve(value)};
   const options={
@@ -2111,10 +2111,10 @@ async function startRazorpayPayment(order,checkoutData,form,button){
    prefill:{name:checkoutData.name||currentUser?.name||"",email:checkoutData.email||currentUser?.email||"",contact:checkoutData.phone||currentUser?.phone||""},
    notes:{ghar_ka_khana_order_id:String(order.id)},
    theme:{color:"#104d37"},
-   modal:{ondismiss:async()=>{if(verifyingPayment||finished)return;try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }showPaymentRetry(order,checkoutData,form);success.textContent="Payment was cancelled. Your order is still pending and has not been sent to the kitchen. You can try again.";success.classList.add("show");finish(false)}}
+   modal:{ondismiss:async()=>{if(verifyingPayment||finished)return;try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }showPaymentRetry(order,checkoutData,form);finish(false)}}
   };
   const rzp=new Razorpay(options);
-  rzp.on("payment.failed",response=>{if(verifyingPayment||finished)return;showPaymentRetry(order,checkoutData,form);success.textContent=(response?.error?.description||"Payment failed.")+" Your order is still pending and has not been sent to the kitchen. You can try again.";success.classList.add("show");finish(false)});
+  rzp.on("payment.failed",response=>{if(verifyingPayment||finished)return;showPaymentRetry(order,checkoutData,form);finish(false)});
   rzp.open();
  });
 }
