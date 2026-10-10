@@ -333,6 +333,9 @@ async function initializeDatabase() {
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await pool.query("INSERT INTO kitchen_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
+  await pool.query("ALTER TABLE kitchen_settings ADD COLUMN IF NOT EXISTS daily_schedule_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+  await pool.query("ALTER TABLE kitchen_settings ADD COLUMN IF NOT EXISTS daily_open_time TIME");
+  await pool.query("ALTER TABLE kitchen_settings ADD COLUMN IF NOT EXISTS daily_close_time TIME");
   await pool.query("CREATE TABLE IF NOT EXISTS delivery_area_settings (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), kitchen_address TEXT NOT NULL DEFAULT 'Brigade 7 Gardens, Paduka Madira Road, Subramanyapura, Uttarahalli, Bengaluru 560061', latitude DOUBLE PRECISION NOT NULL DEFAULT 12.89627, longitude DOUBLE PRECISION NOT NULL DEFAULT 77.528264, radius_km NUMERIC(5,2) NOT NULL DEFAULT 12 CHECK (radius_km > 0 AND radius_km <= 100), grace_meters INTEGER NOT NULL DEFAULT 300 CHECK (grace_meters >= 0 AND grace_meters <= 5000), updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("INSERT INTO delivery_area_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
   // Current delivery policy: 12 km radius. Keep existing installations in sync.
@@ -1110,6 +1113,8 @@ function deliveryDistanceForAddress(address){return isKitchenSocietyAddress(addr
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "", paymentMethod = "online" } = req.body || {};
   if (!Array.isArray(items) || !items.length || !address) return res.status(400).json({error:"Cart and delivery address are required."});
+  const kitchenStatus = await getKitchenStatus();
+  if (!kitchenStatus.isOpen) return res.status(400).json({ error: "Our kitchen is currently closed. Please place your order during our daily opening hours." });
   let customerLat=Number(req.body.latitude),customerLng=Number(req.body.longitude);
   const savedAddressId=Number(req.body.addressId);
   if(Number.isInteger(savedAddressId)&&savedAddressId>0){
@@ -1480,21 +1485,43 @@ async function readOrder(id) {
 
 // Public kitchen availability. Scheduled reopening automatically takes effect at reopen_at.
 async function getKitchenStatus() {
-  const result = await pool.query(`SELECT is_open, reopen_at,
+  const result = await pool.query(`SELECT is_open, reopen_at, daily_schedule_enabled, daily_open_time, daily_close_time,
     CASE WHEN is_open = FALSE AND reopen_at IS NOT NULL AND reopen_at <= NOW()
       THEN TRUE ELSE is_open END AS currently_open
     FROM kitchen_settings WHERE id = 1`);
-  const row = result.rows[0] || { is_open: true, reopen_at: null, currently_open: true };
+  const row = result.rows[0] || { is_open: true, reopen_at: null, currently_open: true, daily_schedule_enabled: false };
+  if (row.daily_schedule_enabled && row.daily_open_time && row.daily_close_time) {
+    const local = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+    const [hour, minute] = local.split(":").map(Number);
+    const nowMinutes = hour * 60 + minute;
+    const [openHour, openMinute] = String(row.daily_open_time).slice(0, 5).split(":").map(Number);
+    const [closeHour, closeMinute] = String(row.daily_close_time).slice(0, 5).split(":").map(Number);
+    const openMinutes = openHour * 60 + openMinute;
+    const closeMinutes = closeHour * 60 + closeMinute;
+    const isOpen = openMinutes === closeMinutes ? false : openMinutes < closeMinutes
+      ? nowMinutes >= openMinutes && nowMinutes < closeMinutes
+      : nowMinutes >= openMinutes || nowMinutes < closeMinutes;
+    return { isOpen, reopenAt: null, scheduleEnabled: true, dailyOpenTime: String(row.daily_open_time).slice(0, 5), dailyCloseTime: String(row.daily_close_time).slice(0, 5) };
+  }
   if (row.currently_open && !row.is_open) {
     await pool.query("UPDATE kitchen_settings SET is_open = TRUE, reopen_at = NULL, updated_at = NOW() WHERE id = 1");
-    return { isOpen: true, reopenAt: null };
+    return { isOpen: true, reopenAt: null, scheduleEnabled: false, dailyOpenTime: null, dailyCloseTime: null };
   }
-  return { isOpen: row.currently_open, reopenAt: row.reopen_at };
+  return { isOpen: row.currently_open, reopenAt: row.reopen_at, scheduleEnabled: false, dailyOpenTime: row.daily_open_time || null, dailyCloseTime: row.daily_close_time || null };
 }
 app.get("/api/kitchen/status", asyncRoute(async (req, res) => {
   res.json(await getKitchenStatus());
 }));
 app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, "dailyOpenTime") || Object.prototype.hasOwnProperty.call(req.body || {}, "dailyCloseTime")) {
+    const { dailyOpenTime, dailyCloseTime } = req.body || {};
+    const validTime = value => typeof value === "string" && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(value);
+    if (!validTime(dailyOpenTime) || !validTime(dailyCloseTime) || dailyOpenTime === dailyCloseTime) {
+      return res.status(400).json({ error: "Choose valid daily opening and closing times. They cannot be the same." });
+    }
+    await pool.query("UPDATE kitchen_settings SET daily_schedule_enabled = TRUE, daily_open_time = $1, daily_close_time = $2, reopen_at = NULL, updated_at = NOW() WHERE id = 1", [dailyOpenTime, dailyCloseTime]);
+    return res.json(await getKitchenStatus());
+  }
   const isOpen = req.body.isOpen;
   if (typeof isOpen !== "boolean") return res.status(400).json({ error: "Choose whether the kitchen is open or closed." });
   let reopenAt = null;
@@ -1506,7 +1533,7 @@ app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
     reopenAt = parsed.toISOString();
   }
   await pool.query(
-    "UPDATE kitchen_settings SET is_open = $1, reopen_at = $2, updated_at = NOW() WHERE id = 1",
+    "UPDATE kitchen_settings SET is_open = $1, reopen_at = $2, daily_schedule_enabled = FALSE, updated_at = NOW() WHERE id = 1",
     [isOpen, reopenAt]
   );
   res.json(await getKitchenStatus());
