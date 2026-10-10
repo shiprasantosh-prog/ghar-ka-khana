@@ -317,6 +317,9 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT");
+  await pool.query("CREATE TABLE IF NOT EXISTS order_refunds (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_refund_id TEXT UNIQUE, amount_paise INTEGER NOT NULL CHECK (amount_paise > 0), status TEXT NOT NULL DEFAULT 'pending', initiated_by TEXT NOT NULL DEFAULT 'owner', failure_reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS order_refunds_one_active_per_order ON order_refunds(order_id) WHERE status IN ('pending','processing','created')");
+  await pool.query("CREATE INDEX IF NOT EXISTS order_refunds_order_id_idx ON order_refunds(order_id, created_at DESC)");
   await pool.query("CREATE TABLE IF NOT EXISTS promo_codes (id SERIAL PRIMARY KEY, code TEXT NOT NULL UNIQUE, customer_phone TEXT NOT NULL DEFAULT '', discount_type TEXT NOT NULL CHECK (discount_type IN ('percent','fixed')), discount_value INTEGER NOT NULL CHECK (discount_value > 0), minimum_order INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, valid_from DATE NOT NULL DEFAULT CURRENT_DATE, valid_until DATE NOT NULL DEFAULT CURRENT_DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS customer_phone TEXT NOT NULL DEFAULT ''");
   await pool.query("ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS valid_from DATE NOT NULL DEFAULT CURRENT_DATE");
@@ -1223,7 +1226,7 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   if(String(payment.order_id||"")!==razorpayOrderId)return res.status(400).json({error:"Payment order does not match this order."});
   if(Number(payment.amount)!==Number(row.total)*100)return res.status(400).json({error:"Payment amount does not match this order."});
   if(payment.status!=="captured" && payment.captured!==true)return res.status(400).json({error:"Payment has not been captured yet. Your order remains pending."});
-  const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
+  const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
   const order=await readOrder(orderId);
   if(updated.rowCount)notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
   res.json(order);
@@ -1248,7 +1251,7 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
     if(String(payment.order_id||"")!==razorpayOrderId || Number(payment.amount)!==Number(row.total)*100 || (payment.status!=="captured" && payment.captured!==true)){
       return res.redirect("/?payment=failed&reason=payment_not_captured");
     }
-    const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,row.id]);
+    const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,row.id]);
     if(updated.rowCount){
       const order=await readOrder(row.id);
       notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
@@ -1321,6 +1324,47 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   return res.status(200).json({ ok: true });
 }));
 
+// Owner-triggered full refund. Durable local records prevent duplicate requests.
+app.post("/api/admin/orders/:id/refund", auth, admin, asyncRoute(async (req, res) => {
+  if (!razorpay) return res.status(503).json({ error: "Razorpay is not configured." });
+  const orderId = Number(req.params.id);
+  if (!Number.isInteger(orderId) || orderId < 1) return res.status(400).json({ error: "Invalid order." });
+  const client = await pool.connect();
+  let refundRecord;
+  let paymentId;
+  try {
+    await client.query("BEGIN");
+    const found = await client.query("SELECT id,total,status,payment_status,razorpay_payment_id FROM orders WHERE id=$1 FOR UPDATE", [orderId]);
+    const order = found.rows[0];
+    if (!order) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Order not found." }); }
+    if (order.status !== "Cancelled") { await client.query("ROLLBACK"); return res.status(409).json({ error: "Cancel the order before requesting a refund." }); }
+    if (order.payment_status !== "paid" || !order.razorpay_payment_id) { await client.query("ROLLBACK"); return res.status(409).json({ error: "This order has no verified captured payment to refund." }); }
+    paymentId = order.razorpay_payment_id;
+    const prior = await client.query("SELECT * FROM order_refunds WHERE order_id=$1 ORDER BY created_at DESC LIMIT 1", [orderId]);
+    if (prior.rows[0] && ["pending","processing","created","processed"].includes(prior.rows[0].status)) {
+      await client.query("COMMIT");
+      return res.status(200).json({ refund: prior.rows[0], message: "A refund already exists for this order; no duplicate was created." });
+    }
+    const inserted = await client.query("INSERT INTO order_refunds(order_id,amount_paise,status,initiated_by) VALUES($1,$2,\'processing\',\'owner\') RETURNING *", [orderId, Number(order.total) * 100]);
+    refundRecord = inserted.rows[0];
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    if (error.code === "23505") return res.status(409).json({ error: "A refund is already in progress for this order." });
+    throw error;
+  } finally { client.release(); }
+  try {
+    const response = await razorpay.payments.refund(paymentId, { amount: refundRecord.amount_paise, notes: { order_id: String(orderId), source: "Ghar ka Khana owner dashboard" } });
+    const status = ["processed","pending","failed"].includes(String(response.status)) ? String(response.status) : "processing";
+    const saved = await pool.query("UPDATE order_refunds SET razorpay_refund_id=$1,status=$2,failure_reason=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$4 RETURNING *", [response.id || null, status, status === "failed" ? "Razorpay reported refund failure." : "", refundRecord.id]);
+    if (status === "failed") return res.status(502).json({ error: "Razorpay reported that the refund failed.", refund: saved.rows[0] });
+    return res.status(200).json({ message: status === "processed" ? "Refund processed by Razorpay." : "Refund submitted to Razorpay and is awaiting confirmation.", refund: saved.rows[0] });
+  } catch (error) {
+    console.error("Razorpay refund submission requires reconciliation:", error.message);
+    await pool.query("UPDATE order_refunds SET status=\'processing\',failure_reason=$1,updated_at=CURRENT_TIMESTAMP WHERE id=$2", ["Submission outcome unclear; reconcile in Razorpay before retrying.", refundRecord.id]);
+    return res.status(202).json({ message: "Refund submission needs reconciliation in Razorpay. It has been kept in processing to prevent a duplicate refund.", refundId: refundRecord.id });
+  }
+}));
 app.post("/api/payments/cancel",auth,asyncRoute(async(req,res)=>{
   const orderId=Number(req.body?.orderId);
   if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
@@ -1478,6 +1522,11 @@ async function readOrder(id) {
   );
 
   order.items = itemsResult.rows;
+  const refundsResult = await pool.query(
+    "SELECT id, razorpay_refund_id, amount_paise, status, failure_reason, created_at, updated_at FROM order_refunds WHERE order_id=$1 ORDER BY created_at DESC",
+    [id]
+  );
+  order.refunds = refundsResult.rows;
   return order;
 }
 
