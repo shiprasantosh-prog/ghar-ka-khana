@@ -1636,7 +1636,7 @@ function renderOrderDetail(order){
   <header class="customer-bill-head">
    <div class="customer-bill-brand-row">
     <svg class="customer-bill-logo" viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg>
-    <div class="customer-bill-brand-copy"><h2>Ghar ka Khana</h2><div class="bill-tagline">Homemade with Love</div><div>Bengaluru, Karnataka</div></div>
+    <div class="customer-bill-brand-copy"><h2>Ghar ka Khana</h2><div class="bill-tagline">Homemade with Love</div><div class="bill-pure-veg"><span aria-hidden="true">✿</span> PURE VEGETARIAN</div><div>Bengaluru, Karnataka</div></div>
    </div>
    <div class="customer-bill-legal">GSTIN: 29ENQPS3057L1Z2 <span>•</span> FSSAI Lic. No.: 212251860001525</div>
   </header>
@@ -1660,7 +1660,7 @@ async function downloadOrderReceipt(orderId){
    <header class="customer-bill-head">
     <div class="customer-bill-brand-row">
      <svg class="customer-bill-logo" viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg>
-     <div class="customer-bill-brand-copy"><h1>Ghar ka Khana</h1><div class="bill-tagline">Homemade with Love</div><div>Bengaluru, Karnataka</div></div>
+     <div class="customer-bill-brand-copy"><h1>Ghar ka Khana</h1><div class="bill-tagline">Homemade with Love</div><div class="bill-pure-veg"><span aria-hidden="true">✿</span> PURE VEGETARIAN</div><div>Bengaluru, Karnataka</div></div>
     </div>
     <div class="customer-bill-legal">GSTIN: 29ENQPS3057L1Z2 <span>•</span> FSSAI Lic. No.: 212251860001525</div>
    </header>
@@ -3095,6 +3095,7 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 .customer-bill-brand-copy{min-width:0}
 .customer-bill-brand-copy h1,.customer-bill-brand-copy h2{margin:0;color:#18563c;font:700 25px Georgia,serif;line-height:1.15;overflow-wrap:anywhere}
 .customer-bill-brand-copy .bill-tagline{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#a77b2b;margin:4px 0}
+.customer-bill-brand-copy .bill-pure-veg{display:flex;align-items:center;gap:5px;margin:4px 0 5px;color:#1b5a3a;font-size:10px;font-weight:800;letter-spacing:1.25px;line-height:1.2;white-space:nowrap}.customer-bill-brand-copy .bill-pure-veg span{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border:1px solid #1b5a3a;border-radius:2px;font-size:9px;line-height:1}
 .customer-bill-brand-copy>div:last-child{font-size:11px;color:#555}
 .customer-bill-legal{text-align:center;margin-top:10px;font-size:10px;color:#555;line-height:1.5;overflow-wrap:anywhere}
 .customer-bill-legal span{padding:0 5px;color:#a77b2b}
@@ -3103,6 +3104,8 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  .customer-bill-logo{flex-basis:58px;width:58px;height:52px}
  .customer-bill-brand-copy h1,.customer-bill-brand-copy h2{font-size:21px}
  .customer-bill-brand-copy .bill-tagline{font-size:9px;letter-spacing:1px}
+ .customer-bill-brand-copy .bill-pure-veg{font-size:8px;letter-spacing:.8px;gap:4px}
+ .customer-bill-brand-copy .bill-pure-veg span{width:11px;height:11px;font-size:8px}
  .customer-bill-legal{font-size:9px}
 }
 @media print{
