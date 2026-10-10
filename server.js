@@ -177,6 +177,9 @@ async function initializeDatabase() {
     );
   `);
 
+  await pool.query("CREATE TABLE IF NOT EXISTS password_reset_tokens (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id)");
+
   await pool.query("ALTER TABLE menu ADD COLUMN IF NOT EXISTS variant_parent_id INTEGER REFERENCES menu(id) ON DELETE SET NULL");
   await pool.query("CREATE TABLE IF NOT EXISTS menu_variants (id SERIAL PRIMARY KEY, menu_id INTEGER NOT NULL REFERENCES menu(id) ON DELETE CASCADE, variant_label TEXT NOT NULL, price INTEGER NOT NULL CHECK (price > 0), available BOOLEAN NOT NULL DEFAULT TRUE, UNIQUE(menu_id, variant_label))");
   await pool.query("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label TEXT DEFAULT ''");
@@ -592,42 +595,67 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
 }));
 
 const passwordResetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
-function normalizeOtpPhone(value) {
-  const raw=String(value||"").trim();
-  if(/^\+\d{10,15}$/.test(raw)) return raw;
-  const digits=raw.replace(/\D/g,"");
-  if(/^\d{10}$/.test(digits)) return "+91"+digits;
-  if(/^91\d{10}$/.test(digits)) return "+"+digits;
-  return "";
-}
-async function twilioVerifyRequest(path, params) {
-  const sid=process.env.TWILIO_ACCOUNT_SID, token=process.env.TWILIO_AUTH_TOKEN, service=process.env.TWILIO_VERIFY_SERVICE_SID;
-  if(!sid||!token||!service) throw Object.assign(new Error("Password reset by SMS is not configured yet. Please contact Ghar ka Khana for help."),{status:503});
-  const response=await fetch("https://verify.twilio.com/v2/Services/"+encodeURIComponent(service)+path,{
-    method:"POST",headers:{"Authorization":"Basic "+Buffer.from(sid+":"+token).toString("base64"),"Content-Type":"application/x-www-form-urlencoded"},
-    body:new URLSearchParams(params),signal:AbortSignal.timeout(12000)
+const passwordResetConfirmLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+
+async function sendPasswordResetEmail(to, resetUrl) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.PASSWORD_RESET_FROM_EMAIL || process.env.ADMIN_EMAIL;
+  if (!apiKey || !from) throw Object.assign(new Error("Password reset email is not configured yet. Please contact Ghar ka Khana for help."), { statusCode: 503 });
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [to], subject: "Reset your Ghar ka Khana password",
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#203b2e;max-width:560px;margin:auto"><h2 style="color:#18563c">Ghar ka Khana</h2><p>We received a request to reset your password.</p><p><a href="${resetUrl}" style="display:inline-block;background:#18563c;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Reset password</a></p><p>This link expires in 30 minutes and works only once.</p><p>If you did not request this, ignore this email. Your password will remain unchanged.</p></div>` })
   });
-  const payload=await response.json().catch(()=>({}));
-  if(!response.ok) { const error=new Error("We could not complete SMS verification. Please check the mobile number and try again.");error.status=502;throw error; }
-  return payload;
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.error("Password reset email provider rejected request:", response.status, detail.slice(0, 300));
+    throw Object.assign(new Error("We could not send the reset email right now. Please try again later."), { statusCode: 502 });
+  }
 }
-app.post("/api/auth/password-reset/request",passwordResetLimiter,asyncRoute(async(req,res)=>{
-  const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone);
-  if(!to)return res.status(400).json({error:"Enter a valid mobile number including the 10-digit number."});
-  const found=await pool.query("SELECT id FROM users WHERE phone=$1 AND role='customer'",[phone]);
-  // Do not reveal whether a customer account exists.
-  if(found.rowCount) await twilioVerifyRequest("/Verifications",{To:to,Channel:"sms"});
-  res.json({ok:true,message:"If a customer account matches that number, an OTP has been sent. Enter the code to reset your password."});
+
+app.post("/api/auth/password-reset/request", passwordResetLimiter, asyncRoute(async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return res.status(400).json({ error: "Enter a valid email address." });
+  const found = await pool.query("SELECT id FROM users WHERE LOWER(email) = $1 AND role = 'customer'", [email]);
+  if (found.rowCount) {
+    if (!process.env.RESEND_API_KEY || !(process.env.PASSWORD_RESET_FROM_EMAIL || process.env.ADMIN_EMAIL)) {
+      return res.status(503).json({ error: "Password reset email is not configured yet. Please contact Ghar ka Khana for help." });
+    }
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    await pool.query("DELETE FROM password_reset_tokens WHERE user_id = $1 OR expires_at <= NOW()", [found.rows[0].id]);
+    await pool.query("INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '30 minutes')", [found.rows[0].id, tokenHash]);
+    const baseUrl = String(process.env.PUBLIC_SITE_URL || "https://gharkakhanakitchen.in").replace(/\\/$/, "");
+    try {
+      await sendPasswordResetEmail(email, baseUrl + "/?resetToken=" + encodeURIComponent(rawToken));
+    } catch (error) {
+      await pool.query("DELETE FROM password_reset_tokens WHERE token_hash = $1", [tokenHash]);
+      throw error;
+    }
+  }
+  res.json({ ok: true, message: "If a customer account uses that email address, a password reset link will be sent. Please check your inbox and spam folder." });
 }));
-app.post("/api/auth/password-reset/confirm",passwordResetLimiter,asyncRoute(async(req,res)=>{
-  const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone),code=String(req.body?.code||"").trim(),password=String(req.body?.newPassword||"");
-  if(!to||/^\d{4,10}$/.test(code)===false||password.length<8)return res.status(400).json({error:"Enter your mobile number, the OTP, and a new password of at least 8 characters."});
-  const found=await pool.query("SELECT id FROM users WHERE phone=$1 AND role='customer'",[phone]);
-  if(!found.rowCount)return res.status(400).json({error:"We could not verify this reset request. Check the mobile number and request a new OTP."});
-  const verified=await twilioVerifyRequest("/VerificationCheck",{To:to,Code:code});
-  if(verified.status!=="approved")return res.status(400).json({error:"That OTP is invalid or expired. Request a new code and try again."});
-  await pool.query("UPDATE users SET password_hash=$1 WHERE id=$2",[bcrypt.hashSync(password,12),found.rows[0].id]);
-  res.json({ok:true,message:"Password reset successfully. You can now sign in with your new password."});
+
+app.post("/api/auth/password-reset/confirm", passwordResetConfirmLimiter, asyncRoute(async (req, res) => {
+  const token = String(req.body?.token || "").trim();
+  const password = String(req.body?.newPassword || "");
+  const confirmPassword = String(req.body?.confirmPassword || "");
+  if (!/^[a-f0-9]{64}$/i.test(token)) return res.status(400).json({ error: "This reset link is invalid. Request a new password reset link." });
+  if (password.length < 8) return res.status(400).json({ error: "Your new password must be at least 8 characters." });
+  if (password !== confirmPassword) return res.status(400).json({ error: "The passwords do not match." });
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const result = await pool.query("SELECT user_id FROM password_reset_tokens WHERE token_hash = $1 AND expires_at > NOW()", [tokenHash]);
+  if (!result.rowCount) return res.status(400).json({ error: "This reset link has expired or was already used. Request a new one." });
+  const userId = result.rows[0].user_id;
+  await pool.query("BEGIN");
+  try {
+    const consumed = await pool.query("DELETE FROM password_reset_tokens WHERE token_hash = $1 AND expires_at > NOW() RETURNING user_id", [tokenHash]);
+    if (!consumed.rowCount) { await pool.query("ROLLBACK"); return res.status(400).json({ error: "This reset link has expired or was already used. Request a new one." }); }
+    await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2 AND role = 'customer'", [bcrypt.hashSync(password, 12), userId]);
+    await pool.query("COMMIT");
+  } catch (error) { await pool.query("ROLLBACK"); throw error; }
+  res.json({ ok: true, message: "Password updated successfully. You can now sign in with your new password." });
 }));
 
 app.post("/api/auth/logout", (req, res) => {
