@@ -1228,7 +1228,10 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   if(payment.status!=="captured" && payment.captured!==true)return res.status(400).json({error:"Payment has not been captured yet. Your order remains pending."});
   const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
   const order=await readOrder(orderId);
-  if(updated.rowCount)notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+  if(updated.rowCount){
+    if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(orderId);
+    else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+  }
   res.json(order);
 }));
 
@@ -1254,7 +1257,8 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
     const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,row.id]);
     if(updated.rowCount){
       const order=await readOrder(row.id);
-      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+      if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(row.id);
+      else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
     }
   }
   return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
