@@ -1913,10 +1913,8 @@ async function loadGooglePlacesLibrary(){
   const config=await configResponse.json();
   if(!config.apiKey)throw new Error("Google Maps API key is missing.");
   if(!window.google?.maps?.importLibrary){
-   // Install Google's supported dynamic loader bootstrap before requesting Places.
-   // Loading the API URL directly does not define google.maps.importLibrary.
-   const options=JSON.stringify({key:config.apiKey,v:"weekly"});
-   const bootstrap=`((g)=>{let h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});const d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await(a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src="https://maps."+c+"apis.com/maps/api/js?"+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})(${options});`;
+   // Load the Maps JavaScript API as an external script to avoid inline-bootstrap/CSP failures.
+
    // Load the Maps JavaScript API as an external script. This avoids relying on
    // execution of an injected inline bootstrap, which can be blocked by CSP.
    await new Promise((resolve,reject)=>{
