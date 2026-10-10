@@ -1633,9 +1633,12 @@ function renderOrderDetail(order){
  const scheduled=order.scheduled_at?new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"}):"";
  const host=document.getElementById("orderDetailBody");
  host.innerHTML=`<div class="customer-bill">
-  <header class="customer-bill-head"><h2>Ghar ka Khana</h2><div class="bill-tagline">Homemade with Love</div>
-   <div>Bengaluru, Karnataka</div>
-   <div>GSTIN: 29ENQPS3057L1Z2</div><div>FSSAI Lic. No.: 212251860001525</div>
+  <header class="customer-bill-head">
+   <div class="customer-bill-brand-row">
+    <svg class="customer-bill-logo" viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg>
+    <div class="customer-bill-brand-copy"><h2>Ghar ka Khana</h2><div class="bill-tagline">Homemade with Love</div><div>Bengaluru, Karnataka</div></div>
+   </div>
+   <div class="customer-bill-legal">GSTIN: 29ENQPS3057L1Z2 <span>•</span> FSSAI Lic. No.: 212251860001525</div>
   </header>
   <div class="customer-bill-meta"><div><span>Bill No.</span><strong>GKK-${String(order.id).padStart(4,"0")}</strong></div><div><span>Bill Date</span><strong>${formatOrderDate(order.created_at)}</strong></div><div><span>Status</span><strong>${escapeHTML(order.status||"")}</strong></div>${scheduled?`<div><span>Scheduled delivery</span><strong>${escapeHTML(scheduled)}</strong></div>`:""}</div>
   <div class="customer-bill-customer"><strong>Bill To:</strong> ${escapeHTML(order.customer_name||"Customer")}${order.customer_phone?`<br><strong>Phone:</strong> ${escapeHTML(order.customer_phone)}`:""}<br><strong>Delivery address:</strong> ${escapeHTML(order.address||"Not provided")}</div>
@@ -1654,7 +1657,13 @@ async function downloadOrderReceipt(orderId){
   const handling=Number(order.handling_fee??5),delivery=Number(order.delivery_fee)||0,discount=Number(order.discount)||0;
   const scheduled=order.scheduled_at?new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"}):"";
   document.getElementById("orderReceiptPrint").innerHTML=`<div class="receipt-print-sheet customer-bill">
-   <header class="customer-bill-head"><h1>Ghar ka Khana</h1><div class="bill-tagline">Homemade with Love</div><div>Bengaluru, Karnataka</div><div>GSTIN: 29ENQPS3057L1Z2</div><div>FSSAI Lic. No.: 212251860001525</div></header>
+   <header class="customer-bill-head">
+    <div class="customer-bill-brand-row">
+     <svg class="customer-bill-logo" viewBox="0 0 180 130" role="img" aria-label="Ghar ka Khana logo"><path d="M18 62 L90 8 L162 62" fill="none" stroke="#b58a36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 56 V112 H144 V56" fill="none" stroke="#1b5a3a" stroke-width="7" stroke-linejoin="round"/><path d="M63 79 H117 L111 103 Q90 115 69 103 Z" fill="#b58a36"/><path d="M58 77 H122" stroke="#b58a36" stroke-width="6" stroke-linecap="round"/><path d="M82 68 C73 57 83 51 88 45 M98 68 C107 57 97 51 92 45" fill="none" stroke="#b58a36" stroke-width="4" stroke-linecap="round"/><path d="M18 91 Q29 82 39 91 M141 91 Q151 82 162 91" fill="none" stroke="#4d8962" stroke-width="5" stroke-linecap="round"/></svg>
+     <div class="customer-bill-brand-copy"><h1>Ghar ka Khana</h1><div class="bill-tagline">Homemade with Love</div><div>Bengaluru, Karnataka</div></div>
+    </div>
+    <div class="customer-bill-legal">GSTIN: 29ENQPS3057L1Z2 <span>•</span> FSSAI Lic. No.: 212251860001525</div>
+   </header>
    <h2 class="bill-title">Customer Bill</h2>
    <div class="customer-bill-meta"><div><span>Bill No.</span><strong>GKK-${String(order.id).padStart(4,"0")}</strong></div><div><span>Bill Date</span><strong>${formatOrderDate(order.created_at)}</strong></div><div><span>Status</span><strong>${escapeHTML(order.status||"")}</strong></div>${scheduled?`<div><span>Scheduled delivery</span><strong>${escapeHTML(scheduled)}</strong></div>`:""}</div>
    <div class="customer-bill-customer"><strong>Bill To:</strong> ${escapeHTML(order.customer_name||"Customer")}${order.customer_phone?`<br><strong>Phone:</strong> ${escapeHTML(order.customer_phone)}`:""}<br><strong>Delivery address:</strong> ${escapeHTML(order.address||"Not provided")}</div>
@@ -3077,5 +3086,30 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  else bindOrderDetailClose();
 })();
 </script>
+
+
+<style id="customer-bill-logo-header">
+.customer-bill .customer-bill-head{text-align:left;padding-bottom:12px}
+.customer-bill-brand-row{display:flex;align-items:center;justify-content:center;gap:14px;text-align:left;max-width:100%;margin:0 auto}
+.customer-bill-logo{display:block;flex:0 0 76px;width:76px;height:60px;object-fit:contain}
+.customer-bill-brand-copy{min-width:0}
+.customer-bill-brand-copy h1,.customer-bill-brand-copy h2{margin:0;color:#18563c;font:700 25px Georgia,serif;line-height:1.15;overflow-wrap:anywhere}
+.customer-bill-brand-copy .bill-tagline{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#a77b2b;margin:4px 0}
+.customer-bill-brand-copy>div:last-child{font-size:11px;color:#555}
+.customer-bill-legal{text-align:center;margin-top:10px;font-size:10px;color:#555;line-height:1.5;overflow-wrap:anywhere}
+.customer-bill-legal span{padding:0 5px;color:#a77b2b}
+@media(max-width:600px){
+ .customer-bill-brand-row{gap:10px}
+ .customer-bill-logo{flex-basis:58px;width:58px;height:52px}
+ .customer-bill-brand-copy h1,.customer-bill-brand-copy h2{font-size:21px}
+ .customer-bill-brand-copy .bill-tagline{font-size:9px;letter-spacing:1px}
+ .customer-bill-legal{font-size:9px}
+}
+@media print{
+ .customer-bill-brand-row{gap:12px}
+ .customer-bill-logo{flex-basis:68px;width:68px;height:58px}
+ .customer-bill-brand-copy h1,.customer-bill-brand-copy h2{font-size:24px}
+}
+</style>
 
 </body></html>
