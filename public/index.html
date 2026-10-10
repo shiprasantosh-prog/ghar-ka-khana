@@ -3410,35 +3410,38 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 </style>
 
 <style id="navratri-warm-cream-design">
-/* Navratri landing feature: warm ivory, forest green and subtle festive gold. Keeps owner-selected dishes and cart actions data-driven. */
-#homePopular.navratri-festive-section{padding:0 0 28px!important;background:#fbf7ec!important;border:0!important;color:#244126!important;overflow:hidden}
-#homePopular .navratri-festive-frame{max-width:none!important;width:100%;margin:0!important;padding:22px clamp(18px,4vw,58px) 24px!important;border:0!important;border-radius:0!important;background:#fff8e8!important;box-shadow:none!important;position:relative;overflow:hidden}
-#homePopular .navratri-real-photo{position:absolute!important;left:clamp(18px,4vw,58px)!important;top:22px!important;width:41%!important;height:clamp(245px,27vw,340px)!important;max-height:none!important;object-fit:cover!important;object-position:center 38%!important;border:0!important;border-radius:16px!important;margin:0!important;box-shadow:0 8px 26px #5c401c22!important}
-#homePopular .navratri-festive-topline{margin-left:44%!important;text-align:center!important;color:#8a6427!important;font-size:11px!important;letter-spacing:2px!important;font-weight:700!important;padding-top:8px!important}
-#homePopular .navratri-festive-heading{margin:12px 0 0 44%!important;display:flex!important;justify-content:center!important;gap:12px!important;text-align:center!important;color:#244126!important}
-#homePopular .navratri-festive-heading h2{font-family:Georgia,'Times New Roman',serif!important;font-size:clamp(34px,4.2vw,58px)!important;line-height:1!important;font-weight:500!important;letter-spacing:-1.5px!important;color:#244126!important;margin:0 0 12px!important}
+/* Rebuild the Navratri section as a clean two-part hero followed by an independent dish grid.
+   The photograph and text share the first row; cards always start below the hero. */
+#homePopular.navratri-festive-section{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0 0 30px!important;background:#fbf7ec!important;border:0!important;color:#244126!important;overflow:hidden!important}
+#homePopular .navratri-festive-frame{display:grid!important;grid-template-columns:minmax(280px, .92fr) minmax(0,1.08fr)!important;grid-template-rows:auto auto auto auto!important;column-gap:clamp(24px,4vw,60px)!important;row-gap:0!important;align-items:center!important;max-width:1500px!important;width:100%!important;margin:0 auto!important;padding:28px clamp(22px,4vw,58px) 24px!important;border:0!important;border-radius:0!important;background:#fff8e8!important;box-shadow:none!important;position:relative!important;overflow:hidden!important}
+#homePopular .navratri-real-photo{position:static!important;grid-column:1!important;grid-row:1 / span 3!important;display:block!important;width:100%!important;height:clamp(250px,27vw,355px)!important;max-height:none!important;object-fit:cover!important;object-position:center 38%!important;border:0!important;border-radius:16px!important;margin:0!important;box-shadow:0 8px 26px #5c401c22!important;z-index:1!important}
+#homePopular .navratri-ornament{display:none!important}
+#homePopular .navratri-festive-topline{grid-column:2!important;grid-row:1!important;margin:0!important;padding:8px 0 0!important;text-align:center!important;color:#8a6427!important;font-size:11px!important;letter-spacing:2px!important;font-weight:700!important}
+#homePopular .navratri-festive-heading{grid-column:2!important;grid-row:2!important;margin:14px 0 0!important;display:flex!important;justify-content:center!important;gap:12px!important;text-align:center!important;color:#244126!important}
+#homePopular .navratri-festive-heading h2{font-family:Georgia,'Times New Roman',serif!important;font-size:clamp(32px,4vw,58px)!important;line-height:1.04!important;font-weight:500!important;letter-spacing:-1.5px!important;color:#244126!important;margin:0 0 12px!important}
 #homePopular .navratri-festive-heading p{font-size:clamp(14px,1.35vw,19px)!important;color:#39543a!important;line-height:1.5!important;margin:0 auto!important;max-width:480px!important}
-#homePopular .navratri-heading-rule{width:clamp(18px,4vw,54px)!important;flex:0 1 54px!important;background:#c69b4c!important;height:1px!important;margin-top:20px!important}
-#homePopular .navratri-purity-note{margin:18px 0 20px 44%!important;display:flex!important;justify-content:center!important;gap:16px!important;flex-wrap:wrap!important;color:#315238!important;font-size:12px!important;font-weight:650!important}
+#homePopular .navratri-heading-rule{width:clamp(12px,3vw,54px)!important;flex:0 1 54px!important;background:#c69b4c!important;height:1px!important;margin-top:20px!important}
+#homePopular .navratri-purity-note{grid-column:2!important;grid-row:3!important;margin:18px 0 0!important;display:flex!important;justify-content:center!important;gap:16px!important;flex-wrap:wrap!important;color:#315238!important;font-size:12px!important;font-weight:650!important}
 #homePopular .navratri-purity-dot{color:#c69b4c!important}
-#homePopular #popularGrid{clear:both!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:16px!important;align-items:stretch!important;margin-top:22px!important}
-#homePopular #popularGrid>.card{min-width:0!important;margin:0!important;background:#fffdf7!important;border:1px solid #eee5d2!important;border-radius:15px!important;overflow:hidden!important;box-shadow:0 3px 12px #57421c0b!important;color:#263d25!important}
-#homePopular #popularGrid .food-img{width:100%!important;height:clamp(135px,14vw,195px)!important;min-height:0!important;object-fit:cover!important}
+#homePopular #popularGrid{grid-column:1 / -1!important;grid-row:4!important;clear:both!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:16px!important;align-items:stretch!important;margin:28px 0 0!important;position:relative!important;z-index:2!important}
+#homePopular #popularGrid>.card{min-width:0!important;width:auto!important;margin:0!important;background:#fffdf7!important;border:1px solid #eee5d2!important;border-radius:15px!important;overflow:hidden!important;box-shadow:0 3px 12px #57421c0b!important;color:#263d25!important}
+#homePopular #popularGrid .food-img{width:100%!important;height:clamp(135px,14vw,195px)!important;min-height:0!important;overflow:hidden!important}
+#homePopular #popularGrid .food-img img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important}
 #homePopular #popularGrid .card-body{padding:14px!important}
 #homePopular #popularGrid .card-title h3,#homePopular #popularGrid .card h3{color:#29452a!important;font-size:16px!important;line-height:1.3!important}
 #homePopular #popularGrid .card-body p{color:#6b6c60!important}
 #homePopular #popularGrid .price{color:#29452a!important;font-weight:750!important}
 #homePopular #popularGrid button{border-radius:999px!important}
-#homePopular .navratri-festive-footer{color:#476447!important;text-align:center!important;margin:20px auto 0!important;font-size:13px!important;letter-spacing:.2px!important}
+#homePopular .navratri-festive-footer{grid-column:1 / -1!important;color:#476447!important;text-align:center!important;margin:20px auto 0!important;font-size:13px!important;letter-spacing:.2px!important}
 @media(max-width:760px){
-#homePopular .navratri-festive-frame{padding:14px 14px 18px!important}
-#homePopular .navratri-real-photo{position:relative!important;left:auto!important;top:auto!important;width:100%!important;height:clamp(155px,43vw,230px)!important;margin:0 0 12px!important;object-position:center 38%!important}
-#homePopular .navratri-festive-topline,#homePopular .navratri-festive-heading,#homePopular .navratri-purity-note{margin-left:0!important}
-#homePopular .navratri-festive-topline{font-size:9px!important;letter-spacing:1.4px!important}
-#homePopular .navratri-festive-heading h2{font-size:clamp(31px,8vw,44px)!important}
+#homePopular .navratri-festive-frame{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto auto auto auto!important;padding:14px 14px 18px!important;gap:0!important}
+#homePopular .navratri-real-photo{grid-column:1!important;grid-row:1!important;position:static!important;width:100%!important;height:clamp(155px,43vw,230px)!important;margin:0 0 14px!important;object-position:center 38%!important;border-radius:12px!important}
+#homePopular .navratri-festive-topline{grid-column:1!important;grid-row:2!important;font-size:9px!important;letter-spacing:1.4px!important;padding:0!important}
+#homePopular .navratri-festive-heading{grid-column:1!important;grid-row:3!important;margin:12px 0 0!important}
+#homePopular .navratri-festive-heading h2{font-size:clamp(30px,8vw,44px)!important}
 #homePopular .navratri-heading-rule{display:none!important}
-#homePopular .navratri-purity-note{gap:10px!important;margin:14px 0!important;font-size:11px!important}
-#homePopular #popularGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-top:16px!important}
+#homePopular .navratri-purity-note{grid-column:1!important;grid-row:4!important;gap:10px!important;margin:14px 0 0!important;font-size:11px!important}
+#homePopular #popularGrid{grid-column:1!important;grid-row:5!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-top:18px!important}
 #homePopular #popularGrid .food-img{height:clamp(105px,30vw,150px)!important}
 #homePopular #popularGrid .card-body{padding:10px!important}
 #homePopular #popularGrid .card-title h3,#homePopular #popularGrid .card h3{font-size:14px!important}
