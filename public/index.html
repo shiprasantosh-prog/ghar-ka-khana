@@ -1908,67 +1908,83 @@ let addressSearchTimer=null,googlePlacesLibraryPromise=null,addressSearchRequest
 async function loadGooglePlacesLibrary(){
  if(googlePlacesLibraryPromise)return googlePlacesLibraryPromise;
  googlePlacesLibraryPromise=(async()=>{
-  const configResponse=await fetch("/api/maps-config");
-  if(!configResponse.ok)throw new Error("Google Maps is not configured on the server.");
+  const configResponse=await fetch("/api/maps-config",{cache:"no-store"});
+  if(!configResponse.ok){
+   let detail="";
+   try{detail=(await configResponse.json()).error||""}catch{}
+   throw new Error(detail||"Google Maps configuration is missing on the server (HTTP "+configResponse.status+").");
+  }
   const config=await configResponse.json();
-  if(!config.apiKey)throw new Error("Google Maps API key is missing.");
-  if(!window.google?.maps?.importLibrary){
-   // Load the Maps JavaScript API as an external script to avoid inline-bootstrap/CSP failures.
+  if(!config.apiKey)throw new Error("GOOGLE_MAPS_API_KEY is empty on the server.");
+  if(!window.google?.maps?.places){
    await new Promise((resolve,reject)=>{
+    const callbackName="__ghkMapsPlacesReady";
+    const timeout=setTimeout(()=>{
+     delete window[callbackName];
+     reject(new Error("Timed out loading Google Maps. Check the API key, Places API, billing, and website referrer restrictions."));
+    },15000);
+    window[callbackName]=()=>{
+     clearTimeout(timeout);
+     delete window[callbackName];
+     resolve();
+    };
     const script=document.createElement("script");
-    script.src="https://maps.googleapis.com/maps/api/js?"+new URLSearchParams({
-     key:config.apiKey,v:"weekly",libraries:"places",loading:"async"
-    }).toString();
+    const params=new URLSearchParams({
+     key:config.apiKey,
+     v:"weekly",
+     libraries:"places",
+     callback:callbackName
+    });
+    script.src="https://maps.googleapis.com/maps/api/js?"+params.toString();
     script.async=true;
-    script.onload=resolve;
-    script.onerror=()=>reject(new Error("Google Maps JavaScript API failed to load. Check the key, Places API access, billing, and HTTP referrer restrictions."));
+    script.onerror=()=>{
+     clearTimeout(timeout);
+     delete window[callbackName];
+     reject(new Error("Google Maps script failed to load. Check network access and the API key."));
+    };
     document.head.appendChild(script);
    });
-   if(!window.google?.maps?.places){
-    throw new Error("Google Maps loaded without Places. Enable the Places API for this key.");
-   }
-   // Adapt the loaded Places service to the autocomplete interface used below.
-   window.google.maps.importLibrary=window.google.maps.importLibrary||((library)=>Promise.resolve(
-    library==="places"?{
-     AutocompleteSuggestion:{
-      fetchAutocompleteSuggestions:async({input})=>{
-       const service=new google.maps.places.AutocompleteService();
-       const predictions=await new Promise((resolve,reject)=>service.getPlacePredictions(
-        {input,componentRestrictions:{country:"in"},types:["geocode"]},
-        (items,status)=>{
-         if(status===google.maps.places.PlacesServiceStatus.OK||status===google.maps.places.PlacesServiceStatus.ZERO_RESULTS)resolve(items||[]);
-         else reject(new Error("Places autocomplete request failed: "+status));
-        }
-       ));
-       return {suggestions:predictions.map(prediction=>({placePrediction:{
-        toPlace:()=>{
-         const selectedPlace={};
-         selectedPlace.fetchFields=async()=>{
-          const service=new google.maps.places.PlacesService(document.createElement("div"));
-          const detail=await new Promise((resolve,reject)=>service.getDetails(
-           {placeId:prediction.place_id,fields:["name","formatted_address","geometry","address_components"]},
-           (place,status)=>{
-            if(status===google.maps.places.PlacesServiceStatus.OK)resolve(place);
-            else reject(new Error("Place details request failed: "+status));
-           }
-          ));
-          const location=detail.geometry?.location;
-          Object.assign(selectedPlace,{
-           displayName:detail.name||detail.formatted_address,
-           formattedAddress:detail.formatted_address,
-           location:location?{lat:()=>location.lat(),lng:()=>location.lng()}:null,
-           addressComponents:(detail.address_components||[]).map(c=>({longText:c.long_name,types:c.types}))
-          });
-         };
-         return selectedPlace;
-        }
-       }}))};
-      }
-     }
-    }:{}
-   ));
   }
-  return google.maps.importLibrary("places");
+  if(!window.google?.maps?.places)throw new Error("Google Maps loaded, but the Places library is unavailable.");
+  // Use the stable Places service interface; it works with the callback-based API
+  // and does not depend on importLibrary or the newer AutocompleteSuggestion API.
+  return {
+   AutocompleteSuggestion:{
+    fetchAutocompleteSuggestions:async({input})=>{
+     const service=new google.maps.places.AutocompleteService();
+     const predictions=await new Promise((resolve,reject)=>service.getPlacePredictions(
+      {input,componentRestrictions:{country:"in"}},
+      (items,status)=>{
+       if(status===google.maps.places.PlacesServiceStatus.OK||status===google.maps.places.PlacesServiceStatus.ZERO_RESULTS)resolve(items||[]);
+       else reject(new Error("Google Places autocomplete failed: "+status+". Check Places API access, billing, and API-key restrictions."));
+      }
+     ));
+     return {suggestions:predictions.map(prediction=>({placePrediction:{
+      toPlace:()=>{
+       const selectedPlace={};
+       selectedPlace.fetchFields=async()=>{
+        const detailService=new google.maps.places.PlacesService(document.createElement("div"));
+        const detail=await new Promise((resolve,reject)=>detailService.getDetails(
+         {placeId:prediction.place_id,fields:["name","formatted_address","geometry","address_components"]},
+         (place,status)=>{
+          if(status===google.maps.places.PlacesServiceStatus.OK)resolve(place);
+          else reject(new Error("Google Places place-details request failed: "+status+"."));
+         }
+        ));
+        const location=detail.geometry?.location;
+        Object.assign(selectedPlace,{
+         displayName:detail.name||detail.formatted_address,
+         formattedAddress:detail.formatted_address,
+         location:location?{lat:()=>location.lat(),lng:()=>location.lng()}:null,
+         addressComponents:(detail.address_components||[]).map(c=>({longText:c.long_name,types:c.types}))
+        });
+       };
+       return selectedPlace;
+      }
+     }}))};
+    }
+   }
+  };
  })().catch(err=>{googlePlacesLibraryPromise=null;throw err});
  return googlePlacesLibraryPromise;
 }
