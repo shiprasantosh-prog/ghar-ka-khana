@@ -1174,8 +1174,6 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     discount=code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value;
     discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;
   }
-  const kitchenStatus=await getKitchenStatus();
-  if(!kitchenStatus.isOpen)return res.status(503).json({error:"Our kitchen is currently closed. Please try again later."});
   const normalizedPaymentMethod=String(paymentMethod||"online").trim().toLowerCase();
   if(!["online","cod"].includes(normalizedPaymentMethod))return res.status(400).json({error:"Please choose a valid payment method."});
   const isCod=normalizedPaymentMethod==="cod";
