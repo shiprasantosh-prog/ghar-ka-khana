@@ -3142,6 +3142,32 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 </script>
 
 
+<style id="mobile-order-modal-header-overlap-fix">
+/* The site's global header rule also matches the receipt's semantic <header>.
+   Keep the receipt brand header in normal flow so it cannot cover the modal title/X. */
+#orderDetailOverlay .customer-bill .customer-bill-head{
+ position:static!important;
+ top:auto!important;
+ z-index:auto!important;
+}
+#orderDetailOverlay .order-detail-head{
+ position:sticky!important;
+ top:0!important;
+ z-index:30!important;
+ background:#fffdf8!important;
+}
+@media(max-width:600px){
+ #orderDetailOverlay .order-detail-head{
+  top:0!important;
+  margin:0 -14px 12px!important;
+  padding:10px 14px 12px!important;
+  border-radius:14px 14px 0 0;
+ }
+ #orderDetailOverlay .order-detail-modal{
+  overscroll-behavior:contain;
+ }
+}
+</style>
 <style id="customer-bill-logo-header">
 .customer-bill .customer-bill-head{text-align:left;padding-bottom:12px}
 .customer-bill-brand-row{display:flex;align-items:center;justify-content:center;gap:14px;text-align:left;max-width:100%;margin:0 auto}
