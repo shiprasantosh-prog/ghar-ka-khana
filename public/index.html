@@ -1467,7 +1467,7 @@ function openMenuCategories(){
     if(e.target===overlay) close();
   });
  }
- const cats=["Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages"];
+ const cats=["Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];
  overlay.querySelector(".menu-category-list").innerHTML=cats.map(cat=>'<button type="button" class="menu-category-choice" data-category="'+escapeHTML(cat)+'"><span>'+escapeHTML(cat)+'</span><span>›</span></button>').join("");
  overlay.querySelectorAll(".menu-category-choice").forEach(btn=>btn.onclick=()=>{
   const cat=btn.dataset.category;
@@ -1542,6 +1542,8 @@ async function loadCustomerMenu(){
   Parathas:Array.isArray(imageCatalog.Parathas)?imageCatalog.Parathas:[],
   'Healthy Salads':Array.isArray(imageCatalog['Healthy Salads'])?imageCatalog['Healthy Salads']:[],
   Sandwich:Array.isArray(imageCatalog.Snacks)?imageCatalog.Snacks:[],
+  Extras:Array.isArray(imageCatalog.Snacks)?imageCatalog.Snacks:[],
+  'Single Plate Meal':Array.isArray(imageCatalog['Main Course'])?imageCatalog['Main Course']:[],
   'Sweets & Desserts':Array.isArray(imageCatalog['Sweets & Deserts'])?imageCatalog['Sweets & Deserts']:[],
   Beverages:Array.isArray(imageCatalog.Beverages)?imageCatalog.Beverages:[]
  };
@@ -1551,6 +1553,8 @@ async function loadCustomerMenu(){
   'Main Course':'Main%20Course',
   Snacks:'Snacks',
   Sandwich:'Snacks',
+  Extras:'Snacks',
+  'Single Plate Meal':'Main%20Course',
   Parathas:'Parathas',
   'Healthy Salads':'Healthy%20Salads',
   'Sweets & Desserts':'Sweets%20%26%20Deserts',
@@ -1719,7 +1723,7 @@ async function downloadOrderReceipt(orderId){
 }
 async function submitOrderReview(event,orderId){event.preventDefault();const form=event.currentTarget;const message=form.querySelector('[data-review-message]');const data=new FormData(form);try{const result=await api('/api/reviews',{method:'POST',body:JSON.stringify({orderId,rating:Number(data.get('rating')),comment:data.get('comment')})});message.textContent=result.message;await loadMyOrders()}catch(error){message.textContent=error.message}}
 async function loadPublicReviews(){const summary=document.getElementById('reviewSummary'),host=document.getElementById('reviewList');try{const data=await api('/api/reviews');summary.textContent=data.summary.count?data.summary.average+' ★ · '+data.summary.count+' customer review(s)':'Be the first to share a review';host.innerHTML=data.reviews.length?data.reviews.map(r=>'<article class="card" style="padding:20px"><div style="color:var(--gold2);font-size:20px">'+('★'.repeat(r.rating))+'<span style="color:#5b5140">'+('★'.repeat(5-r.rating))+'</span></div><p style="color:var(--cream);line-height:1.7">'+escapeHTML(r.comment||'Rated their experience')+'</p><div class="tag">'+escapeHTML(r.customer_name)+' · Verified customer</div></article>').join(''):'<p class="empty">Customer reviews will appear here once approved.</p>';const preview=document.getElementById('homeReviewCards');if(preview)preview.innerHTML=data.reviews.length?data.reviews.slice().sort((a,b)=>Number(b.rating)-Number(a.rating)).slice(0,3).map(r=>'<article class="card home-review-card" style="padding:22px"><div class="review-stars">'+('★'.repeat(r.rating))+'<span>'+('★'.repeat(5-r.rating))+'</span></div><p>'+escapeHTML(r.comment||'Rated their experience')+'</p><div class="tag">'+escapeHTML(r.customer_name)+' · Verified customer</div></article>').join(''):'<p class="empty">Customer reviews will appear here once approved.</p>'}catch(error){host.innerHTML='<p class="empty">Reviews are temporarily unavailable.</p>';const preview=document.getElementById('homeReviewCards');if(preview)preview.innerHTML='<p class="empty">Reviews are temporarily unavailable.</p>';console.error(error)}}
-function menuGroup(d){const c=String(d.cat||'').trim().toLowerCase(),n=String(d.name||'').toLowerCase();if(c.includes('chinese')||/manchurian|chow ?mein|noodles|fried rice|schezwan|hakka|spring roll|momo|chilli paneer|chilly paneer|chilli baby ?corn|chilly baby ?corn|chilli potato|chilly potato/.test(n))return 'Chinese';if(['lunch','rice & biryani','rice and biryani','main course'].includes(c))return 'Main Course';return titleCase(d.cat||'Other')}
+function menuGroup(d){const c=String(d.cat||'').trim().toLowerCase(),n=String(d.name||'').toLowerCase();if(c==='extras')return 'Extras';if(c==='single plate meal')return 'Single Plate Meal';if(c.includes('chinese')||/manchurian|chow ?mein|noodles|fried rice|schezwan|hakka|spring roll|momo|chilli paneer|chilly paneer|chilli baby ?corn|chilly baby ?corn|chilli potato|chilly potato/.test(n))return 'Chinese';if(['lunch','rice & biryani','rice and biryani','main course'].includes(c))return 'Main Course';return titleCase(d.cat||'Other')}
 function mainCourseSubgroup(d){const c=String(d.cat||'').toLowerCase(),n=String(d.name||'').toLowerCase();if(c.includes('rice')||c.includes('biryani')||/\b(rice|pulav|pulao|biryani|chawal)\b/.test(n))return 'Rice & Biryani';if(/\b(daal|dal|lentil)\b/.test(n))return 'Daal';if(/\b(roti|phulka|naan|paratha|kulcha|puri|poori|bhatura|thepla|chapati)\b/.test(n)||/extra pav/.test(n))return 'Breads';if(/\b(dry|kurkure|fry|fried|bhaja|sauteed|sautéed|roast|roasted)\b/.test(n))return 'Dry';return 'Gravy'}
 function menuItemOrder(items,group){
  const rules={
@@ -1779,9 +1783,9 @@ function menuItemOrder(items,group){
   return pa-pb||na.localeCompare(nb);
  });
 }
-function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Sandwich','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
+function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Sandwich','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages','Extras','Single Plate Meal'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
 function setMenuCategory(value){category=value;renderCats();renderMenu()}
-function renderCats(){const host=document.getElementById("categories");if(!host)return;const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages"];host.innerHTML=cats.map(c=>'<button type="button" class="chip '+(category===c?'active':'')+'" data-category="'+escapeHTML(c)+'">'+escapeHTML(c)+'</button>').join("");host.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>setMenuCategory(btn.dataset.category)))}
+function renderCats(){const host=document.getElementById("categories");if(!host)return;const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];host.innerHTML=cats.map(c=>'<button type="button" class="chip '+(category===c?'active':'')+'" data-category="'+escapeHTML(c)+'">'+escapeHTML(c)+'</button>').join("");host.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>setMenuCategory(btn.dataset.category)))}
 function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
 function parseCartLineKey(key){const parts=String(key).split(":");return {menuId:Number(parts[0]),variantId:parts[1]?Number(parts[1]):0}}
 function findCustomerDish(id){return dishes.find(x=>Number(x.id)===Number(id))||popularDishes.find(x=>Number(x.id)===Number(id))||todaySpecials.find(x=>Number(x.id)===Number(id))||null}
