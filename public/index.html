@@ -2985,6 +2985,10 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 #menu .menu-search-input-wrap input#customerMenuSearch{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;padding:12px 44px 12px 14px!important;background:#fffdf7!important;border:1px solid #d9cfb6!important;border-radius:10px!important;font-size:16px!important}
 #menu .menu-search-clear{position:absolute!important;right:8px!important;top:50%!important;transform:translateY(-50%)!important;width:30px!important;height:30px!important;padding:0!important;border:0!important;border-radius:50%!important;background:#e8eee5!important;color:#104d37!important;font-size:22px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important}
 #menu .menu-search-clear[hidden]{display:none!important}
+/* Use only our custom clear button; suppress the browser-native search X on desktop and mobile. */
+#menu input#customerMenuSearch::-webkit-search-cancel-button{-webkit-appearance:none!important;appearance:none!important;display:none!important}
+#menu input#customerMenuSearch::-webkit-search-decoration{-webkit-appearance:none!important}
+#menu input#customerMenuSearch::-ms-clear{display:none!important;width:0!important;height:0!important}
 #menu .menu-search-sticky.menu-search-pinned{position:fixed!important;top:0!important;z-index:9999!important;margin:0!important;padding:8px 12px 10px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.14)!important}
 #menu .menu-search-sticky.menu-search-pinned label{display:none!important}
 .menu-search-spacer{display:none;height:0}
