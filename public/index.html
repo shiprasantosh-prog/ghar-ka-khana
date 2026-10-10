@@ -2978,10 +2978,10 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 
 <style id="sticky-menu-search-and-home-highlights">
 /* Search behaves like a frozen spreadsheet header after category chips scroll away. */
-#menu .menu-search-sticky{position:relative!important;top:auto!important;left:auto!important;transform:none!important;z-index:1!important;padding:10px 12px 12px!important;margin:8px 0 16px!important;background:transparent!important;border:0!important;outline:0!important;border-radius:12px!important;box-shadow:none!important;max-width:620px;box-sizing:border-box}
+#menu .menu-search-sticky{position:sticky!important;top:0!important;left:auto!important;transform:none!important;z-index:50!important;width:100%!important;max-width:100%!important;margin:8px 0 16px!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;outline:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.10)!important;box-sizing:border-box}
 #menu .menu-search-sticky label{color:#385644!important}
 #menu .menu-search-sticky input{background:#fffdf7!important;border:1px solid #d9cfb6!important;box-shadow:none!important;outline:0!important}
-#menu .menu-search-sticky.menu-search-pinned{position:sticky!important;top:0!important;z-index:50!important;width:min(620px,100%)!important;max-width:620px!important;margin:0 0 16px!important;padding-top:10px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.10)!important}
+#menu .menu-search-sticky.menu-search-pinned{position:sticky!important;top:0!important;z-index:50!important;width:100%!important;max-width:100%!important;margin:0 0 16px!important;padding-top:10px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.10)!important}
 #menu .menu-search-sticky.menu-search-pinned label{display:none!important}
 </style>
 <script id="menu-search-non-overlap-sticky">
@@ -3000,6 +3000,7 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    search.classList.toggle('menu-search-pinned',pinned);
  }
  window.addEventListener('scroll',update,{passive:true});
+ document.addEventListener('gkk:menu-layout-ready',()=>{search.classList.remove('menu-search-pinned');requestAnimationFrame(()=>{measure();update();});});
  window.addEventListener('resize',()=>{search.classList.remove('menu-search-pinned');measure();update();});
  document.addEventListener('click',event=>{if(event.target.closest('[onclick*="showPage"]'))setTimeout(()=>{measure();update();},0);});
  measure();update();
