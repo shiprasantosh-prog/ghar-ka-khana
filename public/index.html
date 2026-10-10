@@ -1236,7 +1236,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="field"><label>Email (optional, for new accounts)</label><input name="email" type="email" placeholder="Email address" autocomplete="email"></div>
 <div class="field"><label>Password</label><input name="password" required type="password" minlength="8" placeholder="At least 8 characters" autocomplete="current-password"></div>
 <div class="field" id="referralSignupField" hidden><label>Referral code (optional)</label><input name="referralCode" placeholder="Enter a friend’s referral code" autocomplete="off"><small class="notice">Enter it while creating your account. It cannot be added later.</small></div>
-<div id="signupAddressFields" hidden style="border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0"><h3 style="margin:0 0 8px">Delivery address</h3><p class="notice">Add the same details as a saved address so we can calculate delivery availability and fees.</p><div class="field"><label>Address label</label><select name="addressLabel" style="width:100%;background:#fff;border:1px solid #cbd9cc;color:#203b2e;border-radius:5px;padding:12px"><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field"><label>House / Flat / Door number</label><input name="house" autocomplete="address-line1" placeholder="House, flat or door number" required></div><div class="field"><label>Street / Area</label><input name="street" autocomplete="address-line2" placeholder="Street, locality or area" required></div><div class="field"><label>City</label><input name="city" autocomplete="address-level2" value="Bengaluru" required></div><div class="field"><label>State</label><input name="state" autocomplete="address-level1" value="Karnataka" required></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="6-digit PIN code" required></div></div>
+<div id="signupAddressFields" hidden style="border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0"><h3 style="margin:0 0 8px">Delivery address</h3><p class="notice">Search for your apartment, building, street or landmark, then select a Google Maps result to verify the location before creating your account.</p><div class="field"><label for="signupAddressSearch">Search your delivery address</label><input id="signupAddressSearch" autocomplete="off" placeholder="Search apartment, street, landmark or PIN code" required><div id="signupAddressSuggestions" class="notice address-suggestions" role="listbox"></div><small class="notice">Select a suggested location. Your delivery address cannot be verified by typing alone.</small></div><div class="field"><label>Address label</label><select name="addressLabel" style="width:100%;background:#fff;border:1px solid #cbd9cc;color:#203b2e;border-radius:5px;padding:12px"><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field"><label>House / Flat / Door number</label><input name="house" autocomplete="address-line1" placeholder="House, flat or door number" required></div><div class="field"><label>Street / Area</label><input name="street" autocomplete="address-line2" placeholder="Street, locality or area" required></div><div class="field"><label>City</label><input name="city" autocomplete="address-level2" value="Bengaluru" required></div><div class="field"><label>State</label><input name="state" autocomplete="address-level1" value="Karnataka" required></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="6-digit PIN code" required></div></div>
 <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button>
 </form><form id="forgotPasswordForm" hidden style="margin-top:14px"><h3>Reset your password</h3><p class="notice">We’ll email a secure, one-time reset link to your registered email address.</p><div class="field"><label>Registered email address</label><input id="resetEmail" name="email" type="email" autocomplete="email" placeholder="Email address used for your account" required></div><button class="btn secondary" id="sendResetLink" type="button">Send Reset Link</button><div id="resetPasswordFields" hidden><div class="field" style="margin-top:12px"><label>New password (at least 8 characters)</label><input name="newPassword" type="password" minlength="8" autocomplete="new-password"></div><div class="field"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" autocomplete="new-password"></div><button class="btn" type="submit">Save Password</button></div><button class="btn ghost" id="backToSignIn" type="button" style="margin-top:10px">Back to sign in</button><p id="resetPasswordMessage" class="notice" role="status"></p></form><p class="notice" id="authMessage" role="status"></p></div></section>
 <section class="wrap page-view" id="myorders" style="border-top:1px solid #332b1d;padding-top:35px">
@@ -1614,7 +1614,7 @@ document.getElementById("backToSignIn").addEventListener("click",()=>{document.g
 /* Removed obsolete SMS OTP reset handler; password reset uses secure email links. */
 
 
-document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.target,data=Object.fromEntries(new FormData(f)),msg=document.getElementById("authMessage");msg.textContent="Please wait…";const submit=document.getElementById("authSubmit");submit.disabled=true;try{const registering=authMode==="register";let verifiedLocation=null;if(registering){const pin=String(data.pincode||"").trim();if(!/^[0-9]{6}$/.test(pin))throw new Error("Please enter a valid 6-digit delivery PIN code.");const addressQuery=[data.house,data.street,data.city,data.state,pin,"India"].filter(Boolean).join(", ");let geo;try{const geoResponse=await fetch("https://photon.komoot.io/api/?limit=5&lang=en&lat=12.89627&lon=77.52864&zoom=10&q="+encodeURIComponent(addressQuery));if(!geoResponse.ok)throw new Error("Location service unavailable.");geo=await geoResponse.json();}catch(geoError){throw new Error("We couldn’t verify this delivery address right now. Please check your details and try again in a moment. Your account has not been created.");}const features=(geo?.features||[]).filter(x=>{const coords=x.geometry?.coordinates,props=x.properties||{},postcode=String(props.postcode||props.postalcode||"").replace(/\D/g,""),country=String(props.country||"").toLowerCase();return Array.isArray(coords)&&coords.length===2&&Number.isFinite(Number(coords[0]))&&Number.isFinite(Number(coords[1]))&&Number(coords[0])>=-180&&Number(coords[0])<=180&&Number(coords[1])>=-90&&Number(coords[1])<=90&&postcode===pin&&(!country||country.includes("india"));});if(!features.length)throw new Error("We couldn’t verify this address against the PIN code. Please check the house/flat, street/area and PIN code. Your account has not been created.");const feature=features[0],coords=feature.geometry.coordinates;verifiedLocation={latitude:Number(coords[1]),longitude:Number(coords[0])};}const addressText=registering?[data.house,data.street,data.city,data.state,data.pincode].filter(Boolean).join(", "):"";const payload=registering?{name:data.name,phone:data.phone,email:data.email||null,password:data.password,address:addressText,referralCode:data.referralCode||""}:{phone:data.phone,password:data.password};const result=await api(registering?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});currentUser=result.user;switchCartOwner(currentUser.phone);if(registering){const formatted=[data.street,data.city,data.state,data.pincode].filter(Boolean).join(", ");await api("/api/addresses",{method:"POST",body:JSON.stringify({label:data.addressLabel||"Home",house:data.house,street:data.street,city:data.city,state:data.state,pincode:data.pincode,formatted_address:formatted,latitude:verifiedLocation.latitude,longitude:verifiedLocation.longitude})});}msg.textContent="";await renderAccount()}catch(err){msg.textContent=err.message||"We couldn’t complete your request. Please try again."}finally{submit.disabled=false}});
+document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.target,data=Object.fromEntries(new FormData(f)),msg=document.getElementById("authMessage");msg.textContent="Please wait…";const submit=document.getElementById("authSubmit");submit.disabled=true;try{const registering=authMode==="register";let verifiedLocation=null;if(registering){const pin=String(data.pincode||"").trim(),selectedLat=Number(f.dataset.selectedLat),selectedLng=Number(f.dataset.selectedLng),selectedPin=String(f.dataset.selectedPostcode||"").replace(/\D/g,""),selectedCountry=String(f.dataset.selectedCountry||"").trim().toLowerCase();if(!/^[0-9]{6}$/.test(pin))throw new Error("Please enter a valid 6-digit delivery PIN code.");if(!f.dataset.selectedLat||!f.dataset.selectedLng||!Number.isFinite(selectedLat)||!Number.isFinite(selectedLng))throw new Error("Please search for your delivery address and select a Google Maps suggestion before creating your account.");if(!selectedPin||selectedPin!==pin)throw new Error("The selected Google Maps location does not match the PIN code entered. Please select the correct address or update the PIN code.");if(!selectedCountry.includes("india"))throw new Error("Please select a delivery address in India.");verifiedLocation={latitude:selectedLat,longitude:selectedLng};}const addressText=registering?[data.house,data.street,data.city,data.state,data.pincode].filter(Boolean).join(", "):"";const payload=registering?{name:data.name,phone:data.phone,email:data.email||null,password:data.password,address:addressText,referralCode:data.referralCode||""}:{phone:data.phone,password:data.password};const result=await api(registering?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});currentUser=result.user;switchCartOwner(currentUser.phone);if(registering){const formatted=[data.house,data.street,data.city,data.state,data.pincode].filter(Boolean).join(", ");await api("/api/addresses",{method:"POST",body:JSON.stringify({label:data.addressLabel||"Home",house:data.house,street:data.street,city:data.city,state:data.state,pincode:data.pincode,formatted_address:formatted,latitude:verifiedLocation.latitude,longitude:verifiedLocation.longitude})});}msg.textContent="";await renderAccount()}catch(err){msg.textContent=err.message||"We couldn’t complete your request. Please try again."}finally{submit.disabled=false}});
 async function handlePaymentReturn(){
  const params=new URLSearchParams(window.location.search);
  const payment=params.get("payment");
@@ -2024,57 +2024,76 @@ function googleAddressFeature(place,components){
  }};
 }
 document.addEventListener("input",e=>{
- if(e.target.id!=="addressSearch")return;
+ const isSaved=e.target.id==="addressSearch",isSignup=e.target.id==="signupAddressSearch";
+ if(!isSaved&&!isSignup)return;
  clearTimeout(addressSearchTimer);
- const requestId=++addressSearchRequestId;
- const q=e.target.value.trim(),host=document.getElementById("addressSuggestions"),form=document.getElementById("savedAddressForm");
- document.getElementById("clearAddressSearch").hidden=!q;
- form.dataset.selectedLat="";form.dataset.selectedLng="";
+ const requestId=++addressSearchRequestId,q=e.target.value.trim();
+ const host=document.getElementById(isSaved?"addressSuggestions":"signupAddressSuggestions");
+ const form=document.getElementById(isSaved?"savedAddressForm":"authForm");
+ document.getElementById(isSaved?"clearAddressSearch":"signupAddressSearch").hidden=isSaved?!q:false;
+ form.dataset.selectedLat="";form.dataset.selectedLng="";form.dataset.selectedPostcode="";form.dataset.selectedCountry="";form.dataset.selectedFormatted="";
+ if(isSignup)host.textContent="";
  if(q.length<3){host.textContent="Type at least 3 characters to search.";return}
  addressSearchTimer=setTimeout(async()=>{
   host.textContent="Searching Google Maps…";
-  document.getElementById("openAddressMap").hidden=true;
+  if(isSaved)document.getElementById("openAddressMap").hidden=true;
   try{
    const {AutocompleteSuggestion}=await loadGooglePlacesLibrary();
    if(requestId!==addressSearchRequestId)return;
    const response=await Promise.race([
     AutocompleteSuggestion.fetchAutocompleteSuggestions({input:q,includedRegionCodes:["in"],language:"en",locationBias:{center:{lat:12.89627,lng:77.52864},radius:50000}}),
-    new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places autocomplete request timed out. The API request is not responding; check Places API (New), billing, API-key restrictions, and browser console errors.")),12000))
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places autocomplete request timed out. Check Places API (New), billing, API-key restrictions, and browser console errors.")),12000))
    ]);
    if(requestId!==addressSearchRequestId)return;
-   const predictions=(response.suggestions||[]).map(x=>x.placePrediction).filter(Boolean).slice(0,8);
-   const features=[];
+   const predictions=(response.suggestions||[]).map(x=>x.placePrediction).filter(Boolean).slice(0,8),features=[];
    for(const prediction of predictions){
     if(requestId!==addressSearchRequestId)return;
     try{
      const place=prediction.toPlace();
-     await Promise.race([
-      place.fetchFields({fields:["displayName","formattedAddress","location","addressComponents"]}),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places place details timed out.")),10000))
-     ]);
+     await Promise.race([place.fetchFields({fields:["displayName","formattedAddress","location","addressComponents"]}),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places place details timed out.")),10000))]);
      if(place.location)features.push(googleAddressFeature(place,place.addressComponents||[]));
     }catch(err){console.warn("Could not load Google place details",err)}
    }
    if(requestId!==addressSearchRequestId)return;
    host._features=features;
-   document.getElementById("openAddressMap").hidden=features.length>0;
+   if(isSaved)document.getElementById("openAddressMap").hidden=features.length>0;
    host.innerHTML=features.length?features.map((x,i)=>{
-    const p=x.properties||{},main=p.name||"Location";
-    const detail=[p.formatted_address,p.postcode].filter(Boolean).filter((v,j,a)=>a.indexOf(v)===j).join(" · ");
-    return `<button type="button" class="btn ghost" style="display:block;width:100%;text-align:left;margin:4px 0;white-space:normal" data-address-result="${i}"><strong>${escapeHTML(main)}</strong><span style="display:block;font-size:.9em;opacity:.8">${escapeHTML(detail)}</span></button>`;
-   }).join(""):(document.getElementById("openAddressMap").hidden=false,"No matching place found on Google Maps. Try a fuller apartment or street name, or pin your location on the map.");
+    const p=x.properties||{},main=p.name||"Location",detail=[p.formatted_address,p.postcode].filter(Boolean).filter((v,j,a)=>a.indexOf(v)===j).join(" · ");
+    return `<button type="button" class="btn ghost" style="display:block;width:100%;text-align:left;margin:4px 0;white-space:normal" data-address-result="${i}" data-address-form="${isSaved?"saved":"signup"}"><strong>${escapeHTML(main)}</strong><span style="display:block;font-size:.9em;opacity:.8">${escapeHTML(detail)}</span></button>`;
+   }).join(""):(isSaved? (document.getElementById("openAddressMap").hidden=false,"No matching place found on Google Maps. Try a fuller apartment or street name, or pin your location on the map."):"No matching place found. Try a fuller apartment or street name.");
   }catch(err){
    if(requestId!==addressSearchRequestId)return;
    console.error("Google Places search failed",err);
-   document.getElementById("openAddressMap").hidden=false;
+   if(isSaved)document.getElementById("openAddressMap").hidden=false;
    const message=String(err?.message||err||"");
-   // Keep the actual Maps error visible so API permissions/configuration failures
-   // can be diagnosed instead of hiding them behind a generic message.
-   host.textContent=(message&&message!=="[object Object]"?message:"Google Places returned an unknown error.")+" You can pin the location on the map instead.";
+   host.textContent=(message&&message!=="[object Object]"?message:"Google Places returned an unknown error.")+(isSaved?" You can pin the location on the map instead.":" Please try searching again.");
   }
  },450);
 });
-document.addEventListener("click",e=>{if(e.target.closest("#clearAddressSearch")){clearTimeout(addressSearchTimer);addressSearchRequestId++;const search=document.getElementById("addressSearch"),form=document.getElementById("savedAddressForm"),host=document.getElementById("addressSuggestions");search.value="";document.getElementById("clearAddressSearch").hidden=true;form.dataset.selectedLat="";form.dataset.selectedLng="";form.elements.street.value="";form.elements.city.value="Bengaluru";form.elements.state.value="Karnataka";form.elements.pincode.value="";host.innerHTML="";host._features=[];document.getElementById("openAddressMap").hidden=true;search.focus();return;}const button=e.target.closest("[data-address-result]");if(!button)return;const host=document.getElementById("addressSuggestions"),feature=host._features?.[Number(button.dataset.addressResult)];if(!feature)return;const p=feature.properties||{},form=document.getElementById("savedAddressForm"),[lng,lat]=feature.geometry.coordinates;form.dataset.selectedLat=String(lat);form.dataset.selectedLng=String(lng);form.elements.street.value=p.street||p.suburb||p.neighbourhood||p.locality||"";form.elements.city.value=p.city||"Bengaluru";form.elements.state.value=p.state||"Karnataka";if(p.postcode)form.elements.pincode.value=p.postcode;document.getElementById("addressSearch").value=p.formatted_address||p.name||button.textContent.trim();document.getElementById("clearAddressSearch").hidden=false;host.innerHTML='<div class="address-selected"><span aria-hidden="true">✓</span><div><strong>Location selected</strong><small>Now add your flat or house number and confirm the details below.</small></div></div>';});
+document.addEventListener("click",e=>{
+ if(e.target.closest("#clearAddressSearch")){
+  clearTimeout(addressSearchTimer);addressSearchRequestId++;
+  const search=document.getElementById("addressSearch"),form=document.getElementById("savedAddressForm"),host=document.getElementById("addressSuggestions");
+  search.value="";document.getElementById("clearAddressSearch").hidden=true;form.dataset.selectedLat="";form.dataset.selectedLng="";form.dataset.selectedPostcode="";form.dataset.selectedCountry="";form.dataset.selectedFormatted="";
+  form.elements.street.value="";form.elements.city.value="Bengaluru";form.elements.state.value="Karnataka";form.elements.pincode.value="";
+  host.innerHTML="";host._features=[];document.getElementById("openAddressMap").hidden=true;search.focus();return;
+ }
+ const button=e.target.closest("[data-address-result]");if(!button)return;
+ const isSaved=button.dataset.addressForm==="saved",host=document.getElementById(isSaved?"addressSuggestions":"signupAddressSuggestions"),feature=host._features?.[Number(button.dataset.addressResult)];if(!feature)return;
+ const p=feature.properties||{},form=document.getElementById(isSaved?"savedAddressForm":"authForm"),[lng,lat]=feature.geometry.coordinates;
+ form.dataset.selectedLat=String(lat);form.dataset.selectedLng=String(lng);form.dataset.selectedPostcode=String(p.postcode||"").replace(/\D/g,"");form.dataset.selectedCountry=String(p.country||"");form.dataset.selectedFormatted=String(p.formatted_address||p.name||"");
+ form.elements.street.value=p.street||p.suburb||p.neighbourhood||p.locality||"";
+ form.elements.city.value=p.city||"Bengaluru";form.elements.state.value=p.state||"Karnataka";
+ if(p.postcode)form.elements.pincode.value=p.postcode;
+ if(isSaved){
+  document.getElementById("addressSearch").value=p.formatted_address||p.name||button.textContent.trim();
+  document.getElementById("clearAddressSearch").hidden=false;
+  host.innerHTML='<div class="address-selected"><span aria-hidden="true">✓</span><div><strong>Location selected</strong><small>Now add your flat or house number and confirm the address details below.</small></div></div>';
+ }else{
+  document.getElementById("signupAddressSearch").value=p.formatted_address||p.name||button.textContent.trim();
+  host.innerHTML='<div class="address-selected"><span aria-hidden="true">✓</span><div><strong>Location selected</strong><small>Location selected. Confirm the house/flat and PIN code before creating your account.</small></div></div>';
+ }
+});
 let addressMapInstance=null,addressMapMarker=null,addressMapPoint=null,addressMapSearchTimer=null;
 function openAddressMapPicker(){const panel=document.getElementById("addressMapPicker");panel.hidden=false;document.getElementById("openAddressMap").hidden=true;setTimeout(()=>{if(!addressMapInstance){addressMapInstance=L.map("addressMapCanvas").setView([12.89627,77.52864],13);L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles &copy; Esri &mdash; Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, &copy; OpenStreetMap contributors, and the GIS User Community"}).addTo(addressMapInstance);addressMapInstance.on("click",e=>setAddressMapPoint(e.latlng.lat,e.latlng.lng,"Pin placed. Confirm this location or adjust it on the map."));}addressMapInstance.invalidateSize();const f=document.getElementById("savedAddressForm");if(f.dataset.selectedLat&&f.dataset.selectedLng)setAddressMapPoint(Number(f.dataset.selectedLat),Number(f.dataset.selectedLng),"Current selected address.");else if(addressMapPoint)addressMapInstance.setView([addressMapPoint.lat,addressMapPoint.lng],16);},150);}
 function closeAddressMapPicker(){document.getElementById("addressMapPicker").hidden=true;}
