@@ -1980,7 +1980,7 @@ document.addEventListener("input",e=>{
    const {AutocompleteSuggestion}=await loadGooglePlacesLibrary();
    if(requestId!==addressSearchRequestId)return;
    const response=await Promise.race([
-    AutocompleteSuggestion.fetchAutocompleteSuggestions({input:q,includedRegionCodes:["in"]}),
+    AutocompleteSuggestion.fetchAutocompleteSuggestions({input:q,includedRegionCodes:["in"],language:"en",locationBias:{circle:{center:{lat:12.89627,lng:77.52864},radius:50000}}}),
     new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places autocomplete request timed out. The API request is not responding; check Places API (New), billing, API-key restrictions, and browser console errors.")),12000))
    ]);
    if(requestId!==addressSearchRequestId)return;
@@ -2010,9 +2010,9 @@ document.addEventListener("input",e=>{
    console.error("Google Places search failed",err);
    document.getElementById("openAddressMap").hidden=false;
    const message=String(err?.message||err||"");
-   host.textContent=/GOOGLE_MAPS_API_KEY|configuration is missing|API key|not authorized|REQUEST_DENIED|billing|referrer|Places API|Autocomplete \(New\)|importLibrary|Timed out loading Google Maps|failed to load/i.test(message)
-    ?message+" You can pin the location on the map instead."
-    :"Google address search is temporarily unavailable. You can pin the location on the map instead.";
+   // Keep the actual Maps error visible so API permissions/configuration failures
+   // can be diagnosed instead of hiding them behind a generic message.
+   host.textContent=(message&&message!=="[object Object]"?message:"Google Places returned an unknown error.")+" You can pin the location on the map instead.";
   }
  },450);
 });
