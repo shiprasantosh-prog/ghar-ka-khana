@@ -1894,6 +1894,8 @@ function updateCart(){
     document.getElementById("payableTotal").textContent=money(Math.max(0,subtotal-discount)+handlingFee+deliveryFee);
     const minimumOrder=minimumOrderForAddress(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");const minimumNotice=document.getElementById("minimumOrderNotice");if(minimumNotice)minimumNotice.textContent=selectedSavedAddress?"Minimum order value for this address: Rs. "+minimumOrder+".":"Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).";
     if(appliedPromo){const line=document.getElementById("promoBreakdown");line.innerHTML="<strong>"+escapeHTML(appliedPromo.code)+" applied</strong>"+(appliedPromo.excludedItems.length?"<br>Excluded from discount: "+appliedPromo.excludedItems.map(x=>escapeHTML(x.name)).join(", "):"")}else if(discount>0){const line=document.getElementById("promoBreakdown");if(line)line.textContent=referralInfo?.firstOrderEligible?"Your first-order offer is automatically applied.": "One available referral reward is automatically applied."}
+    // Revalidate checkout whenever the basket changes, including quantity decreases.
+    updatePlaceOrderButton();
 }
 function openCart(){if(window.matchMedia("(max-width:900px)").matches&&document.body.classList.contains("sidebar-expanded"))toggleSidebar();document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";loadSavedAddresses()}}
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
