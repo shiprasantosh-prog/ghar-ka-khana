@@ -1264,9 +1264,16 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
 // Configure RAZORPAY_WEBHOOK_SECRET in Render and use the same secret in Razorpay Dashboard.
 // The webhook is intentionally kept alongside the Checkout callback as a second confirmation path.
 app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
+  // Safe diagnostics only: never log secrets, signatures, or webhook payloads.
   const webhookSecret = String(process.env.RAZORPAY_WEBHOOK_SECRET || "");
   const signature = String(req.headers["x-razorpay-signature"] || "");
+  console.info("[Razorpay webhook] Request received:", {
+    signaturePresent: Boolean(signature),
+    secretConfigured: Boolean(webhookSecret),
+    rawBodyPresent: Boolean(req.rawBody)
+  });
   if (!webhookSecret || !signature || !req.rawBody) {
+    console.warn("[Razorpay webhook] Rejected: missing secret, signature, or raw request body.");
     return res.status(400).json({ error: "Invalid webhook configuration." });
   }
 
@@ -1274,8 +1281,10 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   const valid = expected.length === signature.length &&
     crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
   if (!valid) {
+    console.warn("[Razorpay webhook] Rejected: signature verification failed.");
     return res.status(400).json({ error: "Invalid webhook signature." });
   }
+  console.info("[Razorpay webhook] Signature verified.");
 
   const event = String(req.body?.event || "");
   console.info("[Razorpay webhook] Verified event received:", event);
