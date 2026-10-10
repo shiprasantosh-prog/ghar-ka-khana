@@ -609,7 +609,7 @@ app.get("/api/auth/me", auth, asyncRoute(async (req, res) => {
 app.get("/api/referrals/me", auth, asyncRoute(async (req,res)=>{
  const user=await pool.query("SELECT referral_code FROM users WHERE id=$1 AND role='customer'",[req.user.id]);
  if(!user.rowCount)return res.status(403).json({error:"Customer account required."});
- const eligible=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
+ const eligible=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (discount_source='first_order' OR payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
  const rewards=await pool.query("SELECT COUNT(*)::int AS available FROM referral_rewards WHERE referrer_user_id=$1 AND status='available'",[req.user.id]);
  const referrals=await pool.query("SELECT COUNT(*)::int AS successful FROM referral_rewards WHERE referrer_user_id=$1",[req.user.id]);
  res.json({referralCode:user.rows[0].referral_code,firstOrderEligible:!eligible.rowCount,availableRewards:Number(rewards.rows[0].available),successfulReferrals:Number(referrals.rows[0].successful)});
@@ -1208,7 +1208,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     discount=code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value;
     discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;discountSource="promo";
   } else {
-    const priorSuccessful=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
+    const priorSuccessful=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (discount_source='first_order' OR payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
     if(!priorSuccessful.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),100);discountSource=discount>0?"first_order":"";}
     else {const reward=await pool.query("SELECT id,reward_amount FROM referral_rewards WHERE referrer_user_id=$1 AND status='available' ORDER BY id LIMIT 1",[req.user.id]);if(reward.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),Number(reward.rows[0].reward_amount),75);discountSource=discount>0?"referral_reward":"";appliedCode="REFERRAL REWARD";}}
   }
