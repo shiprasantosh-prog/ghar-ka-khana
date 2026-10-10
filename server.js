@@ -1224,8 +1224,23 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   if(row.status==="Cancelled"||row.payment_status==="paid")return res.status(409).json({error:"This order cannot be paid again."});
   if(!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))return res.status(409).json({error:"This order is not eligible for payment retry."});
   const rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId)+"-R"+Date.now().toString().slice(-6),notes:{ghar_ka_khana_order_id:String(orderId),payment_retry:"true"}});
-  await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created')",[orderId,rpOrder.id]);
-  await pool.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2 AND user_id=$3 AND payment_status<>'paid'",[rpOrder.id,orderId,req.user.id]);
+  // Atomically re-check eligibility: an owner/customer cancellation or successful
+  // payment may have happened after the initial read while Razorpay created this order.
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    const locked=await client.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE",[orderId,req.user.id]);
+    const current=locked.rows[0];
+    if(!current){await client.query("ROLLBACK");return res.status(404).json({error:"Order not found."});}
+    if(current.status==="Cancelled"||current.payment_status==="paid"||!["created","failed","unpaid"].includes(String(current.payment_status||"").toLowerCase())){
+      await client.query("ROLLBACK");
+      return res.status(409).json({error:"This order is no longer eligible for payment retry. Refresh your orders and check its current status."});
+    }
+    await client.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created')",[orderId,rpOrder.id]);
+    await client.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2",[rpOrder.id,orderId]);
+    await client.query("COMMIT");
+  }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}
+  finally{client.release();}
   const order=await readOrder(orderId);
   return res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
 }));
