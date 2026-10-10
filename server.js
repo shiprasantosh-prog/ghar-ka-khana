@@ -1383,16 +1383,30 @@ async function refundLateCapturedCancelledOrder(orderId) {
 }
 
 app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
-  // Safe diagnostics only: never log secrets, signatures, or webhook payloads.
+  // Correlate each delivery attempt without logging secrets, signatures, or payloads.
+  const diagnosticId = crypto.randomUUID();
+  const startedAt = Date.now();
+  res.on("finish", () => {
+    console.info("[Razorpay webhook] Request completed:", {
+      diagnosticId,
+      event: String(req.body?.event || "unknown"),
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt
+    });
+  });
   const webhookSecret = String(process.env.RAZORPAY_WEBHOOK_SECRET || "");
   const signature = String(req.headers["x-razorpay-signature"] || "");
   console.info("[Razorpay webhook] Request received:", {
+    diagnosticId,
+    method: req.method,
+    path: req.path,
+    contentType: String(req.headers["content-type"] || ""),
     signaturePresent: Boolean(signature),
     secretConfigured: Boolean(webhookSecret),
     rawBodyPresent: Boolean(req.rawBody)
   });
   if (!webhookSecret || !signature || !req.rawBody) {
-    console.warn("[Razorpay webhook] Rejected: missing secret, signature, or raw request body.");
+    console.warn("[Razorpay webhook] Rejected: missing secret, signature, or raw request body.", { diagnosticId });
     return res.status(400).json({ error: "Invalid webhook configuration." });
   }
 
@@ -1400,13 +1414,13 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   const valid = expected.length === signature.length &&
     crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
   if (!valid) {
-    console.warn("[Razorpay webhook] Rejected: signature verification failed.");
+    console.warn("[Razorpay webhook] Rejected: signature verification failed.", { diagnosticId });
     return res.status(400).json({ error: "Invalid webhook signature." });
   }
-  console.info("[Razorpay webhook] Signature verified.");
+  console.info("[Razorpay webhook] Signature verified.", { diagnosticId });
 
   const event = String(req.body?.event || "");
-  console.info("[Razorpay webhook] Verified event received:", event);
+  console.info("[Razorpay webhook] Verified event received:", { diagnosticId, event });
 
   // Refund events carry a refund entity rather than a payment entity.
   // Match the Razorpay refund ID to the durable local refund record and
@@ -1427,9 +1441,10 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
       [status, failureReason, refundId]
     );
     if (!updatedRefund.rowCount) {
-      console.warn("[Razorpay webhook] Refund event had no matching local refund record:", { event, refundId });
+      console.warn("[Razorpay webhook] Refund event had no matching local refund record:", { diagnosticId, event, refundId });
     } else {
       console.info("[Razorpay webhook] Refund status updated:", {
+        diagnosticId,
         event,
         refundId,
         status,
