@@ -316,7 +316,7 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_user_id INTEGER REFERENCES users(id)");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_source TEXT NOT NULL DEFAULT ''");
-  await pool.query("CREATE TABLE IF NOT EXISTS referral_rewards (id SERIAL PRIMARY KEY, referrer_user_id INTEGER NOT NULL REFERENCES users(id), referred_user_id INTEGER NOT NULL UNIQUE REFERENCES users(id), reward_amount INTEGER NOT NULL DEFAULT 75 CHECK (reward_amount > 0), status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','used')), reserved_order_id INTEGER REFERENCES orders(id), earned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, used_at TIMESTAMPTZ)");
+  await pool.query("CREATE TABLE IF NOT EXISTS referral_rewards (id SERIAL PRIMARY KEY, referrer_user_id INTEGER NOT NULL REFERENCES users(id), referred_user_id INTEGER NOT NULL UNIQUE REFERENCES users(id), reward_amount INTEGER NOT NULL DEFAULT 75 CHECK (reward_amount > 0), status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','used')), reserved_order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL, earned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, used_at TIMESTAMPTZ)");
   await pool.query("CREATE INDEX IF NOT EXISTS referral_rewards_available_idx ON referral_rewards(referrer_user_id,status,id)");
   await pool.query("UPDATE users SET referral_code='GKK' || UPPER(SUBSTRING(MD5(id::text || phone) FROM 1 FOR 8)) WHERE role='customer' AND (referral_code IS NULL OR referral_code='')");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS users_referral_code_unique ON users(referral_code) WHERE referral_code IS NOT NULL");
@@ -1242,6 +1242,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     const order=await readOrder(orderId);
     res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
   }catch(e){
+    await pool.query("UPDATE referral_rewards SET status='available',reserved_order_id=NULL WHERE reserved_order_id=$1 AND status='reserved'",[orderId]).catch(()=>{});
     await pool.query("DELETE FROM orders WHERE id=$1",[orderId]).catch(()=>{});
     console.error("Razorpay order creation failed:",e.message);
     return res.status(502).json({error:"We could not start the online payment. Please try again."});
