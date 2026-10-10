@@ -2124,7 +2124,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
  button.disabled=true;button.textContent=paymentMethod==="cod"?"Placing COD order…":"Preparing payment…";
  try{
   const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
-  const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:document.getElementById("promoCode").value.trim(),addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude),paymentMethod})});
+  const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:appliedPromo?document.getElementById("promoCode").value.trim():"",addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude),paymentMethod})});
   if(paymentMethod==="cod"){
    window.location.href="/?payment=cod&orderId="+encodeURIComponent(String(order.id));
    return;
