@@ -2062,9 +2062,8 @@ async function startRazorpayPayment(order,checkoutData,form,button){
    name:"Ghar ka Khana",
    description:"Food order #GKK-"+String(order.id).padStart(4,"0"),
    order_id:order.payment.orderId,
-   // Keep the server callback as a fallback, but handle normal completion in this page.
-   callback_url:window.location.origin+"/api/payments/callback",
-   redirect:false,
+   // Use the in-page handler flow exclusively. Combining callback_url with a handler
+   // can trigger a separate navigation context for some card authentication flows.
    handler:async response=>{
     verifyingPayment=true;
     button.disabled=true;button.textContent="Verifying payment…";
