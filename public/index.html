@@ -1916,12 +1916,12 @@ async function loadGooglePlacesLibrary(){
   }
   const config=await configResponse.json();
   if(!config.apiKey)throw new Error("GOOGLE_MAPS_API_KEY is empty on the server.");
-  if(!window.google?.maps?.places){
+  if(!window.google?.maps?.importLibrary){
    await new Promise((resolve,reject)=>{
     const callbackName="__ghkMapsPlacesReady";
     const timeout=setTimeout(()=>{
      delete window[callbackName];
-     reject(new Error("Timed out loading Google Maps. Check the API key, Places API, billing, and website referrer restrictions."));
+     reject(new Error("Timed out loading Google Maps JavaScript API. Check the key, website referrer restrictions, and network access."));
     },15000);
     window[callbackName]=()=>{
      clearTimeout(timeout);
@@ -1929,70 +1929,26 @@ async function loadGooglePlacesLibrary(){
      resolve();
     };
     const script=document.createElement("script");
-    const params=new URLSearchParams({
-     key:config.apiKey,
-     v:"weekly",
-     libraries:"places",
-     callback:callbackName
-    });
-    script.src="https://maps.googleapis.com/maps/api/js?"+params.toString();
+    script.src="https://maps.googleapis.com/maps/api/js?"+new URLSearchParams({
+     key:config.apiKey,v:"weekly",libraries:"places",loading:"async",callback:callbackName
+    }).toString();
     script.async=true;
     script.onerror=()=>{
      clearTimeout(timeout);
      delete window[callbackName];
-     reject(new Error("Google Maps script failed to load. Check network access and the API key."));
+     reject(new Error("Google Maps JavaScript API failed to load. Check the key and website referrer restrictions."));
     };
     document.head.appendChild(script);
    });
   }
-  if(!window.google?.maps?.places)throw new Error("Google Maps loaded, but the Places library is unavailable.");
-  // Use the stable Places service interface; it works with the callback-based API
-  // and does not depend on importLibrary or the newer AutocompleteSuggestion API.
-  return {
-   AutocompleteSuggestion:{
-    fetchAutocompleteSuggestions:async({input})=>{
-     const service=new google.maps.places.AutocompleteService();
-     const predictions=await new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>reject(new Error("Google Places autocomplete timed out. Check internet access, Places API enablement, billing, and API-key restrictions.")),10000);
-      service.getPlacePredictions(
-       {input,componentRestrictions:{country:"in"}},
-       (items,status)=>{
-        clearTimeout(timer);
-        if(status===google.maps.places.PlacesServiceStatus.OK||status===google.maps.places.PlacesServiceStatus.ZERO_RESULTS)resolve(items||[]);
-        else reject(new Error("Google Places autocomplete failed: "+status+". Check Places API access, billing, and API-key restrictions."));
-       }
-      );
-     });
-     return {suggestions:predictions.map(prediction=>({placePrediction:{
-      toPlace:()=>{
-       const selectedPlace={};
-       selectedPlace.fetchFields=async()=>{
-        const detailService=new google.maps.places.PlacesService(document.createElement("div"));
-        const detail=await new Promise((resolve,reject)=>{
-         const timer=setTimeout(()=>reject(new Error("Google Places place-details request timed out.")),10000);
-         detailService.getDetails(
-          {placeId:prediction.place_id,fields:["name","formatted_address","geometry","address_components"]},
-          (place,status)=>{
-           clearTimeout(timer);
-           if(status===google.maps.places.PlacesServiceStatus.OK)resolve(place);
-           else reject(new Error("Google Places place-details request failed: "+status+"."));
-          }
-         );
-        });
-        const location=detail.geometry?.location;
-        Object.assign(selectedPlace,{
-         displayName:detail.name||detail.formatted_address,
-         formattedAddress:detail.formatted_address,
-         location:location?{lat:()=>location.lat(),lng:()=>location.lng()}:null,
-         addressComponents:(detail.address_components||[]).map(c=>({longText:c.long_name,types:c.types}))
-        });
-       };
-       return selectedPlace;
-      }
-     }}))};
-    }
-   }
-  };
+  if(typeof window.google?.maps?.importLibrary!=="function"){
+   throw new Error("Google Maps loaded without importLibrary. Check that the Maps JavaScript API is enabled for this key.");
+  }
+  // Use the current Places Autocomplete Data API, not the deprecated
+  // AutocompleteService callback interface which can leave requests pending.
+  const places=await window.google.maps.importLibrary("places");
+  if(!places?.AutocompleteSuggestion)throw new Error("Google Places Autocomplete (New) is unavailable. Enable Places API (New) in Google Cloud for this API key.");
+  return places;
  })().catch(err=>{googlePlacesLibraryPromise=null;throw err});
  return googlePlacesLibraryPromise;
 }
@@ -2018,42 +1974,46 @@ document.addEventListener("input",e=>{
  form.dataset.selectedLat="";form.dataset.selectedLng="";
  if(q.length<3){host.textContent="Type at least 3 characters to search.";return}
  addressSearchTimer=setTimeout(async()=>{
-  host.textContent="Searching nearby places…";
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),12000);
+  host.textContent="Searching Google Maps…";
+  document.getElementById("openAddressMap").hidden=true;
   try{
-   // Use Photon/OpenStreetMap for address suggestions so this flow does not
-   // hang when Google Places autocomplete is unavailable or restricted.
-   const url="https://photon.komoot.io/api/?limit=10&lang=en&lat=12.89627&lon=77.52864&zoom=10&q="+encodeURIComponent(q);
-   const response=await fetch(url,{signal:controller.signal,headers:{Accept:"application/json"}});
-   if(!response.ok)throw new Error("Address search returned HTTP "+response.status+".");
-   const data=await response.json();
+   const {AutocompleteSuggestion}=await loadGooglePlacesLibrary();
    if(requestId!==addressSearchRequestId)return;
-   const features=(data.features||[])
-    .filter(x=>x.geometry?.coordinates?.length>=2)
-    .filter(x=>!x.properties?.country||/india/i.test(x.properties.country))
-    .map(x=>{
-     const p=x.properties||{};
-     const street=[p.housenumber,p.street].filter(Boolean).join(" ");
-     const area=p.suburb||p.neighbourhood||p.district||p.locality||p.city||"";
-     const parts=[street||p.name,area,p.city,p.state,p.postcode,"India"].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
-     return {...x,properties:{...p,name:p.name||street||area||"Location",street:street||p.name||"",suburb:p.suburb||p.neighbourhood||p.locality||p.district||"",city:p.city||p.locality||p.district||"Bengaluru",state:p.state||"Karnataka",postcode:p.postcode||"",formatted_address:parts.join(", ")}};
-    }).slice(0,8);
+   const response=await Promise.race([
+    AutocompleteSuggestion.fetchAutocompleteSuggestions({input:q,includedRegionCodes:["in"]}),
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places autocomplete request timed out. The API request is not responding; check Places API (New), billing, API-key restrictions, and browser console errors.")),12000))
+   ]);
+   if(requestId!==addressSearchRequestId)return;
+   const predictions=(response.suggestions||[]).map(x=>x.placePrediction).filter(Boolean).slice(0,8);
+   const features=[];
+   for(const prediction of predictions){
+    if(requestId!==addressSearchRequestId)return;
+    try{
+     const place=prediction.toPlace();
+     await Promise.race([
+      place.fetchFields({fields:["displayName","formattedAddress","location","addressComponents"]}),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Google Places place details timed out.")),10000))
+     ]);
+     if(place.location)features.push(googleAddressFeature(place,place.addressComponents||[]));
+    }catch(err){console.warn("Could not load Google place details",err)}
+   }
+   if(requestId!==addressSearchRequestId)return;
    host._features=features;
    document.getElementById("openAddressMap").hidden=features.length>0;
    host.innerHTML=features.length?features.map((x,i)=>{
     const p=x.properties||{},main=p.name||"Location";
-    const detail=[p.formatted_address].filter(Boolean).join(" · ");
+    const detail=[p.formatted_address,p.postcode].filter(Boolean).filter((v,j,a)=>a.indexOf(v)===j).join(" · ");
     return `<button type="button" class="btn ghost" style="display:block;width:100%;text-align:left;margin:4px 0;white-space:normal" data-address-result="${i}"><strong>${escapeHTML(main)}</strong><span style="display:block;font-size:.9em;opacity:.8">${escapeHTML(detail)}</span></button>`;
-   }).join(""):(document.getElementById("openAddressMap").hidden=false,"No matching place found. Try a nearby landmark or pin your location on the map.");
+   }).join(""):(document.getElementById("openAddressMap").hidden=false,"No matching place found on Google Maps. Try a fuller apartment or street name, or pin your location on the map.");
   }catch(err){
    if(requestId!==addressSearchRequestId)return;
-   console.error("Address search failed",err);
+   console.error("Google Places search failed",err);
    document.getElementById("openAddressMap").hidden=false;
-   host.textContent=err?.name==="AbortError"
-    ?"Address search took too long. Please try again or pin your location on the map."
-    :"Address search is temporarily unavailable. Please try again or pin your location on the map.";
-  }finally{clearTimeout(timeout)}
+   const message=String(err?.message||err||"");
+   host.textContent=/GOOGLE_MAPS_API_KEY|configuration is missing|API key|not authorized|REQUEST_DENIED|billing|referrer|Places API|Autocomplete \(New\)|importLibrary|Timed out loading Google Maps|failed to load/i.test(message)
+    ?message+" You can pin the location on the map instead."
+    :"Google address search is temporarily unavailable. You can pin the location on the map instead.";
+  }
  },450);
 });
 document.addEventListener("click",e=>{const button=e.target.closest("[data-address-result]");if(!button)return;const host=document.getElementById("addressSuggestions"),feature=host._features?.[Number(button.dataset.addressResult)];if(!feature)return;const p=feature.properties||{},form=document.getElementById("savedAddressForm"),[lng,lat]=feature.geometry.coordinates;form.dataset.selectedLat=String(lat);form.dataset.selectedLng=String(lng);form.elements.street.value=p.street||p.suburb||p.neighbourhood||p.locality||"";form.elements.city.value=p.city||"Bengaluru";form.elements.state.value=p.state||"Karnataka";if(p.postcode)form.elements.pincode.value=p.postcode;document.getElementById("addressSearch").value=p.formatted_address||p.name||button.textContent.trim();host.innerHTML='<div class="address-selected"><span aria-hidden="true">✓</span><div><strong>Location selected</strong><small>Now add your flat or house number and confirm the details below.</small></div></div>';});
