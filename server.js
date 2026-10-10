@@ -2630,7 +2630,7 @@ app.use((err, req, res, next) => {
   if (req.path === "/api/addresses" && req.method === "POST") {
     return res.status(500).json({ error: `Address could not be saved (${err.code || "SERVER_ERROR"}). Please try again; if it repeats, share this code with support.` });
   }
-  res.status(500).json({ error: "Something went wrong. Please try again." });
+  const status=Number(err.statusCode||err.status)||500;\n  res.status(status>=400&&status<600?status:500).json({ error: status>=400&&status<500||status===502||status===503 ? err.message : "Something went wrong. Please try again." });
 });
 
 // Start server only after database is ready
