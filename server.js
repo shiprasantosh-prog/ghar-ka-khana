@@ -591,6 +591,45 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
   res.json({ user: safeUser });
 }));
 
+const passwordResetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+function normalizeOtpPhone(value) {
+  const raw=String(value||"").trim();
+  if(/^\+\d{10,15}$/.test(raw)) return raw;
+  const digits=raw.replace(/\D/g,"");
+  if(/^\d{10}$/.test(digits)) return "+91"+digits;
+  if(/^91\d{10}$/.test(digits)) return "+"+digits;
+  return "";
+}
+async function twilioVerifyRequest(path, params) {
+  const sid=process.env.TWILIO_ACCOUNT_SID, token=process.env.TWILIO_AUTH_TOKEN, service=process.env.TWILIO_VERIFY_SERVICE_SID;
+  if(!sid||!token||!service) throw Object.assign(new Error("Password reset by SMS is not configured yet. Please contact Ghar ka Khana for help."),{status:503});
+  const response=await fetch("https://verify.twilio.com/v2/Services/"+encodeURIComponent(service)+path,{
+    method:"POST",headers:{"Authorization":"Basic "+Buffer.from(sid+":"+token).toString("base64"),"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams(params),signal:AbortSignal.timeout(12000)
+  });
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok) { const error=new Error("We could not complete SMS verification. Please check the mobile number and try again.");error.status=502;throw error; }
+  return payload;
+}
+app.post("/api/auth/password-reset/request",passwordResetLimiter,asyncRoute(async(req,res)=>{
+  const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone);
+  if(!to)return res.status(400).json({error:"Enter a valid mobile number including the 10-digit number."});
+  const found=await pool.query("SELECT id FROM users WHERE phone=$1 AND role='customer'",[phone]);
+  // Do not reveal whether a customer account exists.
+  if(found.rowCount) await twilioVerifyRequest("/Verifications",{To:to,Channel:"sms"});
+  res.json({ok:true,message:"If a customer account matches that number, an OTP has been sent. Enter the code to reset your password."});
+}));
+app.post("/api/auth/password-reset/confirm",passwordResetLimiter,asyncRoute(async(req,res)=>{
+  const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone),code=String(req.body?.code||"").trim(),password=String(req.body?.newPassword||"");
+  if(!to||/^\d{4,10}$/.test(code)===false||password.length<8)return res.status(400).json({error:"Enter your mobile number, the OTP, and a new password of at least 8 characters."});
+  const found=await pool.query("SELECT id FROM users WHERE phone=$1 AND role='customer'",[phone]);
+  if(!found.rowCount)return res.status(400).json({error:"We could not verify this reset request. Check the mobile number and request a new OTP."});
+  const verified=await twilioVerifyRequest("/VerificationCheck",{To:to,Code:code});
+  if(verified.status!=="approved")return res.status(400).json({error:"That OTP is invalid or expired. Request a new code and try again."});
+  await pool.query("UPDATE users SET password_hash=$1 WHERE id=$2",[bcrypt.hashSync(password,12),found.rows[0].id]);
+  res.json({ok:true,message:"Password reset successfully. You can now sign in with your new password."});
+}));
+
 app.post("/api/auth/logout", (req, res) => {
   res.clearCookie("gkk_token", sessionCookieOptions()).json({ ok: true });
 });
@@ -2591,7 +2630,8 @@ app.use((err, req, res, next) => {
   if (req.path === "/api/addresses" && req.method === "POST") {
     return res.status(500).json({ error: `Address could not be saved (${err.code || "SERVER_ERROR"}). Please try again; if it repeats, share this code with support.` });
   }
-  res.status(500).json({ error: "Something went wrong. Please try again." });
+  const status=Number(err.statusCode||err.status)||500;
+  res.status(status>=400&&status<600?status:500).json({ error: status>=400&&status<500||status===502||status===503 ? err.message : "Something went wrong. Please try again." });
 });
 
 // Start server only after database is ready
