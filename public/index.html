@@ -1904,7 +1904,7 @@ document.getElementById("addCheckoutAddress").addEventListener("click",()=>{clos
 function showAddressEditor(){const form=document.getElementById("savedAddressForm");form.hidden=false;form.reset();delete form.dataset.editId;form.elements.label.value=savedAddresses.length?"Other":"Home";form.dataset.selectedLat="";form.dataset.selectedLng="";document.getElementById("addressSuggestions").innerHTML="";document.getElementById("addressFormMessage").textContent="";form.querySelector('[type="submit"]').textContent="Save address";}
 function editSavedAddress(id){const a=savedAddresses.find(x=>x.id===Number(id));if(!a)return;const form=document.getElementById("savedAddressForm");form.hidden=false;form.dataset.editId=String(a.id);form.elements.label.value=a.label||"Other";form.elements.house.value=a.house||"";form.elements.street.value=a.street||"";form.elements.city.value=a.city||"Bangalore";form.elements.state.value=a.state||"Karnataka";form.elements.pincode.value=a.pincode||"";document.getElementById("addressSearch").value=a.formatted_address||"";form.dataset.selectedLat=String(a.latitude);form.dataset.selectedLng=String(a.longitude);document.getElementById("addressSuggestions").textContent="Editing saved location. Change the search field only if you also want to update the delivery location.";document.getElementById("addressFormMessage").textContent="";form.querySelector('[type="submit"]').textContent="Save changes";form.scrollIntoView({behavior:"smooth",block:"start"});}
 function hideAddressEditor(){document.getElementById("savedAddressForm").hidden=true}
-let addressSearchTimer=null,googlePlacesLibraryPromise=null;
+let addressSearchTimer=null,googlePlacesLibraryPromise=null,addressSearchRequestId=0;
 async function loadGooglePlacesLibrary(){
  if(googlePlacesLibraryPromise)return googlePlacesLibraryPromise;
  googlePlacesLibraryPromise=(async()=>{
@@ -1917,10 +1917,14 @@ async function loadGooglePlacesLibrary(){
    // Loading the API URL directly does not define google.maps.importLibrary.
    const options=JSON.stringify({key:config.apiKey,v:"weekly"});
    const bootstrap=`((g)=>{let h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});const d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await(a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src="https://maps."+c+"apis.com/maps/api/js?"+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})(${options});`;
+   // The bootstrap registers importLibrary synchronously; the API itself loads asynchronously.
+   // Wait until the loader registration is visible before requesting Places.
    const script=document.createElement("script");
    script.textContent=bootstrap;
    document.head.appendChild(script);
-   if(!window.google?.maps?.importLibrary)throw new Error("Google Maps loader could not be initialized.");
+   if(typeof window.google?.maps?.importLibrary!=="function"){
+    throw new Error("Google Maps loader could not be initialized. Check the site's Content-Security-Policy.");
+   }
   }
   return google.maps.importLibrary("places");
  })().catch(err=>{googlePlacesLibraryPromise=null;throw err});
@@ -1943,6 +1947,7 @@ function googleAddressFeature(place,components){
 document.addEventListener("input",e=>{
  if(e.target.id!=="addressSearch")return;
  clearTimeout(addressSearchTimer);
+ const requestId=++addressSearchRequestId;
  const q=e.target.value.trim(),host=document.getElementById("addressSuggestions"),form=document.getElementById("savedAddressForm");
  form.dataset.selectedLat="";form.dataset.selectedLng="";
  if(q.length<3){host.textContent="Type at least 3 characters to search.";return}
@@ -1950,10 +1955,12 @@ document.addEventListener("input",e=>{
   host.textContent="Searching Google Maps…";
   try{
    const {AutocompleteSuggestion}=await loadGooglePlacesLibrary();
+   if(requestId!==addressSearchRequestId)return;
    const response=await AutocompleteSuggestion.fetchAutocompleteSuggestions({
     input:q,
     includedRegionCodes:["in"],
    });
+   if(requestId!==addressSearchRequestId)return;
    const predictions=(response.suggestions||[]).map(x=>x.placePrediction).filter(Boolean).slice(0,8);
    const features=[];
    for(const prediction of predictions){
@@ -1963,6 +1970,7 @@ document.addEventListener("input",e=>{
      if(place.location)features.push(googleAddressFeature(place,place.addressComponents||[]));
     }catch(err){console.warn("Could not load Google place details",err)}
    }
+   if(requestId!==addressSearchRequestId)return;
    host._features=features;
    document.getElementById("openAddressMap").hidden=features.length>0;
    host.innerHTML=features.length?features.map((x,i)=>{
@@ -1971,9 +1979,13 @@ document.addEventListener("input",e=>{
     return `<button type="button" class="btn ghost" style="display:block;width:100%;text-align:left;margin:4px 0;white-space:normal" data-address-result="${i}"><strong>${escapeHTML(main)}</strong><span style="display:block;font-size:.9em;opacity:.8">${escapeHTML(detail)}</span></button>`;
    }).join(""):(document.getElementById("openAddressMap").hidden=false,"No matching place found on Google Maps. You can pin the location on the map instead.");
   }catch(err){
+   if(requestId!==addressSearchRequestId)return;
    console.error("Google Places search failed",err);
    document.getElementById("openAddressMap").hidden=false;
-   host.textContent="Google address search is unavailable right now. You can pin the location on the map instead.";
+   const message=String(err?.message||err||"");
+   host.textContent=/API key|not authorized|REQUEST_DENIED|billing|referer/i.test(message)
+    ?"Google Maps address search could not be authorized. Please use the map pin or contact the kitchen."
+    :"Google address search is unavailable right now. You can pin the location on the map instead.";
   }
  },450);
 });
