@@ -51,7 +51,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // HTTP-referrer and API restrictions in Google Cloud Console.
 const MENU_IMAGE_FOLDERS = {
   "Breakfast": "Breakfast", "Chinese": "Chinese", "Main Course": "Main Course",
-  "Snacks": "Snacks", "Sandwich": "Snacks", "Parathas": "Parathas", "Healthy Salads": "Healthy Salads",
+  "Snacks": "Snacks", "Sandwich": "Snacks", "Extras": "Snacks", "Single Plate Meal": "Main Course", "Parathas": "Parathas",
   "Sweets & Desserts": "Sweets & Deserts", "Beverages": "Beverages"
 };
 const menuImageCatalog = {};
@@ -358,9 +358,12 @@ async function initializeDatabase() {
   // Current delivery policy: 12 km radius. Keep existing installations in sync.
   await pool.query("UPDATE delivery_area_settings SET radius_km=12 WHERE id=1");
 
-  // Give sandwich dishes their own customer-facing category on existing databases.
-  // Keep the move name-based so dishes previously listed under Breakfast or Snacks are migrated too.
+  // Keep sandwich dishes in their own customer-facing category on existing databases.
   await pool.query("UPDATE menu SET category = 'Sandwich' WHERE LOWER(TRIM(category)) = 'sandwich' OR LOWER(name) LIKE '%sandwich%'");
+
+  // Move the requested add-ons and single-plate dishes into their dedicated menu categories.
+  await pool.query(`UPDATE menu SET category = 'Extras' WHERE LOWER(TRIM(name)) IN ('curd','papad','green veg salad','boondi raita','cucumber raita','extra pav','extra bati')`);
+  await pool.query(`UPDATE menu SET category = 'Single Plate Meal' WHERE LOWER(TRIM(name)) LIKE 'chole bhature%' OR (LOWER(TRIM(name)) LIKE 'chole kulche%' AND LOWER(TRIM(name)) LIKE '%plain%') OR LOWER(TRIM(name)) LIKE 'pav bhaji%' OR LOWER(TRIM(name)) LIKE 'sattu kachori with aloo chana masala%' OR LOWER(TRIM(name)) LIKE 'sattu kachori with aloo hing sabj%' OR LOWER(TRIM(name)) IN ('mini meal','full meal','deluxe meal')`);
 
   // Owner-curated dishes featured in the customer-facing Popular section.
   await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
