@@ -612,12 +612,13 @@ async function twilioVerifyRequest(path, params) {
   return payload;
 }
 app.post("/api/auth/password-reset/request",passwordResetLimiter,asyncRoute(async(req,res)=>{
+  if(!process.env.TWILIO_ACCOUNT_SID||!process.env.TWILIO_AUTH_TOKEN||!process.env.TWILIO_VERIFY_SERVICE_SID)return res.status(503).json({error:"SMS password reset is not configured yet. No OTP was sent. Please contact Ghar ka Khana for help."});
   const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone);
   if(!to)return res.status(400).json({error:"Enter a valid mobile number including the 10-digit number."});
   const found=await pool.query("SELECT id FROM users WHERE phone=$1 AND role='customer'",[phone]);
   // Do not reveal whether a customer account exists.
   if(found.rowCount) await twilioVerifyRequest("/Verifications",{To:to,Channel:"sms"});
-  res.json({ok:true,message:"If a customer account matches that number, an OTP has been sent. Enter the code to reset your password."});
+  res.json({ok:true,message:"If this is a registered customer number, an OTP has been requested for the mobile ending in "+to.slice(-4)+". If no SMS arrives within a minute, check the number and try again or contact support."});
 }));
 app.post("/api/auth/password-reset/confirm",passwordResetLimiter,asyncRoute(async(req,res)=>{
   const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone),code=String(req.body?.code||"").trim(),password=String(req.body?.newPassword||"");
