@@ -1278,6 +1278,7 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   }
 
   const event = String(req.body?.event || "");
+  console.info("[Razorpay webhook] Verified event received:", event);
 
   // Refund events carry a refund entity rather than a payment entity.
   // Match the Razorpay refund ID to the durable local refund record and
@@ -1298,7 +1299,14 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
       [status, failureReason, refundId]
     );
     if (!updatedRefund.rowCount) {
-      console.warn("Razorpay refund webhook received for unknown refund:", refundId);
+      console.warn("[Razorpay webhook] Refund event had no matching local refund record:", { event, refundId });
+    } else {
+      console.info("[Razorpay webhook] Refund status updated:", {
+        event,
+        refundId,
+        status,
+        orderId: updatedRefund.rows[0].order_id
+      });
     }
     return res.status(200).json({ ok: true });
   }
