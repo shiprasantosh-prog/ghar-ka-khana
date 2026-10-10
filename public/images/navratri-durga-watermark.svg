@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 760" fill="none">
-  <g opacity=".78" stroke="#A84D12" stroke-linecap="round" stroke-linejoin="round">
+  <defs><linearGradient id="navratriRainbow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e83e68"/><stop offset=".28" stop-color="#f28c28"/><stop offset=".56" stop-color="#8b43c7"/><stop offset=".78" stop-color="#d42d6e"/><stop offset="1" stop-color="#d69b23"/></linearGradient></defs>
+  <g opacity=".78" stroke="url(#navratriRainbow)" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="310" cy="310" r="174" stroke-width="2.5"/>
     <circle cx="310" cy="310" r="151" stroke-width="2" stroke-dasharray="3 9"/>
     <path d="M310 105 C330 145 360 157 402 151 C380 181 381 210 413 235 C374 231 348 248 338 286 C322 254 298 254 282 286 C272 248 246 231 207 235 C239 210 240 181 218 151 C260 157 290 145 310 105Z" stroke-width="2"/>
@@ -12,7 +13,7 @@
     <path d="M275 274 Q269 303 282 324 Q295 344 310 346 Q325 344 338 324 Q351 303 345 274 Q310 252 275 274Z" stroke-width="2.5"/>
     <path d="M286 292 Q295 286 302 293 M318 293 Q326 286 334 292" stroke-width="2.5"/>
     <path d="M310 294 L305 311 L313 312 M297 326 Q310 333 323 326" stroke-width="2"/>
-    <circle cx="310" cy="279" r="4" fill="#9B5421" stroke="none"/>
+    <circle cx="310" cy="279" r="4" fill="#e83e68" stroke="none"/>
     <!-- Earrings -->
     <circle cx="270" cy="305" r="9" stroke-width="2"/><circle cx="350" cy="305" r="9" stroke-width="2"/>
     <!-- Multiple arms radiating behind shoulders -->
