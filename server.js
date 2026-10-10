@@ -594,10 +594,10 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
 const passwordResetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 function normalizeOtpPhone(value) {
   const raw=String(value||"").trim();
-  if(/^\\+\\d{10,15}$/.test(raw)) return raw;
-  const digits=raw.replace(/\\D/g,"");
-  if(/^\\d{10}$/.test(digits)) return "+91"+digits;
-  if(/^91\\d{10}$/.test(digits)) return "+"+digits;
+  if(/^\+\d{10,15}$/.test(raw)) return raw;
+  const digits=raw.replace(/\D/g,"");
+  if(/^\d{10}$/.test(digits)) return "+91"+digits;
+  if(/^91\d{10}$/.test(digits)) return "+"+digits;
   return "";
 }
 async function twilioVerifyRequest(path, params) {
@@ -621,7 +621,7 @@ app.post("/api/auth/password-reset/request",passwordResetLimiter,asyncRoute(asyn
 }));
 app.post("/api/auth/password-reset/confirm",passwordResetLimiter,asyncRoute(async(req,res)=>{
   const phone=String(req.body?.phone||"").trim(),to=normalizeOtpPhone(phone),code=String(req.body?.code||"").trim(),password=String(req.body?.newPassword||"");
-  if(!to||!/^\\d{4,10}$/.test(code)||password.length<8)return res.status(400).json({error:"Enter your mobile number, the OTP, and a new password of at least 8 characters."});
+  if(!to||/^\d{4,10}$/.test(code)===false||password.length<8)return res.status(400).json({error:"Enter your mobile number, the OTP, and a new password of at least 8 characters."});
   const found=await pool.query("SELECT id FROM users WHERE phone=$1 AND role='customer'",[phone]);
   if(!found.rowCount)return res.status(400).json({error:"We could not verify this reset request. Check the mobile number and request a new OTP."});
   const verified=await twilioVerifyRequest("/VerificationCheck",{To:to,Code:code});
