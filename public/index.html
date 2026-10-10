@@ -1150,6 +1150,17 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  .pure-veg-badge{margin-top:5px;padding:4px 7px;font-size:9px;letter-spacing:.8px}
 }
 </style>
+<style>
+.order-payment-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:12px 0 8px;padding:12px;background:#f2f6ed;border:1px solid #dce5d9;border-radius:10px}
+.order-payment-summary>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.order-payment-summary>div>span{font-size:12px;color:#52695a}
+.order-payment-summary>div>strong{font-size:14px;color:#203b2e;overflow-wrap:anywhere}
+.order-payment-summary .payment-state.paid,.order-payment-summary .payment-state.refunded{color:#17643a}
+.order-payment-summary .payment-state.failed{color:#a3332a}
+.order-payment-summary .payment-state.pending{color:#946719}
+.order-payment-summary .payment-state.cod{color:#315d79}
+@media(max-width:520px){.order-payment-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.order-payment-summary>div>strong{font-size:13px}}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -1632,7 +1643,7 @@ function getPaymentDisplay(order){
  else if(["pending","processing"].includes(refundStatus)){statusLabel="Refund Processing";tone="pending";}
  else if(refundStatus==="failed"){statusLabel="Refund Failed";tone="failed";}
  let amountCaption="Amount Paid",amountLabel="";
- if(refundStatus==="processed"){amountCaption="Refunded Amount";amountLabel=money(Number(order.total)||0);}
+ if(refundStatus==="processed"){amountCaption="Refunded Amount";const refundPaise=Number(order.refund_amount_paise||(Array.isArray(order.refunds)?order.refunds[0]?.amount_paise:0))||0;amountLabel=money(refundPaise>0?refundPaise/100:Number(order.total)||0);}
  else if(paymentStatus==="paid"){amountLabel=money(Number(order.total)||0);}
  else if(paymentStatus==="cod"){amountCaption="Payment Due";amountLabel="On delivery";}
  else {amountLabel=money(0);}
