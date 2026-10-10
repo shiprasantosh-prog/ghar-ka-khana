@@ -2018,41 +2018,42 @@ document.addEventListener("input",e=>{
  form.dataset.selectedLat="";form.dataset.selectedLng="";
  if(q.length<3){host.textContent="Type at least 3 characters to search.";return}
  addressSearchTimer=setTimeout(async()=>{
-  host.textContent="Searching Google Maps…";
+  host.textContent="Searching nearby places…";
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),12000);
   try{
-   const {AutocompleteSuggestion}=await loadGooglePlacesLibrary();
+   // Use Photon/OpenStreetMap for address suggestions so this flow does not
+   // hang when Google Places autocomplete is unavailable or restricted.
+   const url="https://photon.komoot.io/api/?limit=10&lang=en&lat=12.89627&lon=77.52864&zoom=10&q="+encodeURIComponent(q);
+   const response=await fetch(url,{signal:controller.signal,headers:{Accept:"application/json"}});
+   if(!response.ok)throw new Error("Address search returned HTTP "+response.status+".");
+   const data=await response.json();
    if(requestId!==addressSearchRequestId)return;
-   const response=await AutocompleteSuggestion.fetchAutocompleteSuggestions({
-    input:q,
-    includedRegionCodes:["in"],
-   });
-   if(requestId!==addressSearchRequestId)return;
-   const predictions=(response.suggestions||[]).map(x=>x.placePrediction).filter(Boolean).slice(0,8);
-   const features=[];
-   for(const prediction of predictions){
-    try{
-     const place=prediction.toPlace();
-     await place.fetchFields({fields:["displayName","formattedAddress","location","addressComponents"]});
-     if(place.location)features.push(googleAddressFeature(place,place.addressComponents||[]));
-    }catch(err){console.warn("Could not load Google place details",err)}
-   }
-   if(requestId!==addressSearchRequestId)return;
+   const features=(data.features||[])
+    .filter(x=>x.geometry?.coordinates?.length>=2)
+    .filter(x=>!x.properties?.country||/india/i.test(x.properties.country))
+    .map(x=>{
+     const p=x.properties||{};
+     const street=[p.housenumber,p.street].filter(Boolean).join(" ");
+     const area=p.suburb||p.neighbourhood||p.district||p.locality||p.city||"";
+     const parts=[street||p.name,area,p.city,p.state,p.postcode,"India"].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+     return {...x,properties:{...p,name:p.name||street||area||"Location",street:street||p.name||"",suburb:p.suburb||p.neighbourhood||p.locality||p.district||"",city:p.city||p.locality||p.district||"Bengaluru",state:p.state||"Karnataka",postcode:p.postcode||"",formatted_address:parts.join(", ")}};
+    }).slice(0,8);
    host._features=features;
    document.getElementById("openAddressMap").hidden=features.length>0;
    host.innerHTML=features.length?features.map((x,i)=>{
     const p=x.properties||{},main=p.name||"Location";
-    const detail=[p.formatted_address,p.postcode].filter(Boolean).filter((v,j,a)=>a.indexOf(v)===j).join(" · ");
+    const detail=[p.formatted_address].filter(Boolean).join(" · ");
     return `<button type="button" class="btn ghost" style="display:block;width:100%;text-align:left;margin:4px 0;white-space:normal" data-address-result="${i}"><strong>${escapeHTML(main)}</strong><span style="display:block;font-size:.9em;opacity:.8">${escapeHTML(detail)}</span></button>`;
-   }).join(""):(document.getElementById("openAddressMap").hidden=false,"No matching place found on Google Maps. You can pin the location on the map instead.");
+   }).join(""):(document.getElementById("openAddressMap").hidden=false,"No matching place found. Try a nearby landmark or pin your location on the map.");
   }catch(err){
    if(requestId!==addressSearchRequestId)return;
-   console.error("Google Places search failed",err);
+   console.error("Address search failed",err);
    document.getElementById("openAddressMap").hidden=false;
-   const message=String(err?.message||err||"");
-   host.textContent=/GOOGLE_MAPS_API_KEY|configuration is missing|API key|not authorized|REQUEST_DENIED|billing|referrer|Places API|Places autocomplete failed|place-details request failed|Timed out loading Google Maps|script failed to load/i.test(message)
-    ?message+" You can pin the location on the map instead."
-    :"Google address search is unavailable right now. You can pin the location on the map instead.";
-  }
+   host.textContent=err?.name==="AbortError"
+    ?"Address search took too long. Please try again or pin your location on the map."
+    :"Address search is temporarily unavailable. Please try again or pin your location on the map.";
+  }finally{clearTimeout(timeout)}
  },450);
 });
 document.addEventListener("click",e=>{const button=e.target.closest("[data-address-result]");if(!button)return;const host=document.getElementById("addressSuggestions"),feature=host._features?.[Number(button.dataset.addressResult)];if(!feature)return;const p=feature.properties||{},form=document.getElementById("savedAddressForm"),[lng,lat]=feature.geometry.coordinates;form.dataset.selectedLat=String(lat);form.dataset.selectedLng=String(lng);form.elements.street.value=p.street||p.suburb||p.neighbourhood||p.locality||"";form.elements.city.value=p.city||"Bengaluru";form.elements.state.value=p.state||"Karnataka";if(p.postcode)form.elements.pincode.value=p.postcode;document.getElementById("addressSearch").value=p.formatted_address||p.name||button.textContent.trim();host.innerHTML='<div class="address-selected"><span aria-hidden="true">✓</span><div><strong>Location selected</strong><small>Now add your flat or house number and confirm the details below.</small></div></div>';});
