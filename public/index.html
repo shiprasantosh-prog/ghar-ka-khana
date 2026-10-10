@@ -2041,8 +2041,8 @@ document.addEventListener("input",e=>{
    console.error("Google Places search failed",err);
    document.getElementById("openAddressMap").hidden=false;
    const message=String(err?.message||err||"");
-   host.textContent=/API key|not authorized|REQUEST_DENIED|billing|referer/i.test(message)
-    ?"Google Maps address search could not be authorized. Please use the map pin or contact the kitchen."
+   host.textContent=/GOOGLE_MAPS_API_KEY|configuration is missing|API key|not authorized|REQUEST_DENIED|billing|referrer|Places API|Places autocomplete failed|place-details request failed|Timed out loading Google Maps|script failed to load/i.test(message)
+    ?message+" You can pin the location on the map instead."
     :"Google address search is unavailable right now. You can pin the location on the map instead.";
   }
  },450);
