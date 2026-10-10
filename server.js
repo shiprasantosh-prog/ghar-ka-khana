@@ -117,6 +117,8 @@ async function initializeDatabase() {
       password_hash TEXT NOT NULL,
       address TEXT DEFAULT '',
       role TEXT NOT NULL DEFAULT 'customer',
+      referral_code TEXT UNIQUE,
+      referred_by_user_id INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -310,7 +312,14 @@ async function initializeDatabase() {
   await pool.query("CREATE TABLE IF NOT EXISTS whatsapp_pending_eta (id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_slot TEXT DEFAULT ''");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_user_id INTEGER REFERENCES users(id)");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code TEXT DEFAULT ''");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_source TEXT NOT NULL DEFAULT ''");
+  await pool.query("CREATE TABLE IF NOT EXISTS referral_rewards (id SERIAL PRIMARY KEY, referrer_user_id INTEGER NOT NULL REFERENCES users(id), referred_user_id INTEGER NOT NULL UNIQUE REFERENCES users(id), reward_amount INTEGER NOT NULL DEFAULT 75 CHECK (reward_amount > 0), status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available','reserved','used')), reserved_order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL, earned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, used_at TIMESTAMPTZ)");
+  await pool.query("CREATE INDEX IF NOT EXISTS referral_rewards_available_idx ON referral_rewards(referrer_user_id,status,id)");
+  await pool.query("UPDATE users SET referral_code='GKK' || UPPER(SUBSTRING(MD5(id::text || phone) FROM 1 FOR 8)) WHERE role='customer' AND (referral_code IS NULL OR referral_code='')");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS users_referral_code_unique ON users(referral_code) WHERE referral_code IS NOT NULL");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount INTEGER NOT NULL DEFAULT 0");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS handling_fee INTEGER NOT NULL DEFAULT 5");
@@ -507,6 +516,13 @@ app.use("/api", limiter);
 // Customer registration
 app.post("/api/auth/register", asyncRoute(async (req, res) => {
   const { name, phone, email, password, address = "" } = req.body || {};
+  const submittedReferralCode = String(req.body?.referralCode || "").trim().toUpperCase();
+  let referrerId = null;
+  if (submittedReferralCode) {
+    const referrer = await pool.query("SELECT id FROM users WHERE UPPER(referral_code)=UPPER($1) AND role='customer'", [submittedReferralCode]);
+    if (!referrer.rowCount) return res.status(400).json({ error: "That referral code is not valid." });
+    referrerId = Number(referrer.rows[0].id);
+  }
 
   if (!name || !phone || !password || String(password).length < 8) {
     return res.status(400).json({
@@ -517,16 +533,10 @@ app.post("/api/auth/register", asyncRoute(async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO users
-       (name, phone, email, password_hash, address)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, phone, email, address, role`,
-      [
-        name.trim(),
-        phone.trim(),
-        email || null,
-        bcrypt.hashSync(password, 12),
-        address
-      ]
+       (name, phone, email, password_hash, address, referred_by_user_id, referral_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+      [name.trim(), phone.trim(), email || null, bcrypt.hashSync(password, 12), address, referrerId, "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase()]
     );
 
     const user = result.rows[0];
@@ -568,7 +578,9 @@ app.post("/api/auth/login", asyncRoute(async (req, res) => {
     phone: user.phone,
     email: user.email,
     address: user.address,
-    role: user.role
+    role: user.role,
+    referral_code: user.referral_code,
+    referred_by_user_id: user.referred_by_user_id
   };
 
   res.cookie("gkk_token", tokenFor(safeUser), {
@@ -586,12 +598,21 @@ app.post("/api/auth/logout", (req, res) => {
 // Current customer session
 app.get("/api/auth/me", auth, asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT id, name, phone, email, address, role
+    `SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id
      FROM users WHERE id = $1`,
     [req.user.id]
   );
 
   res.json({ user: result.rows[0] || null });
+}));
+
+app.get("/api/referrals/me", auth, asyncRoute(async (req,res)=>{
+ const user=await pool.query("SELECT referral_code FROM users WHERE id=$1 AND role='customer'",[req.user.id]);
+ if(!user.rowCount)return res.status(403).json({error:"Customer account required."});
+ const eligible=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (discount_source='first_order' OR payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
+ const rewards=await pool.query("SELECT COUNT(*)::int AS available FROM referral_rewards WHERE referrer_user_id=$1 AND status='available'",[req.user.id]);
+ const referrals=await pool.query("SELECT COUNT(*)::int AS successful FROM referral_rewards WHERE referrer_user_id=$1",[req.user.id]);
+ res.json({referralCode:user.rows[0].referral_code,firstOrderEligible:!eligible.rowCount,availableRewards:Number(rewards.rows[0].available),successfulReferrals:Number(referrals.rows[0].successful)});
 }));
 
 // Saved customer delivery addresses
@@ -1114,6 +1135,14 @@ function isCodEligibleAddress(address){return String(address||"").toLowerCase().
 function calculateDeliveryFee(distanceKm,address){if(isKitchenSocietyAddress(address))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=12?100:0;}
 function deliveryDistanceForAddress(address){return isKitchenSocietyAddress(address)?{distanceKm:0,distanceType:"same-society"}:null;}
 
+// Credit a referral reward only after the referred customer completes their first order.
+async function creditReferralRewardForCompletedOrder(userId) {
+  await pool.query(`INSERT INTO referral_rewards(referrer_user_id,referred_user_id,reward_amount,status)
+    SELECT referred_by_user_id,id,75,'available' FROM users WHERE id=$1 AND referred_by_user_id IS NOT NULL AND role='customer'
+    AND EXISTS (SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')))
+    ON CONFLICT (referred_user_id) DO NOTHING`,[userId]);
+}
+
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "", paymentMethod = "online" } = req.body || {};
@@ -1161,7 +1190,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     if(!scheduledAt||Number.isNaN(scheduledDate.getTime())||scheduledDate<=new Date())return res.status(400).json({error:"Choose a future delivery date and time."});
 
   }else if(orderMode!=="now")return res.status(400).json({error:"Choose Order Now or Prior Order."});
-  let discount=0,appliedCode="";
+  let discount=0,appliedCode="",discountSource="";
   if(String(promoCode).trim()){
     const result=await pool.query("SELECT *, ((NOW() AT TIME ZONE 'Asia/Kolkata')::date >= valid_from) AS date_started, ((NOW() AT TIME ZONE 'Asia/Kolkata')::date <= valid_until) AS date_not_expired FROM promo_codes WHERE UPPER(code)=UPPER($1)",[String(promoCode).trim()]);
     const code=result.rows[0];
@@ -1177,7 +1206,11 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     const eligibleSubtotal=validated.filter(item=>!excludedIds.includes(Number(item.id))).reduce((sum,item)=>sum+item.price*item.quantity,0);
     if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
     discount=code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value;
-    discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;
+    discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;discountSource="promo";
+  } else {
+    const priorSuccessful=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (discount_source='first_order' OR payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
+    if(!priorSuccessful.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),100);discountSource=discount>0?"first_order":"";}
+    else {const reward=await pool.query("SELECT id,reward_amount FROM referral_rewards WHERE referrer_user_id=$1 AND status='available' ORDER BY id LIMIT 1",[req.user.id]);if(reward.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),Number(reward.rows[0].reward_amount),75);discountSource=discount>0?"referral_reward":"";appliedCode="REFERRAL REWARD";}}
   }
   const normalizedPaymentMethod=String(paymentMethod||"online").trim().toLowerCase();
   if(!["online","cod"].includes(normalizedPaymentMethod))return res.status(400).json({error:"Please choose a valid payment method."});
@@ -1189,12 +1222,15 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,handling_fee,payment_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,handlingFee,isCod?"cod":"created"]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,handling_fee,payment_status,discount_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,handlingFee,isCod?"cod":"created",discountSource]);
     orderId=result.rows[0].id;
+    if(discountSource==="referral_reward"){const reserved=await client.query("UPDATE referral_rewards SET status='reserved',reserved_order_id=$1 WHERE id=(SELECT id FROM referral_rewards WHERE referrer_user_id=$2 AND status='available' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id",[orderId,req.user.id]);if(!reserved.rowCount)throw new Error("Your referral reward was just used elsewhere. Please refresh checkout and try again.");}
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity,variant_label) VALUES($1,$2,$3,$4,$5,$6)",[orderId,item.id,item.name,item.price,item.quantity,item.variantLabel||""]);
     await client.query("COMMIT");
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
   if(isCod){
+    await creditReferralRewardForCompletedOrder(req.user.id);
+    if(discountSource==="referral_reward")await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[orderId]);
     const order=await readOrder(orderId);
     notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
     return res.status(201).json({...order,payment:{method:"cod"}});
@@ -1206,6 +1242,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     const order=await readOrder(orderId);
     res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
   }catch(e){
+    await pool.query("UPDATE referral_rewards SET status='available',reserved_order_id=NULL WHERE reserved_order_id=$1 AND status='reserved'",[orderId]).catch(()=>{});
     await pool.query("DELETE FROM orders WHERE id=$1",[orderId]).catch(()=>{});
     console.error("Razorpay order creation failed:",e.message);
     return res.status(502).json({error:"We could not start the online payment. Please try again."});
@@ -1266,7 +1303,11 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   const order=await readOrder(orderId);
   if(updated.rowCount){
     if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(orderId);
-    else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+    else {
+      await creditReferralRewardForCompletedOrder(req.user.id);
+      await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[orderId]);
+      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+    }
   }
   res.json(order);
 }));
@@ -1294,7 +1335,7 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
     if(updated.rowCount){
       const order=await readOrder(row.id);
       if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(row.id);
-      else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+      else {await creditReferralRewardForCompletedOrder(order.user_id);await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));}
     }
   }
   return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
@@ -1488,6 +1529,8 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
         await refundLateCapturedCancelledOrder(row.id);
       } else {
         const order = await readOrder(row.id);
+        await creditReferralRewardForCompletedOrder(order.user_id);
+        await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);
         notifyWhatsApp(order).catch(error =>
           console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
         );
