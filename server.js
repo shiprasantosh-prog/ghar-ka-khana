@@ -1802,6 +1802,7 @@ app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
 app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT o.id, o.total, o.address, o.status, o.payment_status, o.created_at, o.estimated_delivery_minutes,
+            (SELECT rf.status FROM order_refunds rf WHERE rf.order_id = o.id ORDER BY rf.created_at DESC LIMIT 1) AS refund_status,
             EXISTS (SELECT 1 FROM reviews r WHERE r.order_id = o.id) AS reviewed
      FROM orders o WHERE o.user_id = $1
      ORDER BY id DESC`,
