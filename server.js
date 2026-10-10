@@ -1251,6 +1251,8 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     }
     subtotal+=unitPrice*quantity;validated.push({...dish,quantity,price:unitPrice,variantId,variantLabel});
   }
+  const minimumOrder=isCodEligibleAddress(address)?60:100;
+  if(subtotal<minimumOrder)return res.status(400).json({error:"Minimum order value for this delivery address is Rs. "+minimumOrder+" (item subtotal, before fees and discounts)."});
   let scheduledDate=null;
   if(orderMode==="scheduled"){
     scheduledDate=new Date(scheduledAt);
