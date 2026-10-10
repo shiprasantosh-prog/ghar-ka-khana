@@ -844,7 +844,7 @@ app.get("/api/admin/category-availability", auth, admin, asyncRoute(async (req, 
 app.put("/api/admin/category-availability", auth, admin, asyncRoute(async (req, res) => {
   const incoming = req.body?.schedules;
   if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return res.status(400).json({ error: "Provide category availability schedules." });
-  const validTime = value => typeof value === "string" && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(value);
+  const validTime = value => typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
   const clean = {};
   for (const [category, defaults] of Object.entries(DEFAULT_CATEGORY_SCHEDULES)) {
     const row = incoming[category];
