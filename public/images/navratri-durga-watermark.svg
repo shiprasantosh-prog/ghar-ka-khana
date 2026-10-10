@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 760" fill="none">
+  <g opacity=".22" stroke="#9B5421" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="310" cy="310" r="174" stroke-width="2.5"/>
+    <circle cx="310" cy="310" r="151" stroke-width="1.4" stroke-dasharray="3 9"/>
+    <path d="M310 105 C330 145 360 157 402 151 C380 181 381 210 413 235 C374 231 348 248 338 286 C322 254 298 254 282 286 C272 248 246 231 207 235 C239 210 240 181 218 151 C260 157 290 145 310 105Z" stroke-width="2"/>
+    <path d="M310 130 C335 180 370 194 420 180 C389 215 391 247 429 275 C383 264 352 285 341 330 C325 291 295 291 279 330 C268 285 237 264 191 275 C229 247 231 215 200 180 C250 194 285 180 310 130Z" stroke-width="1.5"/>
+    <!-- Crown and halo -->
+    <circle cx="310" cy="290" r="78" stroke-width="2.5"/>
+    <path d="M258 268 L270 218 L291 239 L310 192 L329 239 L350 218 L362 268Z" stroke-width="3"/>
+    <path d="M275 260 L288 246 L310 263 L332 246 L345 260" stroke-width="1.8"/>
+    <!-- Face -->
+    <path d="M275 274 Q269 303 282 324 Q295 344 310 346 Q325 344 338 324 Q351 303 345 274 Q310 252 275 274Z" stroke-width="2.5"/>
+    <path d="M286 292 Q295 286 302 293 M318 293 Q326 286 334 292" stroke-width="2.5"/>
+    <path d="M310 294 L305 311 L313 312 M297 326 Q310 333 323 326" stroke-width="2"/>
+    <circle cx="310" cy="279" r="4" fill="#9B5421" stroke="none"/>
+    <!-- Earrings -->
+    <circle cx="270" cy="305" r="9" stroke-width="2"/><circle cx="350" cy="305" r="9" stroke-width="2"/>
+    <!-- Multiple arms radiating behind shoulders -->
+    <path d="M279 365 C239 343 207 317 173 282 C159 267 148 250 138 229" stroke-width="5"/>
+    <path d="M280 377 C231 374 190 363 151 342 C130 331 113 313 100 294" stroke-width="5"/>
+    <path d="M282 391 C238 405 205 426 176 457 C161 473 148 492 139 512" stroke-width="5"/>
+    <path d="M292 400 C264 436 247 469 238 508 C234 528 236 548 240 565" stroke-width="5"/>
+    <path d="M341 365 C381 343 413 317 447 282 C461 267 472 250 482 229" stroke-width="5"/>
+    <path d="M340 377 C389 374 430 363 469 342 C490 331 507 313 520 294" stroke-width="5"/>
+    <path d="M338 391 C382 405 415 426 444 457 C459 473 472 492 481 512" stroke-width="5"/>
+    <path d="M328 400 C356 436 373 469 382 508 C386 528 384 548 380 565" stroke-width="5"/>
+    <!-- Hands and sacred objects -->
+    <circle cx="138" cy="222" r="13" stroke-width="3"/><path d="M138 209 V191 M130 200 L138 191 L146 200" stroke-width="2.5"/>
+    <circle cx="96" cy="289" r="12" stroke-width="3"/><path d="M96 278 V260 M88 268 L96 260 L104 268" stroke-width="2.5"/>
+    <circle cx="136" cy="519" r="12" stroke-width="3"/><path d="M136 507 V488 M128 496 L136 488 L144 496" stroke-width="2.5"/>
+    <circle cx="241" cy="574" r="12" stroke-width="3"/><path d="M241 562 V545 M233 553 L241 545 L249 553" stroke-width="2.5"/>
+    <circle cx="482" cy="222" r="13" stroke-width="3"/><path d="M482 209 V191 M474 200 L482 191 L490 200" stroke-width="2.5"/>
+    <circle cx="524" cy="289" r="12" stroke-width="3"/><path d="M524 278 V260 M516 268 L524 260 L532 268" stroke-width="2.5"/>
+    <circle cx="484" cy="519" r="12" stroke-width="3"/><path d="M484 507 V488 M476 496 L484 488 L492 496" stroke-width="2.5"/>
+    <circle cx="379" cy="574" r="12" stroke-width="3"/><path d="M379 562 V545 M371 553 L379 545 L387 553" stroke-width="2.5"/>
+    <!-- Torso, sari and lotus seat -->
+    <path d="M276 354 Q310 340 344 354 L366 425 Q338 451 310 454 Q282 451 254 425Z" stroke-width="3"/>
+    <path d="M278 363 Q308 399 342 363 M254 425 Q310 453 366 425 M291 389 L310 449 L330 389" stroke-width="2"/>
+    <path d="M220 462 Q244 440 264 462 Q286 431 310 462 Q334 431 356 462 Q377 440 400 462 Q379 491 355 500 L265 500 Q241 491 220 462Z" stroke-width="3"/>
+    <path d="M228 481 Q310 514 392 481 M251 500 Q310 522 369 500" stroke-width="2"/>
+    <!-- Lion, respectful stylized profile -->
+    <path d="M278 515 C244 500 206 514 190 543 C172 575 188 619 219 637 C248 654 296 647 321 624 C342 606 350 574 332 550 C320 533 300 525 278 515Z" stroke-width="4"/>
+    <path d="M220 540 C197 530 183 542 180 559 L199 570 M223 538 L215 516 L242 531 M275 533 L287 511 L305 534" stroke-width="3"/>
+    <path d="M219 568 Q239 548 262 564 Q280 580 268 602 Q252 622 230 609 Q213 599 219 568Z" stroke-width="3"/>
+    <path d="M232 575 Q240 570 247 575 M255 575 Q262 570 269 575" stroke-width="2.5"/>
+    <path d="M248 588 L255 592 L262 588 M254 592 Q250 601 242 602 M256 592 Q263 601 271 600" stroke-width="2.5"/>
+    <path d="M231 610 Q253 618 273 607 M290 550 Q312 562 311 587" stroke-width="2"/>
+    <path d="M204 557 Q188 580 205 602 M289 544 Q313 549 323 570" stroke-width="2"/>
+    <!-- Decorative ground and lotus -->
+    <path d="M153 671 Q220 643 310 660 Q400 643 467 671" stroke-width="2"/>
+    <path d="M281 659 Q291 632 310 621 Q329 632 339 659 Q323 649 310 650 Q297 649 281 659Z" stroke-width="2"/>
+    <path d="M260 662 Q267 644 284 641 M360 662 Q353 644 336 641" stroke-width="2"/>
+    <path d="M310 664 V696 M295 679 Q302 669 310 679 Q318 669 325 679" stroke-width="2"/>
+  </g>
+</svg>
