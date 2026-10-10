@@ -107,13 +107,13 @@ async function loadOwnerOrders(){
  // Use the existing Razorpay fetch endpoint as a fallback when webhooks are delayed.
  // Reconcile only non-final refunds, at most once per minute, and never create a refund here.
  if(refundReconcileInProgress||Date.now()-lastRefundReconcileAt<60000)return;
- const candidates=ownerOrderRows.filter(o=>Array.isArray(o.refunds)).flatMap(o=>(o.refunds||[])
-   .filter(r=>r.razorpay_refund_id&&["created","pending","processing"].includes(String(r.status||"").toLowerCase()))
-   .map(r=>({orderId:o.id,refundId:r.razorpay_refund_id})));
+ const candidates=[...new Set(ownerOrderRows.filter(o=>Array.isArray(o.refunds)&&
+   o.refunds.some(r=>r.razorpay_refund_id&&["created","pending","processing"].includes(String(r.status||"").toLowerCase())))
+   .map(o=>o.id))];
  if(!candidates.length)return;
  refundReconcileInProgress=true;lastRefundReconcileAt=Date.now();
  try{
-   await Promise.allSettled(candidates.map(r=>api("/api/admin/orders/"+r.orderId+"/refund/refresh",{method:"POST",body:"{}"})));
+   await Promise.allSettled(candidates.map(orderId=>api("/api/admin/orders/"+orderId+"/refund/refresh",{method:"POST",body:"{}"})));
    ownerOrderRows=await api('/api/admin/orders');
    renderOwnerOrders();
  }catch(error){console.warn("Automatic refund status reconciliation failed:",error.message)}
