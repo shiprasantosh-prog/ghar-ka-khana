@@ -1228,7 +1228,10 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   if(payment.status!=="captured" && payment.captured!==true)return res.status(400).json({error:"Payment has not been captured yet. Your order remains pending."});
   const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
   const order=await readOrder(orderId);
-  if(updated.rowCount)notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+  if(updated.rowCount){
+    if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(orderId);
+    else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+  }
   res.json(order);
 }));
 
@@ -1240,7 +1243,7 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
   const razorpayPaymentId=String(req.body?.razorpay_payment_id||"");
   const razorpaySignature=String(req.body?.razorpay_signature||"");
   if(!razorpay||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.redirect("/?payment=failed&reason=invalid_callback");
-  const result=await pool.query("SELECT id,total,payment_status FROM orders WHERE razorpay_order_id=$1",[razorpayOrderId]);
+  const result=await pool.query("SELECT id,total,payment_status,status FROM orders WHERE razorpay_order_id=$1",[razorpayOrderId]);
   const row=result.rows[0];
   if(!row)return res.redirect("/?payment=failed&reason=order_not_found");
   if(row.payment_status!=="paid"){
@@ -1254,7 +1257,8 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
     const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,row.id]);
     if(updated.rowCount){
       const order=await readOrder(row.id);
-      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+      if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(row.id);
+      else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
     }
   }
   return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
@@ -1263,6 +1267,85 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
 // Razorpay server-to-server webhook.
 // Configure RAZORPAY_WEBHOOK_SECRET in Render and use the same secret in Razorpay Dashboard.
 // The webhook is intentionally kept alongside the Checkout callback as a second confirmation path.
+// Safely refund a payment captured after its order was already cancelled.
+// This function never retries an existing local refund record automatically: an ambiguous
+// outcome must be reconciled with Razorpay rather than risking a duplicate refund.
+async function refundLateCapturedCancelledOrder(orderId) {
+  if (!razorpay) {
+    console.error("[Late payment refund] Razorpay is not configured; owner action required.", { orderId });
+    return;
+  }
+
+  const client = await pool.connect();
+  let refundRecord;
+  let paymentId;
+  try {
+    await client.query("BEGIN");
+    const found = await client.query(
+      "SELECT id,total,status,payment_status,razorpay_payment_id FROM orders WHERE id=$1 FOR UPDATE",
+      [orderId]
+    );
+    const order = found.rows[0];
+    if (!order || order.status !== "Cancelled" || order.payment_status !== "paid" || !order.razorpay_payment_id) {
+      await client.query("ROLLBACK");
+      return;
+    }
+
+    const prior = await client.query(
+      "SELECT id,status,razorpay_refund_id FROM order_refunds WHERE order_id=$1 ORDER BY created_at DESC LIMIT 1",
+      [orderId]
+    );
+    if (prior.rows[0]) {
+      await client.query("COMMIT");
+      console.info("[Late payment refund] Existing refund record found; automatic duplicate prevented.", {
+        orderId, refundId: prior.rows[0].razorpay_refund_id, status: prior.rows[0].status
+      });
+      return;
+    }
+
+    paymentId = order.razorpay_payment_id;
+    const inserted = await client.query(
+      "INSERT INTO order_refunds(order_id,amount_paise,status,initiated_by) VALUES($1,$2,'processing','late_payment_auto') RETURNING *",
+      [orderId, Number(order.total) * 100]
+    );
+    refundRecord = inserted.rows[0];
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    if (error.code === "23505") {
+      console.warn("[Late payment refund] Existing refund/unique constraint prevented duplicate.", { orderId });
+      return;
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  try {
+    const response = await razorpay.payments.refund(paymentId, {
+      amount: refundRecord.amount_paise,
+      notes: { order_id: String(orderId), source: "Ghar ka Khana late captured payment after cancellation" }
+    });
+    const remoteStatus = String(response.status || "").toLowerCase();
+    const status = ["processed", "pending", "failed"].includes(remoteStatus) ? remoteStatus : "processing";
+    await pool.query(
+      "UPDATE order_refunds SET razorpay_refund_id=$1,status=$2,failure_reason=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$4",
+      [response.id || null, status, status === "failed" ? "Razorpay reported refund failure; owner review required." : "", refundRecord.id]
+    );
+    console.info("[Late payment refund] Automatic refund submitted.", {
+      orderId, refundId: response.id || null, status
+    });
+  } catch (error) {
+    await pool.query(
+      "UPDATE order_refunds SET status='processing',failure_reason=$1,updated_at=CURRENT_TIMESTAMP WHERE id=$2",
+      ["Automatic refund outcome unclear; reconcile in Razorpay before retrying.", refundRecord.id]
+    );
+    console.error("[Late payment refund] Submission needs reconciliation; no retry attempted.", {
+      orderId, message: error.message
+    });
+  }
+}
+
 app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   // Safe diagnostics only: never log secrets, signatures, or webhook payloads.
   const webhookSecret = String(process.env.RAZORPAY_WEBHOOK_SECRET || "");
@@ -1344,15 +1427,19 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
     }
 
     const updated = await pool.query(
-      "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status='Received' WHERE id=$2 AND payment_status<>'paid' RETURNING id",
+      "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",
       [razorpayPaymentId, row.id]
     );
 
     if (updated.rowCount) {
-      const order = await readOrder(row.id);
-      notifyWhatsApp(order).catch(error =>
-        console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
-      );
+      if (row.status === "Cancelled") {
+        await refundLateCapturedCancelledOrder(row.id);
+      } else {
+        const order = await readOrder(row.id);
+        notifyWhatsApp(order).catch(error =>
+          console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
+        );
+      }
     }
   } else if (event === "payment.failed") {
     // Keep the order available for another payment attempt. A later
