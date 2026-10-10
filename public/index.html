@@ -3047,4 +3047,35 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  measure();syncClear();update();
 })();
 </script>
+
+<style id="mobile-order-receipt-close-fix">
+/* Keep the order title and close control visible while the receipt scrolls on mobile. */
+#orderDetailOverlay.show{align-items:flex-start!important;overscroll-behavior:contain}
+#orderDetailOverlay .order-detail-modal{position:relative;min-height:0;overscroll-behavior:contain}
+#orderDetailOverlay .order-detail-head{position:sticky;top:-1px;z-index:5;background:#fffdf8;padding:10px 0 14px;margin-top:-10px}
+#orderDetailOverlay .order-detail-close{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;min-width:42px;border:1px solid #1b5a3a!important;border-radius:50%;background:#1b5a3a!important;color:#fff!important;font-size:30px!important;line-height:1!important;font-weight:400;padding:0;cursor:pointer;position:relative;z-index:6;touch-action:manipulation}
+#orderDetailOverlay .order-detail-close:focus-visible{outline:3px solid #b58a3b;outline-offset:3px}
+@media(max-width:600px){
+ #orderDetailOverlay.show{padding:8px!important;align-items:flex-start!important}
+ #orderDetailOverlay .order-detail-modal{width:100%;max-height:calc(100dvh - 16px);max-height:calc(100vh - 16px);padding:14px!important;border-radius:14px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ #orderDetailOverlay .order-detail-head{top:-14px;margin-top:-14px;padding:12px 0 12px;gap:10px}
+ #orderDetailOverlay .order-detail-head h2{font-size:22px!important;overflow-wrap:anywhere}
+ #orderDetailOverlay .order-detail-close{width:44px;height:44px;flex-basis:44px;min-width:44px;font-size:32px!important}
+}
+</style>
+<script id="mobile-order-receipt-close-keyboard-fix">
+(function(){
+ function bindOrderDetailClose(){
+  const overlay=document.getElementById('orderDetailOverlay');
+  if(!overlay||overlay.dataset.closeFixBound==='true')return;
+  overlay.dataset.closeFixBound='true';
+  document.addEventListener('keydown',function(event){
+   if(event.key==='Escape'&&overlay.classList.contains('show'))closeOrderDetail();
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindOrderDetailClose);
+ else bindOrderDetailClose();
+})();
+</script>
+
 </body></html>
