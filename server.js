@@ -1221,7 +1221,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   const found=await pool.query("SELECT id,total,status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
   const row=found.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
-  if(row.status==="Cancelled"||row.payment_status==="paid")return res.status(409).json({error:"This order cannot be paid again."});
+  if(row.status!=="Payment Pending"||row.payment_status==="paid")return res.status(409).json({error:"Only unpaid orders with Payment Pending status can be retried."});
   if(!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))return res.status(409).json({error:"This order is not eligible for payment retry."});
   const rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId)+"-R"+Date.now().toString().slice(-6),notes:{ghar_ka_khana_order_id:String(orderId),payment_retry:"true"}});
   // Atomically re-check eligibility: an owner/customer cancellation or successful
@@ -1232,7 +1232,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
     const locked=await client.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE",[orderId,req.user.id]);
     const current=locked.rows[0];
     if(!current){await client.query("ROLLBACK");return res.status(404).json({error:"Order not found."});}
-    if(current.status==="Cancelled"||current.payment_status==="paid"||!["created","failed","unpaid"].includes(String(current.payment_status||"").toLowerCase())){
+    if(current.status!=="Payment Pending"||current.payment_status==="paid"||!["created","failed","unpaid"].includes(String(current.payment_status||"").toLowerCase())){
       await client.query("ROLLBACK");
       return res.status(409).json({error:"This order is no longer eligible for payment retry. Refresh your orders and check its current status."});
     }
@@ -1803,6 +1803,7 @@ app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT o.id, o.total, o.address, o.status, o.payment_status, o.created_at, o.estimated_delivery_minutes,
             (SELECT rf.status FROM order_refunds rf WHERE rf.order_id = o.id ORDER BY rf.created_at DESC LIMIT 1) AS refund_status,
+            (SELECT rf.amount_paise FROM order_refunds rf WHERE rf.order_id = o.id ORDER BY rf.created_at DESC LIMIT 1) AS refund_amount_paise,
             EXISTS (SELECT 1 FROM reviews r WHERE r.order_id = o.id) AS reviewed
      FROM orders o WHERE o.user_id = $1
      ORDER BY id DESC`,
