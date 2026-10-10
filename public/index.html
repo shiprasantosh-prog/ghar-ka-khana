@@ -1944,8 +1944,9 @@ async function loadGooglePlacesLibrary(){
         }
        ));
        return {suggestions:predictions.map(prediction=>({placePrediction:{
-        toPlace:()=>({
-         fetchFields:async()=>{
+        toPlace:()=>{
+         const selectedPlace={};
+         selectedPlace.fetchFields=async()=>{
           const service=new google.maps.places.PlacesService(document.createElement("div"));
           const detail=await new Promise((resolve,reject)=>service.getDetails(
            {placeId:prediction.place_id,fields:["name","formatted_address","geometry","address_components"]},
@@ -1955,14 +1956,15 @@ async function loadGooglePlacesLibrary(){
            }
           ));
           const location=detail.geometry?.location;
-          Object.assign(this,{
+          Object.assign(selectedPlace,{
            displayName:detail.name||detail.formatted_address,
            formattedAddress:detail.formatted_address,
            location:location?{lat:()=>location.lat(),lng:()=>location.lng()}:null,
            addressComponents:(detail.address_components||[]).map(c=>({longText:c.long_name,types:c.types}))
           });
-         }
-        })
+         };
+         return selectedPlace;
+        }
        }}))};
       }
      }
