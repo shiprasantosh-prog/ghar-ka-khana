@@ -1213,7 +1213,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <section class="wrap page-view active-view home-section" id="homeHow"><div class="section-head"><div><h2>How Ordering Works</h2></div><p>Simple, and ready on time.</p></div><div class="steps"><article class="card" style="padding:24px"><span class="step-number">01</span><h3>Pick your meal</h3><p>Choose from our menu and add your favourites to your basket.</p></article><article class="card" style="padding:24px"><span class="step-number">02</span><h3>We cook it fresh</h3><p>Every meal is prepared with care in small batches, after your order.</p></article><article class="card" style="padding:24px"><span class="step-number">03</span><h3>Delivered to your door</h3><p>Your food is packed carefully and sent your way, ready to enjoy.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeStory"><div class="story-panel"><video class="story-photo" controls playsinline preload="metadata" aria-label="Ghar ka Khana story video"><source src="/images/story.mp4" type="video/mp4">Your browser does not support HTML video.</video><div><div class="eyebrow">Our Story</div><h2>A Home Kitchen with a Big Dream</h2><p>Ghar ka Khana began in 2025 in my home kitchen in Bengaluru with a simple thought: to bring the warmth and comfort of homemade food to more people. I started by cooking for family and friends, who kept asking for more. Today, we serve families across the city with the same recipes, love and care that inspired us from the beginning.</p><p>From litti chokha and paneer gravies to light, healthy everyday meals, we prepare everything fresh with thoughtful ingredients, less oil and no preservatives—just the way we like to eat at home.</p><p>For me, cooking has always been about more than putting a meal on the table. It is the familiar aroma of spices, the joy of sharing food and the little comforts that make an ordinary day feel special. I bring the flavours I grew up loving into every dish, with care and attention so each meal feels personal, wholesome and welcoming.</p><p><em>Every order is a little taste of home. Thank you for being part of the Ghar ka Khana family.</em></p><p><strong>Shipra Santosh</strong><br>Founder</p><div class="story-more" id="storyMore" hidden><p>What began as a small home kitchen has grown into a cloud kitchen serving wholesome, delicious meals to many happy customers. Whether you are looking for a comforting everyday meal, a traditional favourite or a lighter, healthier choice, our hope is to make you feel at home with every bite.</p><p>Every recipe carries the same intention we started with: honest food, familiar flavours and the warmth of a meal made with love.</p></div><button class="story-toggle" id="storyToggle" type="button" aria-expanded="false" aria-controls="storyMore" onclick="toggleStoryMore()">Read More <span aria-hidden="true">⌄</span></button></div></div></section>
 <section class="wrap page-view active-view home-section" id="homeReviewPreview"><div class="section-head"><div><div class="eyebrow">Kind words from our customers</div><h2>What Our Customers Say</h2></div><p>Real experiences from our Ghar ka Khana family.</p></div><div id="homeReviewCards" class="grid"><p class="empty">Loading customer reviews…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('reviews')">Read All Reviews</button></div></section>
-<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="categories" id="categories"></div><div class="field menu-search-sticky" style="max-width:620px;margin:14px 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#fffdf7;border:1px solid #d9cfb6;border-radius:10px;color:#203b2e;font:inherit"></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
+<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="categories" id="categories"></div><div class="field menu-search-sticky" style="max-width:620px;margin:14px 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><div class="menu-search-input-wrap"><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#fffdf7;border:1px solid #d9cfb6;border-radius:10px;color:#203b2e;font:inherit"><button id="clearCustomerMenuSearch" class="menu-search-clear" type="button" aria-label="Clear menu search" title="Clear search" hidden>×</button></div></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
 
 <section class="wrap page-view" id="account" style="border-top:1px solid #332b1d;padding-top:35px">
 <div class="section-head"><div><div class="eyebrow">Customer account</div><h2 id="accountTitle">Sign in or create an account</h2></div><p>Secure access to your orders</p></div>
@@ -2976,79 +2976,71 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 @media(max-width:650px){#popularGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}#popularGrid>.card{grid-template-columns:none!important}#popularGrid>.card .food-img{height:125px!important;min-height:125px!important;max-height:125px!important;flex-basis:125px!important}#popularGrid>.card .card-body{padding:11px!important}#popularGrid>.card h3{font-size:14px!important;line-height:1.25!important}#popularGrid>.card p{font-size:11px!important;line-height:1.35!important;margin:6px 0!important}}
 </style>
 
+
 <style id="sticky-menu-search-and-home-highlights">
-/* Keep the menu search frozen at the top after the category list has passed. */
-#menu .menu-search-sticky{position:relative!important;top:auto!important;left:auto!important;transform:none!important;z-index:50!important;width:min(620px,100%)!important;max-width:620px!important;margin:8px 0 16px!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;outline:0!important;border-radius:0 0 12px 12px!important;box-shadow:none!important;box-sizing:border-box}
+/* Search stays in normal flow until the customer scrolls past it, then pins to the viewport. */
+#menu .menu-search-sticky{position:relative!important;z-index:50!important;width:min(620px,100%)!important;max-width:100%!important;box-sizing:border-box!important;margin:8px 0 16px!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important}
 #menu .menu-search-sticky label{color:#385644!important}
-#menu .menu-search-sticky input{background:#fffdf7!important;border:1px solid #d9cfb6!important;box-shadow:none!important;outline:0!important}
-#menu .menu-search-sticky.menu-search-pinned{position:fixed!important;top:0!important;z-index:999!important;margin:0!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.14)!important}
+#menu .menu-search-input-wrap{position:relative!important;width:100%!important;min-width:0!important}
+#menu .menu-search-input-wrap input#customerMenuSearch{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;padding:12px 44px 12px 14px!important;background:#fffdf7!important;border:1px solid #d9cfb6!important;border-radius:10px!important;font-size:16px!important}
+#menu .menu-search-clear{position:absolute!important;right:8px!important;top:50%!important;transform:translateY(-50%)!important;width:30px!important;height:30px!important;padding:0!important;border:0!important;border-radius:50%!important;background:#e8eee5!important;color:#104d37!important;font-size:22px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important}
+#menu .menu-search-clear[hidden]{display:none!important}
+#menu .menu-search-sticky.menu-search-pinned{position:fixed!important;top:0!important;z-index:9999!important;margin:0!important;padding:8px 12px 10px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.14)!important}
 #menu .menu-search-sticky.menu-search-pinned label{display:none!important}
 .menu-search-spacer{display:none;height:0}
 </style>
-<script id="menu-search-non-overlap-sticky">
+<script id="menu-search-pinning">
 (function(){
  const search=document.querySelector('#menu .menu-search-sticky');
  const menu=document.getElementById('menu');
- if(!search||!menu)return;
+ const input=document.getElementById('customerMenuSearch');
+ const clear=document.getElementById('clearCustomerMenuSearch');
+ if(!search||!menu||!input||!clear)return;
  const spacer=document.createElement('div');
  spacer.className='menu-search-spacer';
  spacer.setAttribute('aria-hidden','true');
  search.parentNode.insertBefore(spacer,search);
  let start=0;
- function measure(){start=search.getBoundingClientRect().top+window.scrollY;}
- function unpin(){search.classList.remove('menu-search-pinned');search.style.left='';search.style.width='';search.style.maxWidth='';spacer.style.display='none';spacer.style.height='0px';}
+ let pinned=false;
+ function measure(){if(!pinned)start=search.getBoundingClientRect().top+window.scrollY;}
+ function unpin(){
+   if(!pinned)return;
+   pinned=false;
+   search.classList.remove('menu-search-pinned');
+   search.style.left='';search.style.width='';search.style.maxWidth='';
+   spacer.style.display='none';spacer.style.height='0px';
+ }
  function update(){
    const active=document.body.dataset.currentPage==='menu'&&menu.classList.contains('active-view');
-   const menuRect=menu.getBoundingClientRect();
-   const searchRect=search.getBoundingClientRect();
-   const shouldPin=active&&window.scrollY>=start-2&&menuRect.bottom>90;
-   if(shouldPin){
-     if(!search.classList.contains('menu-search-pinned')){
-       spacer.style.display='block';
-       spacer.style.height=(search.offsetHeight+24)+'px';
-       search.classList.add('menu-search-pinned');
-     }
-     const rect=spacer.getBoundingClientRect();
-     search.style.left=Math.max(0,rect.left)+'px';
-     search.style.width=Math.max(240,rect.width)+'px';
-     search.style.maxWidth='calc(100vw - '+Math.max(0,rect.left)+'px)';
-   }else unpin();
+   const menuBottom=menu.getBoundingClientRect().bottom;
+   const searchTop=spacer.getBoundingClientRect().top;
+   const shouldPin=active&&window.scrollY>=start&&menuBottom>90;
+   if(!shouldPin){unpin();return;}
+   if(!pinned){
+     spacer.style.display='block';
+     spacer.style.height=(search.offsetHeight+12)+'px';
+     pinned=true;
+     search.classList.add('menu-search-pinned');
+   }
+   const rect=spacer.getBoundingClientRect();
+   search.style.left=Math.max(0,rect.left)+'px';
+   search.style.width=Math.max(0,rect.width)+'px';
+   search.style.maxWidth='100vw';
  }
+ function syncClear(){clear.hidden=!input.value;}
+ clear.addEventListener('click',()=>{
+   input.value='';
+   syncClear();
+   input.dispatchEvent(new Event('input',{bubbles:true}));
+   input.focus();
+ });
+ input.addEventListener('input',syncClear);
  window.addEventListener('scroll',update,{passive:true});
- document.addEventListener('gkk:menu-layout-ready',()=>requestAnimationFrame(()=>{measure();update();}));
+ document.addEventListener('gkk:menu-layout-ready',()=>requestAnimationFrame(()=>{unpin();measure();update();}));
  window.addEventListener('resize',()=>{unpin();requestAnimationFrame(()=>{measure();update();});});
- document.addEventListener('click',event=>{if(event.target.closest('[onclick*="showPage"]'))setTimeout(()=>{measure();update();},80);});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){measure();update();}});
- measure();update();
+ document.addEventListener('click',event=>{if(event.target.closest('[onclick*="showPage"]'))setTimeout(()=>{unpin();measure();update();},100);});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){unpin();measure();update();}});
+ measure();syncClear();update();
 })();
-
-<style id="mobile-menu-search-width-fix">
-/* Keep the floating menu search fully inside the viewport on phones. */
-@media(max-width:650px){
-  #menu .menu-search-sticky.menu-search-pinned{
-    left:0!important;
-    width:100vw!important;
-    max-width:100vw!important;
-    padding:8px 12px 10px!important;
-    box-sizing:border-box!important;
-    overflow:visible!important;
-  }
-  #menu .menu-search-sticky.menu-search-pinned input#customerMenuSearch{
-    display:block!important;
-    width:100%!important;
-    min-width:0!important;
-    max-width:100%!important;
-    box-sizing:border-box!important;
-    padding:12px 42px 12px 14px!important;
-    font-size:16px!important;
-  }
-  #menu .menu-search-sticky.menu-search-pinned input#customerMenuSearch::-webkit-search-cancel-button{
-    -webkit-appearance:searchfield-cancel-button!important;
-    appearance:auto!important;
-    display:block!important;
-    cursor:pointer!important;
-  }
-}
-</style>
 </script>
 </body></html>
