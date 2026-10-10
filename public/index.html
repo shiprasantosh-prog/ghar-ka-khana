@@ -1952,25 +1952,33 @@ async function loadGooglePlacesLibrary(){
    AutocompleteSuggestion:{
     fetchAutocompleteSuggestions:async({input})=>{
      const service=new google.maps.places.AutocompleteService();
-     const predictions=await new Promise((resolve,reject)=>service.getPlacePredictions(
-      {input,componentRestrictions:{country:"in"}},
-      (items,status)=>{
-       if(status===google.maps.places.PlacesServiceStatus.OK||status===google.maps.places.PlacesServiceStatus.ZERO_RESULTS)resolve(items||[]);
-       else reject(new Error("Google Places autocomplete failed: "+status+". Check Places API access, billing, and API-key restrictions."));
-      }
-     ));
+     const predictions=await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("Google Places autocomplete timed out. Check internet access, Places API enablement, billing, and API-key restrictions.")),10000);
+      service.getPlacePredictions(
+       {input,componentRestrictions:{country:"in"}},
+       (items,status)=>{
+        clearTimeout(timer);
+        if(status===google.maps.places.PlacesServiceStatus.OK||status===google.maps.places.PlacesServiceStatus.ZERO_RESULTS)resolve(items||[]);
+        else reject(new Error("Google Places autocomplete failed: "+status+". Check Places API access, billing, and API-key restrictions."));
+       }
+      );
+     });
      return {suggestions:predictions.map(prediction=>({placePrediction:{
       toPlace:()=>{
        const selectedPlace={};
        selectedPlace.fetchFields=async()=>{
         const detailService=new google.maps.places.PlacesService(document.createElement("div"));
-        const detail=await new Promise((resolve,reject)=>detailService.getDetails(
-         {placeId:prediction.place_id,fields:["name","formatted_address","geometry","address_components"]},
-         (place,status)=>{
-          if(status===google.maps.places.PlacesServiceStatus.OK)resolve(place);
-          else reject(new Error("Google Places place-details request failed: "+status+"."));
-         }
-        ));
+        const detail=await new Promise((resolve,reject)=>{
+         const timer=setTimeout(()=>reject(new Error("Google Places place-details request timed out.")),10000);
+         detailService.getDetails(
+          {placeId:prediction.place_id,fields:["name","formatted_address","geometry","address_components"]},
+          (place,status)=>{
+           clearTimeout(timer);
+           if(status===google.maps.places.PlacesServiceStatus.OK)resolve(place);
+           else reject(new Error("Google Places place-details request failed: "+status+"."));
+          }
+         );
+        });
         const location=detail.geometry?.location;
         Object.assign(selectedPlace,{
          displayName:detail.name||detail.formatted_address,
