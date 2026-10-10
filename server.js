@@ -1278,6 +1278,31 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   }
 
   const event = String(req.body?.event || "");
+
+  // Refund events carry a refund entity rather than a payment entity.
+  // Match the Razorpay refund ID to the durable local refund record and
+  // update its status so the owner dashboard reflects Razorpay's final state.
+  if (event === "refund.processed" || event === "refund.failed" || event === "refund.created") {
+    const refund = req.body?.payload?.refund?.entity;
+    const refundId = String(refund?.id || "");
+    if (!refundId) return res.status(200).json({ ok: true });
+
+    const status = event === "refund.processed" ? "processed"
+      : event === "refund.failed" ? "failed" : "pending";
+    const failureReason = status === "failed"
+      ? String(refund?.failure_reason || refund?.error_description || "Razorpay reported refund failure.")
+      : "";
+
+    const updatedRefund = await pool.query(
+      "UPDATE order_refunds SET status=$1, failure_reason=$2, updated_at=CURRENT_TIMESTAMP WHERE razorpay_refund_id=$3 RETURNING id,order_id",
+      [status, failureReason, refundId]
+    );
+    if (!updatedRefund.rowCount) {
+      console.warn("Razorpay refund webhook received for unknown refund:", refundId);
+    }
+    return res.status(200).json({ ok: true });
+  }
+
   const payment = req.body?.payload?.payment?.entity;
   if (!payment) return res.status(200).json({ ok: true });
 
