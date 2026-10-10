@@ -1334,7 +1334,7 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
     if(updated.rowCount){
       const order=await readOrder(row.id);
       if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(row.id);
-      else notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+      else {await creditReferralRewardForCompletedOrder(order.user_id);await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));}
     }
   }
   return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
@@ -1528,6 +1528,8 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
         await refundLateCapturedCancelledOrder(row.id);
       } else {
         const order = await readOrder(row.id);
+        await creditReferralRewardForCompletedOrder(order.user_id);
+        await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);
         notifyWhatsApp(order).catch(error =>
           console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
         );
