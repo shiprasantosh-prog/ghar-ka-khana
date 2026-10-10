@@ -51,7 +51,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // HTTP-referrer and API restrictions in Google Cloud Console.
 const MENU_IMAGE_FOLDERS = {
   "Breakfast": "Breakfast", "Chinese": "Chinese", "Main Course": "Main Course",
-  "Snacks": "Snacks", "Parathas": "Parathas", "Healthy Salads": "Healthy Salads",
+  "Snacks": "Snacks", "Sandwich": "Snacks", "Parathas": "Parathas", "Healthy Salads": "Healthy Salads",
   "Sweets & Desserts": "Sweets & Deserts", "Beverages": "Beverages"
 };
 const menuImageCatalog = {};
@@ -357,6 +357,10 @@ async function initializeDatabase() {
   await pool.query("INSERT INTO delivery_area_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING");
   // Current delivery policy: 12 km radius. Keep existing installations in sync.
   await pool.query("UPDATE delivery_area_settings SET radius_km=12 WHERE id=1");
+
+  // Give sandwich dishes their own customer-facing category on existing databases.
+  // Keep the move name-based so dishes previously listed under Breakfast or Snacks are migrated too.
+  await pool.query("UPDATE menu SET category = 'Sandwich' WHERE LOWER(TRIM(category)) = 'sandwich' OR LOWER(name) LIKE '%sandwich%'");
 
   // Owner-curated dishes featured in the customer-facing Popular section.
   await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
