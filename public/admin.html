@@ -100,7 +100,25 @@ function renderOwnerOrders(){
  $("#pendingOrderCount").textContent=ownerOrderRows.filter(o=>!["Delivered","Cancelled"].includes(o.status)).length;
  $("#ownerOrders").innerHTML=rows.length?rows.map(o=>{const items=(o.items||[]).map(i=>esc(i.name)+" × "+i.quantity).join(", ");const date=o.created_at?new Date(o.created_at).toLocaleString():"Date unavailable";const options=orderStatuses.map(s=>'<option value="'+s+'" '+(o.status===s?'selected':'')+'>'+s+'</option>').join("");return '<article class="order-card" data-order-id="'+o.id+'"><div class="order-top"><div><strong>'+orderCode(o.id)+' · '+esc(o.customer_name||"Customer")+'</strong><div class="order-meta">'+esc(date)+' · '+esc(o.customer_phone||"")+'</div></div><span class="pill '+(o.status==="Cancelled"?'off':'')+'">'+esc(o.status)+'</span></div><div class="order-items">'+esc(items)+'<br><strong>Total: Rs. '+Number(o.total||0)+'</strong><br>Delivery: '+esc(o.address||"")+ (o.scheduled_at?'<br><strong>Scheduled delivery: </strong>'+esc(new Date(o.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"}))+(o.delivery_slot?' · '+esc(o.delivery_slot):""):"")+(Number(o.discount)>0?'<br>Promo '+esc(o.promo_code)+' · Saved Rs. '+Number(o.discount):"")+(o.notes?'<br>Notes: '+esc(o.notes):"")+(o.cancellation_reason?'<br>Cancellation reason: '+esc(o.cancellation_reason):"")+'<br><strong>Payment:</strong> '+esc(o.payment_status||"unknown")+'<br><strong>Razorpay Payment ID:</strong> '+esc(o.razorpay_payment_id||"Not available")+(Array.isArray(o.refunds)&&o.refunds.length?'<br><strong>Refund:</strong> '+o.refunds.map(r=>esc(r.status)+(r.razorpay_refund_id?' · '+esc(r.razorpay_refund_id):'')).join(", "):"")+'</div><div class="order-actions">'+(o.status==="Cancelled"||o.status==="Delivered"?'':'<select aria-label="New status" data-order-status>'+options+'</select><button type="button" class="secondary" data-save-status>Update status</button><button type="button" class="danger" data-cancel-order>Cancel order</button>')+(Array.isArray(o.refunds)&&o.refunds.length?'<button type="button" class="secondary" data-refresh-refund>Refresh refund status</button>':"")+(o.status==="Cancelled"&&o.payment_status==="paid"&&!(Array.isArray(o.refunds)&&o.refunds.some(r=>["pending","processing","created","processed"].includes(r.status)))?'<button type="button" class="danger" data-refund-order>Issue full refund</button>':"")+'</div></article>'}).join(""):'<p class="muted">No orders found.</p>';
 }
-async function loadOwnerOrders(){ownerOrderRows=await api('/api/admin/orders');renderOwnerOrders()}
+let refundReconcileInProgress=false;let lastRefundReconcileAt=0;
+async function loadOwnerOrders(){
+ ownerOrderRows=await api('/api/admin/orders');
+ renderOwnerOrders();
+ // Use the existing Razorpay fetch endpoint as a fallback when webhooks are delayed.
+ // Reconcile only non-final refunds, at most once per minute, and never create a refund here.
+ if(refundReconcileInProgress||Date.now()-lastRefundReconcileAt<60000)return;
+ const candidates=[...new Set(ownerOrderRows.filter(o=>Array.isArray(o.refunds)&&
+   o.refunds.some(r=>r.razorpay_refund_id&&["created","pending","processing"].includes(String(r.status||"").toLowerCase())))
+   .map(o=>o.id))];
+ if(!candidates.length)return;
+ refundReconcileInProgress=true;lastRefundReconcileAt=Date.now();
+ try{
+   await Promise.allSettled(candidates.map(orderId=>api("/api/admin/orders/"+orderId+"/refund/refresh",{method:"POST",body:"{}"})));
+   ownerOrderRows=await api('/api/admin/orders');
+   renderOwnerOrders();
+ }catch(error){console.warn("Automatic refund status reconciliation failed:",error.message)}
+ finally{refundReconcileInProgress=false}
+}
 $("#orderSearch").addEventListener("input",renderOwnerOrders);
 $("#refreshOrders").addEventListener("click",()=>loadOwnerOrders().catch(e=>msg("#ordersMsg",e.message)));
 $("#ownerOrders").addEventListener("click",async e=>{
