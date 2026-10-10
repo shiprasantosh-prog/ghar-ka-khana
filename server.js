@@ -1806,7 +1806,17 @@ async function notifyWhatsApp(order) {
 
   const deliveryFee=Number(order.delivery_fee)||0;
   const handlingFee=Number(order.handling_fee??5);
-  const totalAmount = `Items subtotal Rs. ${(Number(order.total)||0)-handlingFee-deliveryFee+(Number(order.discount)||0)}; Handling & processing fee Rs. ${handlingFee}; Delivery Charge Rs. ${deliveryFee}; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
+  // Keep the approved Meta template's existing parameter count; include payment state
+  // in its existing total/charges parameter so no WhatsApp template edit is required.
+  const paymentState = String(order.payment_status || "").toLowerCase();
+  const paymentSummary = paymentState === "cod"
+    ? `COD — Rs. ${Number(order.total) || 0} due on delivery`
+    : paymentState === "paid"
+      ? `ONLINE — PAID${order.razorpay_payment_id ? " | Razorpay ID: " + cleanWhatsAppText(order.razorpay_payment_id) : ""}`
+      : paymentState === "failed"
+        ? "ONLINE — PAYMENT FAILED / NOT PAID"
+        : "ONLINE — PAYMENT PENDING / NOT CONFIRMED";
+  const totalAmount = `PAYMENT: ${paymentSummary}; Items subtotal Rs. ${(Number(order.total)||0)-handlingFee-deliveryFee+(Number(order.discount)||0)}; Handling & processing fee Rs. ${handlingFee}; Delivery Charge Rs. ${deliveryFee}; ${Number(order.discount)>0 ? `Promo savings Rs. ${Number(order.discount)} (${order.promo_code}); ` : ""}Total Rs. ${Number(order.total)||0}`;
   const scheduledInfo = order.scheduled_at ? `Scheduled: ${new Date(order.scheduled_at).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})}${order.delivery_slot ? " ("+order.delivery_slot+")" : ""}. ` : "";
   const deliveryAddress = cleanWhatsAppText(scheduledInfo + order.address);
 
