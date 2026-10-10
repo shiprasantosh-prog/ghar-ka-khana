@@ -2977,32 +2977,48 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
 </style>
 
 <style id="sticky-menu-search-and-home-highlights">
-/* Search behaves like a frozen spreadsheet header after category chips scroll away. */
-#menu .menu-search-sticky{position:sticky!important;top:0!important;left:auto!important;transform:none!important;z-index:50!important;width:100%!important;max-width:100%!important;margin:8px 0 16px!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;outline:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.10)!important;box-sizing:border-box}
+/* Keep the menu search frozen at the top after the category list has passed. */
+#menu .menu-search-sticky{position:relative!important;top:auto!important;left:auto!important;transform:none!important;z-index:50!important;width:min(620px,100%)!important;max-width:620px!important;margin:8px 0 16px!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;outline:0!important;border-radius:0 0 12px 12px!important;box-shadow:none!important;box-sizing:border-box}
 #menu .menu-search-sticky label{color:#385644!important}
 #menu .menu-search-sticky input{background:#fffdf7!important;border:1px solid #d9cfb6!important;box-shadow:none!important;outline:0!important}
-#menu .menu-search-sticky.menu-search-pinned{position:sticky!important;top:0!important;z-index:50!important;width:100%!important;max-width:100%!important;margin:0 0 16px!important;padding-top:10px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.10)!important}
+#menu .menu-search-sticky.menu-search-pinned{position:fixed!important;top:0!important;z-index:999!important;margin:0!important;padding:10px 12px 12px!important;background:#f8f5e9!important;border:0!important;border-radius:0 0 12px 12px!important;box-shadow:0 4px 10px rgba(24,65,44,.14)!important}
 #menu .menu-search-sticky.menu-search-pinned label{display:none!important}
+.menu-search-spacer{display:none;height:0}
 </style>
 <script id="menu-search-non-overlap-sticky">
 (function(){
  const search=document.querySelector('#menu .menu-search-sticky');
  const menu=document.getElementById('menu');
- const categories=document.getElementById('categories');
- if(!search||!menu||!categories)return;
+ if(!search||!menu)return;
+ const spacer=document.createElement('div');
+ spacer.className='menu-search-spacer';
+ spacer.setAttribute('aria-hidden','true');
+ search.parentNode.insertBefore(spacer,search);
  let start=0;
  function measure(){start=search.getBoundingClientRect().top+window.scrollY;}
+ function unpin(){search.classList.remove('menu-search-pinned');search.style.left='';search.style.width='';search.style.maxWidth='';spacer.style.display='none';spacer.style.height='0px';}
  function update(){
-   const active=document.body.dataset.currentPage==='menu';
+   const active=document.body.dataset.currentPage==='menu'&&menu.classList.contains('active-view');
    const menuRect=menu.getBoundingClientRect();
-   const categoriesRect=categories.getBoundingClientRect();
-   const pinned=active&&window.scrollY>start&&menuRect.bottom>search.offsetHeight+24&&categoriesRect.bottom<8;
-   search.classList.toggle('menu-search-pinned',pinned);
+   const searchRect=search.getBoundingClientRect();
+   const shouldPin=active&&window.scrollY>=start-2&&menuRect.bottom>90;
+   if(shouldPin){
+     if(!search.classList.contains('menu-search-pinned')){
+       spacer.style.display='block';
+       spacer.style.height=(search.offsetHeight+24)+'px';
+       search.classList.add('menu-search-pinned');
+     }
+     const rect=spacer.getBoundingClientRect();
+     search.style.left=Math.max(0,rect.left)+'px';
+     search.style.width=Math.max(240,rect.width)+'px';
+     search.style.maxWidth='calc(100vw - '+Math.max(0,rect.left)+'px)';
+   }else unpin();
  }
  window.addEventListener('scroll',update,{passive:true});
- document.addEventListener('gkk:menu-layout-ready',()=>{search.classList.remove('menu-search-pinned');requestAnimationFrame(()=>{measure();update();});});
- window.addEventListener('resize',()=>{search.classList.remove('menu-search-pinned');measure();update();});
- document.addEventListener('click',event=>{if(event.target.closest('[onclick*="showPage"]'))setTimeout(()=>{measure();update();},0);});
+ document.addEventListener('gkk:menu-layout-ready',()=>requestAnimationFrame(()=>{measure();update();}));
+ window.addEventListener('resize',()=>{unpin();requestAnimationFrame(()=>{measure();update();});});
+ document.addEventListener('click',event=>{if(event.target.closest('[onclick*="showPage"]'))setTimeout(()=>{measure();update();},80);});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){measure();update();}});
  measure();update();
 })();
 </script>
