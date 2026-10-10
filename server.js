@@ -317,6 +317,8 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT");
+  await pool.query("CREATE TABLE IF NOT EXISTS razorpay_payment_attempts (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_order_id TEXT NOT NULL UNIQUE, razorpay_payment_id TEXT, status TEXT NOT NULL DEFAULT 'created', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,razorpay_payment_id,status) SELECT id,razorpay_order_id,razorpay_payment_id,CASE WHEN payment_status='paid' THEN 'paid' WHEN payment_status='failed' THEN 'failed' ELSE 'created' END FROM orders WHERE razorpay_order_id IS NOT NULL ON CONFLICT(razorpay_order_id) DO NOTHING");
   await pool.query("CREATE TABLE IF NOT EXISTS order_refunds (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_refund_id TEXT UNIQUE, amount_paise INTEGER NOT NULL CHECK (amount_paise > 0), status TEXT NOT NULL DEFAULT 'pending', initiated_by TEXT NOT NULL DEFAULT 'owner', failure_reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS order_refunds_one_active_per_order ON order_refunds(order_id) WHERE status IN ('pending','processing','created')");
   await pool.query("CREATE INDEX IF NOT EXISTS order_refunds_order_id_idx ON order_refunds(order_id, created_at DESC)");
@@ -1200,6 +1202,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   try{
     const rpOrder=await razorpay.orders.create({amount:total*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
     await pool.query("UPDATE orders SET razorpay_order_id=$1 WHERE id=$2",[rpOrder.id,orderId]);
+    await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created') ON CONFLICT(razorpay_order_id) DO NOTHING",[orderId,rpOrder.id]);
     const order=await readOrder(orderId);
     res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
   }catch(e){
@@ -1211,6 +1214,22 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
 
  
 // Verify a successful Razorpay Checkout payment before confirming the customer order.
+app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
+  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
+  const orderId=Number(req.params.id);
+  if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
+  const found=await pool.query("SELECT id,total,status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const row=found.rows[0];
+  if(!row)return res.status(404).json({error:"Order not found."});
+  if(row.status==="Cancelled"||row.payment_status==="paid")return res.status(409).json({error:"This order cannot be paid again."});
+  if(!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))return res.status(409).json({error:"This order is not eligible for payment retry."});
+  const rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId)+"-R"+Date.now().toString().slice(-6),notes:{ghar_ka_khana_order_id:String(orderId),payment_retry:"true"}});
+  await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created')",[orderId,rpOrder.id]);
+  await pool.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2 AND user_id=$3 AND payment_status<>'paid'",[rpOrder.id,orderId,req.user.id]);
+  const order=await readOrder(orderId);
+  return res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
+}));
+
 app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   const orderId=Number(req.body?.orderId),razorpayOrderId=String(req.body?.razorpay_order_id||""),razorpayPaymentId=String(req.body?.razorpay_payment_id||""),razorpaySignature=String(req.body?.razorpay_signature||"");
   if(!Number.isInteger(orderId)||orderId<1||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.status(400).json({error:"Incomplete payment verification details."});
@@ -1218,7 +1237,8 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   const result=await pool.query("SELECT id,total,payment_status,razorpay_order_id FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]),row=result.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
   if(row.payment_status==="paid")return res.json(await readOrder(orderId));
-  if(row.razorpay_order_id!==razorpayOrderId)return res.status(400).json({error:"Payment order does not match this order."});
+  const attempt=await pool.query("SELECT id FROM razorpay_payment_attempts WHERE order_id=$1 AND razorpay_order_id=$2",[orderId,razorpayOrderId]);
+  if(!attempt.rowCount)return res.status(400).json({error:"Payment order does not match this order."});
   const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
   const ok=expected.length===razorpaySignature.length&&crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(razorpaySignature));
   if(!ok)return res.status(400).json({error:"Payment verification failed. Your order has not been confirmed."});
@@ -1226,6 +1246,7 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   if(String(payment.order_id||"")!==razorpayOrderId)return res.status(400).json({error:"Payment order does not match this order."});
   if(Number(payment.amount)!==Number(row.total)*100)return res.status(400).json({error:"Payment amount does not match this order."});
   if(payment.status!=="captured" && payment.captured!==true)return res.status(400).json({error:"Payment has not been captured yet. Your order remains pending."});
+  await pool.query("UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE order_id=$2 AND razorpay_order_id=$3",[razorpayPaymentId,orderId,razorpayOrderId]);
   const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
   const order=await readOrder(orderId);
   if(updated.rowCount){
@@ -1411,7 +1432,7 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   if (!razorpayOrderId || !razorpayPaymentId) return res.status(200).json({ ok: true });
 
   const result = await pool.query(
-    "SELECT id,total,payment_status FROM orders WHERE razorpay_order_id=$1",
+    "SELECT o.id,o.total,o.payment_status,o.status FROM orders o JOIN razorpay_payment_attempts a ON a.order_id=o.id WHERE a.razorpay_order_id=$1",
     [razorpayOrderId]
   );
   const row = result.rows[0];
@@ -1421,6 +1442,7 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   }
 
   if (event === "payment.captured") {
+    await pool.query("UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE razorpay_order_id=$2",[razorpayPaymentId,razorpayOrderId]);
     if (Number(payment.amount) !== Number(row.total) * 100) {
       console.error("Razorpay webhook amount mismatch for order:", row.id);
       return res.status(400).json({ error: "Payment amount does not match the order." });
@@ -1442,11 +1464,12 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
       }
     }
   } else if (event === "payment.failed") {
-    // Keep the order available for another payment attempt. A later
-    // payment.captured event is allowed to move it from failed to paid.
+    // Mark this specific attempt failed. An older attempt's delayed failure
+    // must not overwrite the status of a newer retry attempt.
+    await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE razorpay_order_id=$1 AND status<>'paid'",[razorpayOrderId]);
     await pool.query(
-      "UPDATE orders SET payment_status='failed',status='Payment Pending' WHERE id=$1 AND payment_status<>'paid'",
-      [row.id]
+      "UPDATE orders SET payment_status='failed',status='Payment Pending' WHERE id=$1 AND razorpay_order_id=$2 AND payment_status<>'paid'",
+      [row.id,razorpayOrderId]
     );
   }
 
@@ -1763,7 +1786,7 @@ app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
 // Customer order history
 app.get("/api/orders/mine", auth, asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT o.id, o.total, o.address, o.status, o.created_at, o.estimated_delivery_minutes,
+    `SELECT o.id, o.total, o.address, o.status, o.payment_status, o.created_at, o.estimated_delivery_minutes,
             EXISTS (SELECT 1 FROM reviews r WHERE r.order_id = o.id) AS reviewed
      FROM orders o WHERE o.user_id = $1
      ORDER BY id DESC`,
