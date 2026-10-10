@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 760" fill="none">
-  <g opacity=".22" stroke="#9B5421" stroke-linecap="round" stroke-linejoin="round">
+  <g opacity=".78" stroke="#A84D12" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="310" cy="310" r="174" stroke-width="2.5"/>
-    <circle cx="310" cy="310" r="151" stroke-width="1.4" stroke-dasharray="3 9"/>
+    <circle cx="310" cy="310" r="151" stroke-width="2" stroke-dasharray="3 9"/>
     <path d="M310 105 C330 145 360 157 402 151 C380 181 381 210 413 235 C374 231 348 248 338 286 C322 254 298 254 282 286 C272 248 246 231 207 235 C239 210 240 181 218 151 C260 157 290 145 310 105Z" stroke-width="2"/>
-    <path d="M310 130 C335 180 370 194 420 180 C389 215 391 247 429 275 C383 264 352 285 341 330 C325 291 295 291 279 330 C268 285 237 264 191 275 C229 247 231 215 200 180 C250 194 285 180 310 130Z" stroke-width="1.5"/>
+    <path d="M310 130 C335 180 370 194 420 180 C389 215 391 247 429 275 C383 264 352 285 341 330 C325 291 295 291 279 330 C268 285 237 264 191 275 C229 247 231 215 200 180 C250 194 285 180 310 130Z" stroke-width="2"/>
     <!-- Crown and halo -->
     <circle cx="310" cy="290" r="78" stroke-width="2.5"/>
     <path d="M258 268 L270 218 L291 239 L310 192 L329 239 L350 218 L362 268Z" stroke-width="3"/>
