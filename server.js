@@ -1407,6 +1407,51 @@ app.post("/api/admin/orders/:id/refund", auth, admin, asyncRoute(async (req, res
     return res.status(202).json({ message: "Refund submission needs reconciliation in Razorpay. It has been kept in processing to prevent a duplicate refund.", refundId: refundRecord.id });
   }
 }));
+// Reconcile an existing refund with Razorpay without creating a new refund.
+app.post("/api/admin/orders/:id/refund/refresh", auth, admin, asyncRoute(async (req, res) => {
+  if (!razorpay) return res.status(503).json({ error: "Razorpay is not configured." });
+  const orderId = Number(req.params.id);
+  if (!Number.isInteger(orderId) || orderId < 1) return res.status(400).json({ error: "Invalid order." });
+
+  const found = await pool.query(
+    `SELECT r.id, r.razorpay_refund_id, r.status, r.failure_reason,
+            o.razorpay_payment_id
+     FROM order_refunds r
+     JOIN orders o ON o.id = r.order_id
+     WHERE r.order_id = $1
+     ORDER BY r.created_at DESC
+     LIMIT 1`,
+    [orderId]
+  );
+  const refund = found.rows[0];
+  if (!refund) return res.status(404).json({ error: "No refund record exists for this order." });
+  if (!refund.razorpay_refund_id) {
+    return res.status(409).json({ error: "This refund has no Razorpay refund ID yet. Check Razorpay before retrying anything." });
+  }
+  if (!refund.razorpay_payment_id) {
+    return res.status(409).json({ error: "The original Razorpay payment ID is missing; the refund cannot be reconciled automatically." });
+  }
+
+  // Fetch the existing refund only. This endpoint never submits a refund request.
+  const remote = await razorpay.payments.fetchRefund(refund.razorpay_payment_id, refund.razorpay_refund_id);
+  const remoteStatus = String(remote?.status || "").toLowerCase();
+  const status = ["processed", "failed", "pending"].includes(remoteStatus)
+    ? remoteStatus
+    : ["created", "processing"].includes(remoteStatus) ? "processing" : refund.status;
+  const failureReason = status === "failed"
+    ? String(remote?.failure_reason || remote?.error_description || "Razorpay reported refund failure.")
+    : "";
+
+  const updated = await pool.query(
+    "UPDATE order_refunds SET status=$1, failure_reason=$2, updated_at=CURRENT_TIMESTAMP WHERE id=$3 RETURNING id,order_id,razorpay_refund_id,status,failure_reason,updated_at",
+    [status, failureReason, refund.id]
+  );
+  console.info("[Razorpay refund reconciliation] Existing refund checked:", {
+    orderId, refundId: refund.razorpay_refund_id, status
+  });
+  return res.status(200).json({ message: "Existing refund status refreshed from Razorpay.", refund: updated.rows[0] });
+}));
+
 app.post("/api/payments/cancel",auth,asyncRoute(async(req,res)=>{
   const orderId=Number(req.body?.orderId);
   if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
