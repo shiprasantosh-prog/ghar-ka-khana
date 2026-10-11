@@ -421,6 +421,11 @@ async function initializeDatabase() {
   await pool.query(`UPDATE menu SET category = 'Main Course'
     WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN ('kadhpakoda','kadh pakoda','kadhipakoda','lachhaparatha','plainparatha')`);
 
+  // Khichdi varieties belong under Main Course > Rice & Biryani, not Gravy/Daal.
+  await pool.query(`UPDATE menu SET category = 'Main Course'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
+      ('masalakhichdi','palakkhichdi','plainkhichdi','dalkhichdi')`);
+
   // Owner-curated dishes featured in the customer-facing Popular section.
   await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
 
