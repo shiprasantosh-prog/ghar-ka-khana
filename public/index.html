@@ -1224,6 +1224,36 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 @media(max-width:650px){#homePopular.navratri-festive-section{padding:14px 8px!important}#homePopular .navratri-festive-frame{padding:26px 4px 12px}#homePopular .navratri-festive-topline{font-size:9px;letter-spacing:2px;gap:8px}#homePopular .navratri-day-plaque{min-width:0;padding:12px 30px;border-radius:42px 18px}#homePopular .navratri-festive-heading{gap:4px}#homePopular .navratri-heading-rule{width:12px}#homePopular .navratri-dandiya-art{top:92px;font-size:34px;opacity:.62}#homePopular .navratri-dandiya-left{left:0}#homePopular .navratri-dandiya-right{right:0}#homePopular .navratri-purity-note{font-size:12px;gap:6px;margin:10px 0 14px}#homePopular #popularGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}#homePopular #popularGrid>.card .food-img{height:125px!important;min-height:125px!important;max-height:125px!important;flex-basis:125px!important}#homePopular #popularGrid>.card .card-body{padding:10px 8px 11px!important}#homePopular #popularGrid>.card h3{font-size:14px!important;min-height:2.4em}#homePopular #popularGrid>.card .price{font-size:17px!important}#homePopular #popularGrid>.card [data-quantity-control] button.add{padding:6px 9px!important;font-size:17px!important}}
 </style>
 
+<style id="navratri-day2-layout-correction">
+/* Correct Day 2 alignment and compact menu cards after the live-page screenshot. */
+#homePopular .navratri-festive-frame{width:100%;max-width:1500px;margin:0 auto;padding:28px clamp(10px,1.5vw,22px) 18px;box-sizing:border-box}
+#homePopular .navratri-festive-heading{width:100%;display:grid!important;grid-template-columns:minmax(20px,1fr) minmax(0,auto) minmax(20px,1fr)!important;align-items:center!important;justify-content:stretch!important;gap:clamp(8px,2vw,28px)!important;text-align:center!important}
+#homePopular .navratri-festive-heading>div{min-width:0;text-align:center!important}
+#homePopular .navratri-festive-heading h2{width:100%;text-align:center!important;color:#fff!important}
+#homePopular .navratri-day-plaque{display:block!important;box-sizing:border-box;width:clamp(230px,35vw,560px);min-width:0!important;margin:0 auto;color:#fff!important;padding:12px 34px 14px!important;font-size:clamp(34px,4vw,58px)!important;letter-spacing:2px!important}
+#homePopular .navratri-day-plaque *{color:#fff!important}
+#homePopular .navratri-festive-heading p{white-space:normal;text-align:center!important;font-size:clamp(17px,2.2vw,29px)!important}
+#homePopular #popularGrid{display:grid!important;width:100%!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px!important;align-items:stretch!important}
+#homePopular #popularGrid>.card{width:100%!important;min-width:0!important;max-width:none!important;box-sizing:border-box!important;border-radius:16px!important}
+#homePopular #popularGrid>.card .food-img{height:clamp(105px,11vw,165px)!important;min-height:clamp(105px,11vw,165px)!important;max-height:clamp(105px,11vw,165px)!important;flex-basis:clamp(105px,11vw,165px)!important}
+#homePopular #popularGrid>.card .card-body{padding:10px 8px 11px!important;min-width:0!important}
+#homePopular #popularGrid>.card h3{font-size:clamp(13px,1.15vw,17px)!important;line-height:1.2!important;min-height:2.4em!important;overflow-wrap:anywhere}
+#homePopular #popularGrid>.card .price{font-size:clamp(15px,1.25vw,19px)!important}
+#homePopular #popularGrid>.card .card-foot{padding-top:6px!important}
+#homePopular #popularGrid>.card [data-quantity-control] button.add{padding:5px 9px!important;font-size:15px!important;min-height:32px}
+@media(max-width:1100px){#homePopular #popularGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}#homePopular #popularGrid>.card .food-img{height:125px!important;min-height:125px!important;max-height:125px!important;flex-basis:125px!important}}
+@media(max-width:650px){
+#homePopular .navratri-festive-frame{padding:24px 6px 12px!important}
+#homePopular .navratri-festive-heading{grid-template-columns:14px minmax(0,1fr) 14px!important;gap:5px!important}
+#homePopular .navratri-day-plaque{width:auto;max-width:100%;padding:10px 18px!important;font-size:34px!important;border-radius:40px 18px!important}
+#homePopular .navratri-festive-heading p{font-size:17px!important}
+#homePopular #popularGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#homePopular #popularGrid>.card .food-img{height:112px!important;min-height:112px!important;max-height:112px!important;flex-basis:112px!important}
+#homePopular #popularGrid>.card .card-body{padding:9px 7px!important}
+#homePopular #popularGrid>.card h3{font-size:13px!important}
+#homePopular #popularGrid>.card .price{font-size:16px!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
