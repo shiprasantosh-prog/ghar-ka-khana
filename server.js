@@ -2459,18 +2459,22 @@ function normalizePhone(value) {
 
 // Notify customers when an order is accepted, delivered, or cancelled.
 async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "") {
-  if (!["Accepted", "Delivered", "Cancelled"].includes(status)) return;
+  if (!["Accepted", "Delivered", "Cancelled"].includes(status)) {
+    return { status: "skipped", reason: "This status does not send a customer WhatsApp notification." };
+  }
 
   const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
   if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    const reason = "WhatsApp API credentials are missing in the backend environment.";
     console.warn("Customer WhatsApp status notification skipped: API credentials missing.");
-    return;
+    return { status: "skipped", reason };
   }
 
   const order = await readOrder(orderId);
   if (!order?.customer_phone) {
+    const reason = "The order has no customer phone number saved.";
     console.warn(`Customer WhatsApp status notification skipped for order ${orderId}: phone missing.`);
-    return;
+    return { status: "skipped", reason };
   }
 
   let customerPhone = normalizePhone(order.customer_phone);
@@ -2521,9 +2525,10 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
   const result = await response.json();
   if (!response.ok) {
     console.error(`Customer WhatsApp notification failed for order ${orderCode}:`, result);
-    throw new Error("Customer WhatsApp notification failed.");
+    throw new Error(result.error?.message || `WhatsApp rejected the ${status.toLowerCase()} notification. Check the approved template name, language, and parameters in Meta WhatsApp Manager.`);
   }
   console.log(`Customer WhatsApp status notification sent for ${orderCode}: ${status}`);
+  return { status: "sent" };
 }
 
 async function sendWhatsAppText(to, body) {
