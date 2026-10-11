@@ -1837,7 +1837,7 @@ function renderPopularDishes(){
     const key=norm(target);
     return available.find(d=>{const n=norm(d.name);return n===key||(key==='kuttukipuriandsabji'&&n.includes('kuttukipuri')&&n.includes('sabji'))||(key==='purisabji'&&n.includes('purisabji')&&!n.includes('kuttu'))||(key==='ricekheer'&&n.includes('ricekheer'));});
   }).filter(Boolean);
-  const chosen=ordered.length===5?ordered:popularDishes.slice(0,5);
+  const chosen=ordered.length===5?[...ordered,...popularDishes.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):popularDishes.slice(0,6);
   host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please check back for the festive menu.</p>';
 }
 
@@ -3684,7 +3684,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
 
 
 <style id="navratri-compact-home-section">
-/* Keep Navratri festive but reduce the vertical space it takes on the homepage. */
+/* Keep Navratri festive and compact; show up to six dishes so the mobile two-column grid fills evenly. */
 #homePopular.navratri-festive-section{padding:8px clamp(10px,2vw,24px) 18px!important}
 #homePopular .navratri-festive-frame{padding:16px clamp(14px,2.5vw,34px) 16px!important;column-gap:clamp(16px,2.5vw,36px)!important}
 #homePopular .navratri-real-photo{height:clamp(150px,17vw,205px)!important;max-height:205px!important;border-radius:12px!important}
