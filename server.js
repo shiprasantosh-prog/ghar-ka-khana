@@ -2026,11 +2026,24 @@ app.get("/api/kitchen/status", asyncRoute(async (req, res) => {
 app.patch("/api/admin/kitchen", auth, admin, asyncRoute(async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(req.body || {}, "dailyOpenTime") || Object.prototype.hasOwnProperty.call(req.body || {}, "dailyCloseTime")) {
     const { dailyOpenTime, dailyCloseTime } = req.body || {};
-    const validTime = value => typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-    if (!validTime(dailyOpenTime) || !validTime(dailyCloseTime) || dailyOpenTime === dailyCloseTime) {
-      return res.status(400).json({ error: "Choose valid daily opening and closing times. They cannot be the same." });
+    // HTML time inputs normally send HH:mm. Normalize other common time
+    // representations as well so seconds/timezone formatting cannot cause a false rejection.
+    const normalizeKitchenTime = value => {
+      if (typeof value !== "string") return null;
+      const match = value.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d(?:\.\d+)?)?$/);
+      return match ? `${match[1].padStart(2, "0")}:${match[2]}` : null;
+    };
+    const openingTime = normalizeKitchenTime(dailyOpenTime);
+    const closingTime = normalizeKitchenTime(dailyCloseTime);
+    if (!openingTime || !closingTime) {
+      return res.status(400).json({
+        error: `Invalid kitchen hours received (opening: ${JSON.stringify(dailyOpenTime ?? null)}, closing: ${JSON.stringify(dailyCloseTime ?? null)}). Select both times again.`
+      });
     }
-    await pool.query("UPDATE kitchen_settings SET daily_schedule_enabled = TRUE, daily_open_time = $1, daily_close_time = $2, reopen_at = NULL, updated_at = NOW() WHERE id = 1", [dailyOpenTime, dailyCloseTime]);
+    if (openingTime === closingTime) {
+      return res.status(400).json({ error: `Opening and closing times are both ${openingTime}. Choose two different times.` });
+    }
+    await pool.query("UPDATE kitchen_settings SET daily_schedule_enabled = TRUE, daily_open_time = $1, daily_close_time = $2, reopen_at = NULL, updated_at = NOW() WHERE id = 1", [openingTime, closingTime]);
     return res.json(await getKitchenStatus());
   }
   const isOpen = req.body.isOpen;
