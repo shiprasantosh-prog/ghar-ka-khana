@@ -868,7 +868,7 @@ app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
 
 app.put("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
   const { menuIds } = req.body || {};
-  if (!Array.isArray(menuIds) || menuIds.length > 5) return res.status(400).json({ error: "Select no more than five Popular dishes." });
+  if (!Array.isArray(menuIds) || menuIds.length > 6) return res.status(400).json({ error: "Select no more than six Navratri Vrat Special dishes." });
   const ids = [...new Set(menuIds.map(Number))];
   if (ids.length !== menuIds.length || ids.some(id => !Number.isInteger(id) || id < 1)) return res.status(400).json({ error: "Invalid or duplicate menu item selection." });
   const client = await pool.connect();
