@@ -621,6 +621,11 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 .menu-category-open .home-menu-tile{display:none!important}
 @media(max-width:650px){.home-menu-tile{right:16px;bottom:84px;width:92px;height:92px}.home-menu-tile .menu-tile-label{font-size:12px;letter-spacing:1.2px}.home-menu-tile .menu-tile-icon{width:32px;height:32px}.home-menu-tile .menu-tile-icon svg{width:32px;height:32px}}
 
+/* Keep the draggable ITEMS shortcut compact across desktop and mobile. */
+.home-menu-tile.global-items-tile{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;right:20px!important;bottom:82px!important;padding:0!important;gap:4px!important;transform:none!important}
+.home-menu-tile.global-items-tile .menu-tile-icon,.home-menu-tile.global-items-tile .menu-tile-icon svg{width:28px!important;height:28px!important}
+.home-menu-tile.global-items-tile .menu-tile-label{font-size:11px!important;letter-spacing:1px!important}
+@media(max-width:650px){.home-menu-tile.global-items-tile{width:72px!important;height:72px!important;min-width:72px!important;min-height:72px!important;right:14px!important;bottom:74px!important}.home-menu-tile.global-items-tile .menu-tile-icon,.home-menu-tile.global-items-tile .menu-tile-icon svg{width:24px!important;height:24px!important}.home-menu-tile.global-items-tile .menu-tile-label{font-size:10px!important;letter-spacing:.8px!important}}
 /* Restore compact mobile Best Selling Items cards */
 @media(max-width:650px){#popularGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}#popularGrid>.card{min-width:0!important;width:auto!important}#popularGrid .food-img{height:125px!important;min-height:125px!important}#popularGrid .card-body{padding:11px!important}#popularGrid .card-title h3{font-size:14px!important;line-height:1.25!important}#popularGrid .card-body>p{font-size:11px!important;line-height:1.35!important;margin:6px 0!important}}@media(max-width:390px){#popularGrid .food-img{height:112px!important;min-height:112px!important}}
 </style>
@@ -1166,7 +1171,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 .cart-fab{
   position:fixed!important;right:22px!important;bottom:22px!important;z-index:29!important;
   width:48px!important;height:48px!important;min-width:48px!important;
-  padding:0!important;border-radius:50%!important;display:flex;align-items:center;justify-content:center;
+  padding:0!important;border-radius:50%!important;display:none;align-items:center;justify-content:center;
   box-shadow:0 5px 16px rgba(0,0,0,.22)!important;line-height:1!important;
 }
 .cart-fab .cart-fab-icon{width:29px;height:29px;line-height:1;display:block}.cart-fab .cart-fab-icon svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:4.2;stroke-linecap:round;stroke-linejoin:round}
