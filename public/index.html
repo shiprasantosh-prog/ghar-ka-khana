@@ -1813,8 +1813,8 @@ function quantityControlHTML(d,ignoreAvailability=false){
     if(hasVariants)return '<button class="add" type="button" '+(available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"')+' onclick="openVariantPicker('+JSON.stringify(d.id)+','+(ignoreAvailability?'true':'false')+')">'+(available?'Customize':escapeHTML(disabledLabel))+'</button>';
     const qty=cart[d.id]||0,id=JSON.stringify(d.id);
     return qty>0
-        ? `<span style="display:flex;align-items:center;gap:10px"><button class="add" type="button" onclick='change(${id},-1)'>−</button><strong>${qty}</strong><button class="add" type="button" ${available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"'} onclick='change(${id},1)'>+</button></span>`
-        : `<button class="add" type="button" ${available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"'} onclick='add(${id})'>${available?'+ Add':escapeHTML(disabledLabel)}</button>`;
+        ? `<span style="display:flex;align-items:center;gap:10px"><button class="add" type="button" onclick='change(${id},-1,0,${ignoreAvailability})'>−</button><strong>${qty}</strong><button class="add" type="button" ${available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"'} onclick='change(${id},1,0,${ignoreAvailability})'>+</button></span>`
+        : `<button class="add" type="button" ${available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"'} onclick='add(${id},0,${ignoreAvailability})'>${available?'+ Add':escapeHTML(disabledLabel)}</button>`;
 }
 function openVariantPicker(id,ignoreAvailability=false){
     const dish=findCustomerDish(id);
@@ -1833,7 +1833,7 @@ function openVariantPicker(id,ignoreAvailability=false){
         <input type="radio" name="gkkVariant" value="${Number(v.id)}" data-price="${Number(v.price)}" ${i===0?'checked':''} onchange="selectVariantOption(this)" style="width:18px;height:18px;accent-color:#104D37">
         <span style="flex:1;color:#104D37;font-weight:600">${escapeHTML(v.label)}</span><strong style="color:#C99B36">${money(v.price)}</strong>
       </label>`).join('')}</div>
-      <button id="variantAddButton" class="btn" type="button" style="width:100%;margin-top:12px" onclick="addSelectedVariant(${Number(dish.id)})">Add to Basket — ${money(first.price)}</button>
+      <button id="variantAddButton" class="btn" type="button" style="width:100%;margin-top:12px" onclick="addSelectedVariant(${Number(dish.id)},${ignoreAvailability})">Add to Basket — ${money(first.price)}</button>
     </div>`;
     overlay.onclick=e=>{if(e.target===overlay)closeVariantPicker()};
     overlay.style.display='flex';
@@ -1844,9 +1844,9 @@ function selectVariantOption(input){
     const button=document.getElementById('variantAddButton');if(button)button.textContent='Add to Basket — '+money(Number(input.dataset.price)||0);
 }
 function closeVariantPicker(){const overlay=document.getElementById('variantPickerOverlay');if(overlay)overlay.style.display='none'}
-function addSelectedVariant(menuId){
+function addSelectedVariant(menuId,ignoreAvailability=false){
     const selected=document.querySelector('input[name="gkkVariant"]:checked');if(!selected)return;
-    add(menuId,Number(selected.value));closeVariantPicker();
+    add(menuId,Number(selected.value),ignoreAvailability);closeVariantPicker();
 }
 function handleDishImageError(img){
  const fallback=img.dataset.fallback||fallbackFoodImage;
@@ -1878,13 +1878,13 @@ function updateMenuItem(id){
         if(dish&&host)host.innerHTML=quantityControlHTML(dish);
     });
 }
-function add(id,variantId=0){
-    const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
+function add(id,variantId=0,ignoreAvailability=false){
+    const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+1;updateCart();updateMenuItem(dish.id);
 }
-function change(id,n,variantId=0){
+function change(id,n,variantId=0,ignoreAvailability=false){
     appliedPromo=null;const breakdown=document.getElementById("promoBreakdown");if(breakdown)breakdown.textContent="";const promoMessage=document.getElementById("promoMessage"),promoInput=document.getElementById("promoCode"),promoCode=promoInput?.value.trim()||"";if(promoMessage)promoMessage.textContent=promoCode?"Invalid Promo Code/ Promo Code expired":"";
-    const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(n>0&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
+    const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&n>0&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
 function minimumOrderForAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens")?60:100;}
