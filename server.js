@@ -51,7 +51,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // HTTP-referrer and API restrictions in Google Cloud Console.
 const MENU_IMAGE_FOLDERS = {
   "Breakfast": "Breakfast", "Chinese": "Chinese", "Main Course": "Main Course",
-  "Snacks": "Snacks", "Sandwich": "Sandwich", "Extras": "Extras", "Single Plate Meal": "Single Plate Meal", "Parathas": "Parathas",
+  "Snacks": "Snacks", "Sandwich": "Sandwich", "Extras": "Extras", "Single Plate Meal": "Single Plate Meal", "Parathas": "Parathas", "Healthy Salads": "Healthy Salads",
   "Sweets & Desserts": "Sweets & Deserts", "Beverages": "Beverages"
 };
 const menuImageCatalog = {};
