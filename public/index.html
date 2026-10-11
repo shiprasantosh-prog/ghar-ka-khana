@@ -699,13 +699,21 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 #bulkEnquiryOverlay .bulk-form-message.show{display:block}
 @media(max-width:760px){
  #homeBulkOrders{padding:20px 12px 34px!important}
- #homeBulkOrders .bulk-order-section{grid-template-columns:1fr;min-height:0}
- #homeBulkOrders .bulk-order-photo{min-height:270px;order:-1}
+ #homeBulkOrders .bulk-order-section{grid-template-columns:1fr;min-height:0;display:grid}
+ /* Mobile order: introduction, party photo, occasion cards, then enquiry details. */
+ #homeBulkOrders .bulk-order-copy{display:contents}
+ #homeBulkOrders .bulk-order-copy:after{display:none}
+ #homeBulkOrders .bulk-order-copy>.eyebrow{grid-row:1;margin:0 22px 8px}
+ #homeBulkOrders .bulk-order-copy>h2{grid-row:2;margin:0 22px 14px}
+ #homeBulkOrders .bulk-order-copy>p:first-of-type{grid-row:3;margin:0 22px 12px}
+ #homeBulkOrders .bulk-order-photo{grid-row:4;order:initial;min-height:0;height:245px;margin:4px 0 16px;position:relative;overflow:hidden}
+ #homeBulkOrders .bulk-party-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
  #homeBulkOrders .bulk-order-photo:before{background:linear-gradient(180deg,rgba(248,239,217,.02),rgba(248,239,217,.2))}
  #homeBulkOrders .bulk-order-photo:after{display:none}
- #homeBulkOrders .bulk-order-copy{clip-path:none;padding:30px 22px 34px}
- #homeBulkOrders .bulk-order-copy:after{display:none}
- #homeBulkOrders .bulk-occasions{gap:7px}
+ #homeBulkOrders .bulk-occasions{grid-row:5;margin:0 22px 14px;gap:7px}
+ #homeBulkOrders .bulk-order-copy>p:nth-of-type(2){grid-row:6;margin:0 22px 12px}
+ #homeBulkOrders .bulk-order-copy>div:last-child{grid-row:7;margin:0 22px 30px}
+ #homeBulkOrders .bulk-order-copy .btn{margin-top:0}
  #homeBulkOrders .bulk-occasion{font-size:12px;padding:8px 10px}
  #bulkEnquiryOverlay{padding:10px;align-items:center}
  #bulkEnquiryOverlay .bulk-enquiry-modal{max-height:95vh;padding:20px;border-radius:15px}
