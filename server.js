@@ -2124,13 +2124,25 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
     ? `Out of Stock: ${cancellationReason}`
     : cancellationReason;
 
+  let estimatedDeliveryMinutes = null;
+  if (req.body.status === "Accepted") {
+    const rawEstimate = req.body.estimatedDeliveryMinutes;
+    const estimate = Number(rawEstimate);
+    if (rawEstimate === undefined || rawEstimate === null || String(rawEstimate).trim() === "" ||
+        !Number.isInteger(estimate) || estimate < 5 || estimate > 480) {
+      return res.status(400).json({ error: "Please enter an estimated delivery time between 5 and 480 minutes." });
+    }
+    estimatedDeliveryMinutes = estimate;
+  }
+
   const result = await pool.query(
     `UPDATE orders
      SET status = $1,
-         cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN $2 ELSE cancellation_reason END
-     WHERE id = $3
+         estimated_delivery_minutes = CASE WHEN $1 = 'Accepted' THEN $2 ELSE estimated_delivery_minutes END,
+         cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN $3 ELSE cancellation_reason END
+     WHERE id = $4
      RETURNING id, status`,
-    [req.body.status, savedCancellationReason, req.params.id]
+    [req.body.status, estimatedDeliveryMinutes, savedCancellationReason, req.params.id]
   );
 
   if (result.rowCount === 0) {
@@ -2138,17 +2150,21 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   }
 
   const order = await readOrder(req.params.id);
-  if (result.rows[0].status === "Cancelled") {
-    notifyCustomerOrderStatus(order.id, "Cancelled", cancellationReason).catch((error) =>
-      console.error("Customer cancellation notification error:", error.message)
-    );
-  } else if (["Accepted", "Delivered"].includes(result.rows[0].status)) {
-    notifyCustomerOrderStatus(order.id, result.rows[0].status).catch((error) =>
-      console.error("Customer status notification error:", error.message)
-    );
+  let customerNotification = null;
+  if (result.rows[0].status === "Cancelled" || ["Accepted", "Delivered"].includes(result.rows[0].status)) {
+    try {
+      customerNotification = await notifyCustomerOrderStatus(
+        order.id,
+        result.rows[0].status,
+        result.rows[0].status === "Cancelled" ? cancellationReason : ""
+      );
+    } catch (error) {
+      console.error("Customer order status notification error:", error.message);
+      customerNotification = { status: "failed", reason: error.message || "WhatsApp notification failed." };
+    }
   }
 
-  res.json(order);
+  res.json({ ...order, customerNotification });
 }));
 
 
