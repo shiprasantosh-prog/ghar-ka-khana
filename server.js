@@ -77,7 +77,10 @@ function levenshteinMenuImage(a,b){
   } return prev[b.length];
 }
 function canonicalMenuImageCategory(category) {
-  const value = String(category || "").trim().toLowerCase();
+  const value = String(category || "").trim().toLowerCase().replace(/\s+/g, " ");
+  // The public menu/database historically uses the misspelling "Sweets & Deserts";
+  // map both spellings to the same on-disk image folder.
+  if (value === "sweets & deserts" || value === "sweets and deserts" || value === "sweets & desserts" || value === "sweets and desserts") return "Sweets & Desserts";
   return Object.keys(MENU_IMAGE_FOLDERS).find(key => key.toLowerCase() === value) || "";
 }
 function menuImagePath(name, category) {
@@ -95,6 +98,17 @@ function menuImagePath(name, category) {
     const preferred = preferredBreakfastImages.find(entry => entry.pattern.test(String(name || "").trim()));
     if (preferred && candidates.includes(preferred.file)) {
       return "/images/" + encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory]) + "/" + encodeURIComponent(preferred.file) + "?v=20261011";
+    }
+  }
+  // Pin the newly added Sweets & Deserts images so spelling variants and duplicate
+  // extensions cannot cause an older or unintended file to win fuzzy matching.
+  if (canonicalCategory === "Sweets & Desserts") {
+    const sweetsPreferred = [
+      { names: ["sakkarpara", "sakkar para", "shakkarpara", "shakkar para"], file: "Sakkarpara.jpg" },
+      { names: ["daal chakki", "dal chakki", "daal chikki", "dal chikki"], file: "Daal Chakki.jpg" }
+    ].find(entry => entry.names.some(alias => normalizeMenuImageName(alias) === target));
+    if (sweetsPreferred && candidates.includes(sweetsPreferred.file)) {
+      return "/images/" + encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory]) + "/" + encodeURIComponent(sweetsPreferred.file) + "?v=20261012";
     }
   }
   let best={file:"",score:0};
