@@ -143,7 +143,26 @@ $("#ownerOrders").addEventListener("click",async e=>{
  const card=e.target.closest("[data-order-id]");if(!card)return;const order=ownerOrderRows.find(o=>String(o.id)===card.dataset.orderId);if(!order)return;
  if(e.target.closest("[data-refresh-refund]")){try{const result=await api("/api/admin/orders/"+order.id+"/refund/refresh",{method:"POST",body:"{}"});msg("#ordersMsg",result.message||"Refund status refreshed.");await loadOwnerOrders()}catch(err){msg("#ordersMsg",err.message);await loadOwnerOrders().catch(()=>{})}return}
  if(e.target.closest("[data-refund-order]")){if(!confirm("Issue a full refund for "+orderCode(order.id)+" through Razorpay? Only do this if the order was cancelled and payment was captured."))return;try{const result=await api("/api/admin/orders/"+order.id+"/refund",{method:"POST",body:"{}"});msg("#ordersMsg",result.message||"Refund request recorded.");await loadOwnerOrders()}catch(err){msg("#ordersMsg",err.message);await loadOwnerOrders().catch(()=>{})}}
- if(e.target.closest("[data-save-status]")){const status=card.querySelector("[data-order-status]").value;try{await api("/api/admin/orders/"+order.id,{method:"PATCH",body:JSON.stringify({status})});msg("#ordersMsg","Order status updated.");await loadOwnerOrders()}catch(err){msg("#ordersMsg",err.message)}}
+ if(e.target.closest("[data-save-status]")){
+  const status=card.querySelector("[data-order-status]").value;
+  const payload={status};
+  if(status==="Accepted"){
+   const entered=window.prompt("Enter estimated delivery time in minutes (5–480):",String(order.estimated_delivery_minutes||40));
+   if(entered===null)return;
+   const estimate=Number(String(entered).trim());
+   if(!Number.isInteger(estimate)||estimate<5||estimate>480){msg("#ordersMsg","Please enter a whole number between 5 and 480 minutes.");return}
+   payload.estimatedDeliveryMinutes=estimate;
+  }
+  try{
+   const result=await api("/api/admin/orders/"+order.id,{method:"PATCH",body:JSON.stringify(payload)});
+   const notice=result.customerNotification;
+   if(notice?.status==="sent")msg("#ordersMsg","Order status updated. Customer WhatsApp notification sent.");
+   else if(notice?.status==="failed")msg("#ordersMsg","Order status updated, but WhatsApp notification failed: "+(notice.reason||"Check the backend logs and Meta template configuration."));
+   else if(notice?.status==="skipped")msg("#ordersMsg","Order status updated, but customer WhatsApp notification was skipped: "+(notice.reason||"Check the customer phone and WhatsApp API settings."));
+   else msg("#ordersMsg","Order status updated.");
+   await loadOwnerOrders();
+  }catch(err){msg("#ordersMsg",err.message)}
+ }
  if(e.target.closest("[data-cancel-order]")){cancelTargetOrder=order;$("#cancelOrderCode").textContent=orderCode(order.id);$("#outOfStockItem").innerHTML=(order.items||[]).map(i=>'<option value="'+esc(i.name)+'">'+esc(i.name)+'</option>').join("");$("#cancelReason").value="Out of Stock";toggleOutOfStockField();$("#cancelDialog").showModal()}
 });
 function toggleOutOfStockField(){const isStock=$("#cancelReason").value==="Out of Stock";$("#outOfStockField").classList.toggle("hidden",!isStock);$("#outOfStockItem").required=isStock}

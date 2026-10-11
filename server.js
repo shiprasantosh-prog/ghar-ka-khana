@@ -2124,13 +2124,25 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
     ? `Out of Stock: ${cancellationReason}`
     : cancellationReason;
 
+  let estimatedDeliveryMinutes = null;
+  if (req.body.status === "Accepted") {
+    const rawEstimate = req.body.estimatedDeliveryMinutes;
+    const estimate = Number(rawEstimate);
+    if (rawEstimate === undefined || rawEstimate === null || String(rawEstimate).trim() === "" ||
+        !Number.isInteger(estimate) || estimate < 5 || estimate > 480) {
+      return res.status(400).json({ error: "Please enter an estimated delivery time between 5 and 480 minutes." });
+    }
+    estimatedDeliveryMinutes = estimate;
+  }
+
   const result = await pool.query(
     `UPDATE orders
      SET status = $1,
-         cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN $2 ELSE cancellation_reason END
-     WHERE id = $3
+         estimated_delivery_minutes = CASE WHEN $1 = 'Accepted' THEN $2 ELSE estimated_delivery_minutes END,
+         cancellation_reason = CASE WHEN $1 = 'Cancelled' THEN $3 ELSE cancellation_reason END
+     WHERE id = $4
      RETURNING id, status`,
-    [req.body.status, savedCancellationReason, req.params.id]
+    [req.body.status, estimatedDeliveryMinutes, savedCancellationReason, req.params.id]
   );
 
   if (result.rowCount === 0) {
@@ -2138,17 +2150,21 @@ app.patch("/api/admin/orders/:id", auth, admin, asyncRoute(async (req, res) => {
   }
 
   const order = await readOrder(req.params.id);
-  if (result.rows[0].status === "Cancelled") {
-    notifyCustomerOrderStatus(order.id, "Cancelled", cancellationReason).catch((error) =>
-      console.error("Customer cancellation notification error:", error.message)
-    );
-  } else if (["Accepted", "Delivered"].includes(result.rows[0].status)) {
-    notifyCustomerOrderStatus(order.id, result.rows[0].status).catch((error) =>
-      console.error("Customer status notification error:", error.message)
-    );
+  let customerNotification = null;
+  if (result.rows[0].status === "Cancelled" || ["Accepted", "Delivered"].includes(result.rows[0].status)) {
+    try {
+      customerNotification = await notifyCustomerOrderStatus(
+        order.id,
+        result.rows[0].status,
+        result.rows[0].status === "Cancelled" ? cancellationReason : ""
+      );
+    } catch (error) {
+      console.error("Customer order status notification error:", error.message);
+      customerNotification = { status: "failed", reason: error.message || "WhatsApp notification failed." };
+    }
   }
 
-  res.json(order);
+  res.json({ ...order, customerNotification });
 }));
 
 
@@ -2443,18 +2459,22 @@ function normalizePhone(value) {
 
 // Notify customers when an order is accepted, delivered, or cancelled.
 async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "") {
-  if (!["Accepted", "Delivered", "Cancelled"].includes(status)) return;
+  if (!["Accepted", "Delivered", "Cancelled"].includes(status)) {
+    return { status: "skipped", reason: "This status does not send a customer WhatsApp notification." };
+  }
 
   const { WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION = "v21.0" } = process.env;
   if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    const reason = "WhatsApp API credentials are missing in the backend environment.";
     console.warn("Customer WhatsApp status notification skipped: API credentials missing.");
-    return;
+    return { status: "skipped", reason };
   }
 
   const order = await readOrder(orderId);
   if (!order?.customer_phone) {
+    const reason = "The order has no customer phone number saved.";
     console.warn(`Customer WhatsApp status notification skipped for order ${orderId}: phone missing.`);
-    return;
+    return { status: "skipped", reason };
   }
 
   let customerPhone = normalizePhone(order.customer_phone);
@@ -2505,9 +2525,10 @@ async function notifyCustomerOrderStatus(orderId, status, cancellationReason = "
   const result = await response.json();
   if (!response.ok) {
     console.error(`Customer WhatsApp notification failed for order ${orderCode}:`, result);
-    throw new Error("Customer WhatsApp notification failed.");
+    throw new Error(result.error?.message || `WhatsApp rejected the ${status.toLowerCase()} notification. Check the approved template name, language, and parameters in Meta WhatsApp Manager.`);
   }
   console.log(`Customer WhatsApp status notification sent for ${orderCode}: ${status}`);
+  return { status: "sent" };
 }
 
 async function sendWhatsAppText(to, body) {
