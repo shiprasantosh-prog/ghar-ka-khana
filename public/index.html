@@ -1898,7 +1898,7 @@ function updateMenuItem(id){
         if(String(card.dataset.menuCard)!==String(id))return;
         const dish=findCustomerDish(id);
         const host=card.querySelector("[data-quantity-control]");
-        if(dish&&host)host.innerHTML=quantityControlHTML(dish);
+        if(dish&&host)host.innerHTML=quantityControlHTML(dish,card.dataset.ignoreCategoryAvailability==='true');
     });
 }
 function add(id,variantId=0,ignoreAvailability=false){
