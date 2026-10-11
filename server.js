@@ -685,11 +685,16 @@ async function sendPasswordResetEmail(to, resetUrl) {
 app.post("/api/auth/password-reset/request", passwordResetLimiter, asyncRoute(async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "Enter a valid email address." });
+
+  // Check mail configuration before looking up the address. Otherwise a configured
+  // account would get a different response from an unknown account, leaking whether
+  // that email is registered.
+  if (!process.env.RESEND_API_KEY || !(process.env.PASSWORD_RESET_FROM_EMAIL || process.env.ADMIN_EMAIL)) {
+    return res.status(503).json({ error: "Password reset email is not configured yet. Please contact Ghar ka Khana for help." });
+  }
+
   const found = await pool.query("SELECT id FROM users WHERE LOWER(email) = $1 AND role = 'customer'", [email]);
   if (found.rowCount) {
-    if (!process.env.RESEND_API_KEY || !(process.env.PASSWORD_RESET_FROM_EMAIL || process.env.ADMIN_EMAIL)) {
-      return res.status(503).json({ error: "Password reset email is not configured yet. Please contact Ghar ka Khana for help." });
-    }
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     await pool.query("DELETE FROM password_reset_tokens WHERE user_id = $1 OR expires_at <= NOW()", [found.rows[0].id]);
