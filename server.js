@@ -440,8 +440,11 @@ async function initializeDatabase() {
     WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
       ('masalakhichdi','palakkhichdi','plainkhichdi','dalkhichdi')`);
 
-  // Owner-curated dishes featured in the customer-facing Popular section.
-  await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+  // Owner-curated dishes featured in the customer-facing Navratri Vrat Specials section.
+  await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 6), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+  // Existing deployments may still have the original 1–5 constraint from the first table creation.
+  await pool.query(`ALTER TABLE popular_menu DROP CONSTRAINT IF EXISTS popular_menu_display_order_check`);
+  await pool.query(`ALTER TABLE popular_menu ADD CONSTRAINT popular_menu_display_order_check CHECK (display_order BETWEEN 1 AND 6)`);
 
   // Create reviews separately so existing table initialization remains unchanged.
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
