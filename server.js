@@ -87,7 +87,11 @@ function menuImagePath(name, category) {
   for(const file of candidates){ const candidate=normalizeMenuImageName(file); if(!candidate) continue;
     let score=1-(levenshteinMenuImage(target,candidate)/Math.max(target.length,candidate.length));
     if(target===candidate) score=1; else if(target.includes(candidate)||candidate.includes(target)) score=Math.max(score,.86);
-    if(score>best.score) best={file,score};
+    // If multiple files normalize to the same dish name (e.g. "Veg Uttapam.jpg"
+    // and "Veg Uttapam (2PCS).jpg"), prefer the shorter canonical filename.
+    // This avoids accidentally selecting a serving-size variant when a standard
+    // dish photo is available.
+    if(score>best.score || (score===best.score && score>=.999 && file.length<best.file.length)) best={file,score};
   }
   return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory])+"/"+encodeURIComponent(best.file) : "";
 }
