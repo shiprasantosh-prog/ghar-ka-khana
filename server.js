@@ -83,7 +83,21 @@ function canonicalMenuImageCategory(category) {
 function menuImagePath(name, category) {
   const canonicalCategory = canonicalMenuImageCategory(category);
   const candidates=getMenuImageCandidates(canonicalCategory), target=normalizeMenuImageName(name);
-  if(!target || !candidates.length) return ""; let best={file:"",score:0};
+  if(!target || !candidates.length) return "";
+  // Pin the three recently re-uploaded Breakfast photos: older lowercase duplicates
+  // normalize identically, so directory ordering can otherwise serve stale images.
+  const preferredBreakfastImages = [
+    { pattern: /^poha$/i, file: "Poha.jpg" },
+    { pattern: /^vermicelli$/i, file: "Vermicelli.jpg" },
+    { pattern: /^veg\.?\s*uttapam\s*\(?\s*2\s*(?:pcs?|pieces?)\s*\)?$/i, file: "Veg. Uttapam (2PCS).jpg" }
+  ];
+  if (canonicalCategory === "Breakfast") {
+    const preferred = preferredBreakfastImages.find(entry => entry.pattern.test(String(name || "").trim()));
+    if (preferred && candidates.includes(preferred.file)) {
+      return "/images/" + encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory]) + "/" + encodeURIComponent(preferred.file);
+    }
+  }
+  let best={file:"",score:0};
   for(const file of candidates){ const candidate=normalizeMenuImageName(file); if(!candidate) continue;
     let score=1-(levenshteinMenuImage(target,candidate)/Math.max(target.length,candidate.length));
     if(target===candidate) score=1; else if(target.includes(candidate)||candidate.includes(target)) score=Math.max(score,.86);
@@ -374,6 +388,38 @@ async function initializeDatabase() {
   // Move the requested add-ons and single-plate dishes into their dedicated menu categories.
   await pool.query(`UPDATE menu SET category = 'Extras' WHERE LOWER(TRIM(name)) IN ('curd','papad','green veg salad','boondi raita','cucumber raita','extra pav','extra bati')`);
   await pool.query(`UPDATE menu SET category = 'Single Plate Meal' WHERE LOWER(TRIM(name)) LIKE 'chole bhature%' OR (LOWER(TRIM(name)) LIKE 'chole kulche%' AND LOWER(TRIM(name)) LIKE '%plain%') OR LOWER(TRIM(name)) LIKE 'pav bhaji%' OR LOWER(TRIM(name)) LIKE 'sattu kachori with aloo chana masala%' OR LOWER(TRIM(name)) LIKE 'sattu kachori with aloo hing sabj%' OR LOWER(TRIM(name)) IN ('mini meal','full meal','deluxe meal')`);
+
+  // Keep menu categories aligned with the requested menu structure. Normalize
+  // punctuation so existing rows with different casing/spacing still match.
+  await pool.query(`UPDATE menu SET name = CASE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g')
+    WHEN 'bombayvegsandwitch' THEN 'Bombay Veg Sandwich'
+    WHEN 'cheesecornsandwitch' THEN 'Cheese Corn Sandwich'
+    WHEN 'chocolatesandwitch' THEN 'Chocolate Sandwich'
+    WHEN 'extramissiroti' THEN 'Missi Roti'
+    ELSE name END
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
+      ('bombayvegsandwitch','cheesecornsandwitch','chocolatesandwitch','extramissiroti')`);
+  await pool.query(`UPDATE menu SET category = 'Sandwich'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
+      ('bombayvegsandwich','cheesecornsandwich','chocolatesandwich','avocadotoast')`);
+  await pool.query(`UPDATE menu SET category = 'Snacks'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
+      ('churamatar','crispycornserve2','dahivada2pcs','dhokla2pcs','harabharakabab3pcs',
+       'makhanabhel','matarkachori','onionkachori1pcs','soyatikkachap','aloobonda','peanutsalad')`);
+  await pool.query(`UPDATE menu SET category = 'Sweets & Desserts'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN ('dhaniyapanjiri200gm','daalchakki')`);
+  await pool.query(`UPDATE menu SET category = 'Breakfast'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
+      ('franky','kolkataclubkachori','sattukachori','sujitoast2pcs','palakpaneerpuriwithsabji')`);
+  await pool.query(`UPDATE menu SET category = 'Single Plate Meal'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
+      ('littichokha','bengalithali','rajasthanithali','biharistyledaalchavalandaloobhaja','kuttukipuriandsabji')`);
+  await pool.query(`UPDATE menu SET category = 'Extras'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') = 'kuttupuri'`);
+  await pool.query(`UPDATE menu SET category = 'Chinese'
+    WHERE LOWER(TRIM(name)) LIKE 'crispy chilly garlic lotus ste%' OR LOWER(TRIM(name)) LIKE 'crispy chilli garlic lotus ste%'`);
+  await pool.query(`UPDATE menu SET category = 'Main Course'
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN ('kadhpakoda','kadh pakoda','kadhipakoda','lachhaparatha','plainparatha')`);
 
   // Owner-curated dishes featured in the customer-facing Popular section.
   await pool.query(`CREATE TABLE IF NOT EXISTS popular_menu (menu_id INTEGER PRIMARY KEY REFERENCES menu(id) ON DELETE CASCADE, display_order INTEGER NOT NULL UNIQUE CHECK (display_order BETWEEN 1 AND 5), created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
