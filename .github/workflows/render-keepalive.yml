@@ -1,0 +1,32 @@
+name: Keep Ghar ka Khana Awake
+
+on:
+  schedule:
+    # India Standard Time: start at 7:45 AM, then every 10 minutes until 9:25 PM.
+    - cron: '45,55 7 * * *'
+      timezone: 'Asia/Kolkata'
+    - cron: '5,15,25,35,45,55 8-20 * * *'
+      timezone: 'Asia/Kolkata'
+    - cron: '5,15,25 21 * * *'
+      timezone: 'Asia/Kolkata'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping-render:
+    name: Ping Render backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Request backend health endpoint
+        run: |
+          curl --fail --silent --show-error --location \
+            --retry 2 --retry-delay 5 --max-time 120 \
+            -o /dev/null \
+            -w 'HTTP status: %{http_code}\n' \
+            https://ghar-ka-khana-backend-pmxm.onrender.com/
