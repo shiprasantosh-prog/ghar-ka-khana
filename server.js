@@ -77,7 +77,7 @@ function levenshteinMenuImage(a,b){
   } return prev[b.length];
 }
 function canonicalMenuImageCategory(category) {
-  const value = String(category || "").trim().toLowerCase().replace(/\\s+/g, " ");
+  const value = String(category || "").trim().toLowerCase().replace(/\s+/g, " ");
   // The public menu/database historically uses the misspelling "Sweets & Deserts";
   // map both spellings to the same on-disk image folder.
   if (value === "sweets & deserts" || value === "sweets and deserts" || value === "sweets & desserts" || value === "sweets and desserts") return "Sweets & Desserts";
