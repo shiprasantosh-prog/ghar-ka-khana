@@ -94,7 +94,7 @@ function menuImagePath(name, category) {
   if (canonicalCategory === "Breakfast") {
     const preferred = preferredBreakfastImages.find(entry => entry.pattern.test(String(name || "").trim()));
     if (preferred && candidates.includes(preferred.file)) {
-      return "/images/" + encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory]) + "/" + encodeURIComponent(preferred.file);
+      return "/images/" + encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory]) + "/" + encodeURIComponent(preferred.file) + "?v=20261011";
     }
   }
   let best={file:"",score:0};
@@ -415,7 +415,7 @@ async function initializeDatabase() {
     WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') IN
       ('littichokha','bengalithali','rajasthanithali','biharistyledaalchavalandaloobhaja','kuttukipuriandsabji')`);
   await pool.query(`UPDATE menu SET category = 'Extras'
-    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') = 'kuttupuri'`);
+    WHERE regexp_replace(LOWER(TRIM(name)), '[^a-z0-9]', '', 'g') LIKE 'kuttupuri%'`);
   await pool.query(`UPDATE menu SET category = 'Chinese'
     WHERE LOWER(TRIM(name)) LIKE 'crispy chilly garlic lotus ste%' OR LOWER(TRIM(name)) LIKE 'crispy chilli garlic lotus ste%'`);
   await pool.query(`UPDATE menu SET category = 'Main Course'
