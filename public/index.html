@@ -1473,6 +1473,13 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  #menu .menu-search-sticky.menu-search-pinned .menu-search-input-wrap{width:100%!important;max-width:100%!important}
  #menu .menu-search-sticky.menu-search-pinned input{width:100%!important;min-width:0!important;box-sizing:border-box!important}
 }
+</style><style id="mobile-menu-dock-flicker-fix">
+@media(max-width:700px){
+ #menu:not(.active-view) .categories.menu-categories-pinned{display:none!important}
+ #menu:not(.active-view) .menu-search-sticky.menu-search-pinned{display:none!important}
+ #menu .categories.menu-categories-pinned{height:auto!important;box-sizing:border-box!important}
+ #menu .menu-search-sticky.menu-search-pinned{box-sizing:border-box!important;right:0!important}
+}
 </style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -3511,12 +3518,12 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
      catsSpacer.style.display='block';catsSpacer.style.height=cats.offsetHeight+'px';
      catsPinned=true;cats.classList.add('menu-categories-pinned');
    }else if(!shouldPinCats){unpinCategories();}
-   if(!pinned&&window.scrollY>=start){
+   const shouldPinSearch=catsPinned||window.scrollY>=start;
+   if(!pinned&&shouldPinSearch){
      spacer.style.display='block';spacer.style.height=(search.offsetHeight+12)+'px';
      pinned=true;search.classList.add('menu-search-pinned');
-   }else if(window.scrollY<start){unpin();}
+   }else if(!shouldPinSearch){unpin();}
    if(pinned){
-     const rect=spacer.getBoundingClientRect();
      search.style.left='0px';search.style.width='100vw';search.style.maxWidth='100vw';
      const h=catsPinned&&cats?cats.getBoundingClientRect().height:0;
      document.documentElement.style.setProperty('--gkk-mobile-category-height',Math.round(h)+'px');
