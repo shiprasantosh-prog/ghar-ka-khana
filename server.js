@@ -1506,38 +1506,116 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
 
  
 // Verify a successful Razorpay Checkout payment before confirming the customer order.
-app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
-  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
+// Retry by reusing the existing Razorpay order whenever possible. A browser failure
+// must never create a fresh payable order until existing attempts have been checked.
+async function reconcileCapturedPayment(orderId, razorpayOrderId, payment) {
+  if (!payment || String(payment.order_id || "") !== String(razorpayOrderId)) return null;
+  const totalResult = await pool.query("SELECT total FROM orders WHERE id=$1",[orderId]);
+  if (!totalResult.rowCount || Number(payment.amount) !== Number(totalResult.rows[0].total) * 100) return null;
+  if (payment.status !== "captured" && payment.captured !== true) return null;
+
+  await pool.query(
+    "UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE order_id=$2 AND razorpay_order_id=$3",
+    [payment.id, orderId, razorpayOrderId]
+  );
+  const updated = await pool.query(
+    "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",
+    [payment.id, orderId]
+  );
+  const order = await readOrder(orderId);
+  if (updated.rowCount && order) {
+    if (order.status === "Cancelled") await refundLateCapturedCancelledOrder(orderId);
+    else {
+      await creditReferralRewardForCompletedOrder(order.user_id);
+      await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[orderId]);
+      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+    }
+  }
+  return order;
+}
+
+app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
   const orderId=Number(req.params.id);
   if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
   const found=await pool.query("SELECT id,total,status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
   const row=found.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
-  if(row.status!=="Payment Pending"||row.payment_status==="paid")return res.status(409).json({error:"Only unpaid orders with Payment Pending status can be retried."});
-  if(!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))return res.status(409).json({error:"This order is not eligible for payment retry."});
-  const rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId)+"-R"+Date.now().toString().slice(-6),notes:{ghar_ka_khana_order_id:String(orderId),payment_retry:"true"}});
-  // Atomically re-check eligibility: an owner/customer cancellation or successful
-  // payment may have happened after the initial read while Razorpay created this order.
-  const client=await pool.connect();
-  try{
-    await client.query("BEGIN");
-    const locked=await client.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE",[orderId,req.user.id]);
-    const current=locked.rows[0];
-    if(!current){await client.query("ROLLBACK");return res.status(404).json({error:"Order not found."});}
-    if(current.status!=="Payment Pending"||current.payment_status==="paid"||!["created","failed","unpaid"].includes(String(current.payment_status||"").toLowerCase())){
-      await client.query("ROLLBACK");
-      return res.status(409).json({error:"This order is no longer eligible for payment retry. Refresh your orders and check its current status."});
+  if(row.payment_status==="paid")return res.json({state:"paid",order:await readOrder(orderId)});
+  if(!razorpay)return res.json({state:"pending",message:"Payment status is not available yet. Please do not pay again."});
+
+  const attempts=await pool.query("SELECT razorpay_order_id,status FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+  let hasInFlight=false, hasFailed=false, hadLookupError=false;
+  for(const attempt of attempts.rows){
+    try{
+      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const payments=Array.isArray(response?.items)?response.items:[];
+      for(const payment of payments){
+        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+        if(payment.status==="captured"||payment.captured===true){
+          const order=await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+          if(order)return res.json({state:"paid",order});
+        }else if(["authorized","created"].includes(String(payment.status||"").toLowerCase())){
+          hasInFlight=true;
+        }else if(["failed","refunded"].includes(String(payment.status||"").toLowerCase())){
+          hasFailed=true;
+        }
+      }
+    }catch(error){
+      hadLookupError=true;
+      console.warn("[Razorpay payment recovery] Could not inspect existing payment attempt:",{orderId,message:error.message});
     }
-    await client.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created')",[orderId,rpOrder.id]);
-    await client.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2",[rpOrder.id,orderId]);
-    await client.query("COMMIT");
-  }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}
-  finally{client.release();}
-  const order=await readOrder(orderId);
-  return res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
+  }
+  if(hasInFlight||hadLookupError)return res.json({state:"pending",message:"We are still checking your payment. Please do not pay again yet."});
+  if(hasFailed || attempts.rowCount===0)return res.json({state:"failed",message:"No captured payment was found. You can safely retry using the existing order."});
+  return res.json({state:"pending",message:"Payment confirmation is still pending. Please do not pay again yet."});
 }));
 
-app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
+app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
+  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
+  const orderId=Number(req.params.id);
+  if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
+  const found=await pool.query("SELECT id,total,status,payment_status,razorpay_order_id FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const row=found.rows[0];
+  if(!row)return res.status(404).json({error:"Order not found."});
+  if(row.payment_status==="paid")return res.json({...await readOrder(orderId),payment:{method:"already-paid"}});
+  if(row.status!=="Payment Pending"||!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))
+    return res.status(409).json({error:"This order is not eligible for payment retry. Check its current status."});
+
+  const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+  for(const attempt of attempts.rows){
+    try{
+      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const payments=Array.isArray(response?.items)?response.items:[];
+      for(const payment of payments){
+        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+        if(payment.status==="captured"||payment.captured===true){
+          const recovered=await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+          if(recovered)return res.json({...recovered,payment:{method:"already-paid"}});
+        }
+        if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
+          return res.status(409).json({error:"Your payment is still being processed. Please check payment status before trying again."});
+      }
+    }catch(error){
+      console.warn("[Razorpay payment recovery] Existing attempt lookup failed; refusing a new payment order:",{orderId,message:error.message});
+      return res.status(409).json({error:"We could not confirm the previous payment status yet. Please check again shortly; do not pay again."});
+    }
+  }
+
+  // Reuse the existing Razorpay order so a retry cannot create a second payable order.
+  let rpOrderId=String(row.razorpay_order_id||attempts.rows[0]?.razorpay_order_id||"");
+  let rpOrder;
+  if(rpOrderId){
+    try{rpOrder=await razorpay.orders.fetch(rpOrderId);}
+    catch(error){return res.status(409).json({error:"The existing payment session could not be checked. Please check payment status before retrying."});}
+  }else{
+    rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
+    rpOrderId=rpOrder.id;
+    await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created') ON CONFLICT(razorpay_order_id) DO NOTHING",[orderId,rpOrderId]);
+    await pool.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2 AND payment_status<>'paid'",[rpOrderId,orderId]);
+  }
+  const order=await readOrder(orderId);
+  return res.status(200).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrderId,amount:Number(row.total)*100,currency:"INR"}});
+}));app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   const orderId=Number(req.body?.orderId),razorpayOrderId=String(req.body?.razorpay_order_id||""),razorpayPaymentId=String(req.body?.razorpay_payment_id||""),razorpaySignature=String(req.body?.razorpay_signature||"");
   if(!Number.isInteger(orderId)||orderId<1||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.status(400).json({error:"Incomplete payment verification details."});
   if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
