@@ -2515,8 +2515,8 @@ function showPaymentPending(order,checkoutData,form){
    const status=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/payment-status");
    if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(order.id));return;}
    if(status.state==="failed"){check.remove();showPaymentRetry(order,checkoutData,form);return;}
-   success.textContent="Payment is still being verified. Please do not pay again. You can check again shortly.";
-  }catch(_){success.textContent="We could not refresh payment status yet. Please do not pay again; check again shortly."}
+   if(success.firstChild)success.firstChild.textContent="Payment is still being verified. Please do not pay again. You can check again shortly.";
+  }catch(_){if(success.firstChild)success.firstChild.textContent="We could not refresh payment status yet. Please do not pay again; check again shortly."}
   finally{if(check.isConnected){check.disabled=false;check.textContent="Check Payment Status"}}
  };
 }
@@ -2579,6 +2579,18 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
  button.disabled=true;button.textContent=paymentMethod==="cod"?"Placing COD order…":"Preparing payment…";
  try{
   const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
+  if(paymentMethod==="online"&&!pendingCheckoutRetry?.order&&localStorage.getItem("gkk_pending_payment_order_id")){
+   const previousId=localStorage.getItem("gkk_pending_payment_order_id");
+   const previousStatus=await api("/api/orders/"+encodeURIComponent(String(previousId))+"/payment-status");
+   if(previousStatus.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(previousId));return;}
+   if(previousStatus.order)pendingCheckoutRetry={order:previousStatus.order,checkoutData:data,form:e.target};
+   if(previousStatus.state==="pending"){showPaymentPending(previousStatus.order||pendingCheckoutRetry?.order,data,e.target);return;}
+   if(previousStatus.state==="failed"&&pendingCheckoutRetry?.order){
+    const retryOrder=await api("/api/orders/"+encodeURIComponent(String(previousId))+"/retry-payment",{method:"POST",body:"{}"});
+    if(retryOrder.payment?.method==="already-paid"){window.location.href="/?payment=success&orderId="+encodeURIComponent(String(previousId));return;}
+    const opened=await startRazorpayPayment(retryOrder,data,e.target,button);if(!opened)showPaymentRetry(retryOrder,data,e.target);return;
+   }
+  }
   if(paymentMethod==="online"&&pendingCheckoutRetry?.order){
    const pending=pendingCheckoutRetry;
    const status=await api("/api/orders/"+encodeURIComponent(String(pending.order.id))+"/payment-status");
