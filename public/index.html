@@ -1460,6 +1460,21 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
    width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;
  }
 }
+</style><style id="mobile-active-category-highlight-fix">
+@media(max-width:700px){
+ #menu .categories .chip.active{
+   color:#124f39!important;font-weight:800!important;
+   text-decoration:underline!important;text-decoration-color:#b58a36!important;
+   text-decoration-thickness:3px!important;text-underline-offset:6px!important;
+ }
+ #menu .categories .chip.active .category-chip-thumb{
+   border:4px solid #1b5a3a!important;
+   box-shadow:0 0 0 4px #e3ebd4!important;
+ }
+ #menu .categories .chip[data-category="All"].active:before{
+   border:4px solid #1b5a3a!important;box-shadow:0 0 0 4px #e3ebd4!important;
+ }
+}
 </style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
