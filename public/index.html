@@ -1410,7 +1410,15 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
   #menu .categories::-webkit-scrollbar-thumb{background:#cfc4a9;border-radius:8px}
 }
 </style>
-</head>
+
+<style id="mobile-category-chip-thumbnails">
+#menu .categories .chip{display:inline-flex;align-items:center;gap:8px}
+#menu .categories .category-chip-thumb{width:30px;height:30px;flex:0 0 30px;object-fit:cover;border-radius:50%;background:#e7e0ce;border:1px solid #e5dbc3}
+@media(max-width:700px){
+ #menu .categories .chip{padding:7px 13px!important;font-size:15px!important}
+ #menu .categories .category-chip-thumb{width:32px;height:32px;flex-basis:32px}
+}
+</style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
 <aside class="sidebar" aria-label="Main navigation">
@@ -2070,9 +2078,18 @@ function menuItemOrder(items,group){
  });
 }
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Sandwich','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages','Extras','Single Plate Meal'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
-function setMenuCategory(value){category=value;renderCats();renderMenu()}
-function renderCats(){const host=document.getElementById("categories");if(!host)return;const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];host.innerHTML=cats.map(c=>'<button type="button" class="chip '+(category===c?'active':'')+'" data-category="'+escapeHTML(c)+'"'+(categoryAvailability[c]?' title="'+escapeHTML(categoryAvailabilityLabel(c))+'"':'')+'">'+escapeHTML(c)+'</button>').join("");host.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>setMenuCategory(btn.dataset.category)))}
-function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
+function setMenuCategory(value){category=value;renderCats();renderMenu();const active=document.querySelector('#categories .chip.active');if(active&&window.matchMedia('(max-width:700px)').matches)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
+function renderCats(){
+ const host=document.getElementById("categories");if(!host)return;
+ const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];
+ const representativeDish=c=>c==="All"?null:dishes.find(d=>menuGroup(d)===c);
+ host.innerHTML=cats.map(c=>{
+   const dish=representativeDish(c);
+   const thumb=dish?'<img class="category-chip-thumb" src="'+escapeHTML(dish.img||fallbackFoodImage)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">':'';
+   return '<button type="button" class="chip '+(category===c?'active':'')+'" data-category="'+escapeHTML(c)+'"'+(categoryAvailability[c]?' title="'+escapeHTML(categoryAvailabilityLabel(c))+'"':'')+'>'+thumb+'<span>'+escapeHTML(c)+'</span></button>';
+ }).join("");
+ host.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>setMenuCategory(btn.dataset.category)));
+}function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
 function parseCartLineKey(key){const parts=String(key).split(":");return {menuId:Number(parts[0]),variantId:parts[1]?Number(parts[1]):0}}
 function findCustomerDish(id){return dishes.find(x=>Number(x.id)===Number(id))||popularDishes.find(x=>Number(x.id)===Number(id))||todaySpecials.find(x=>Number(x.id)===Number(id))||null}
 function getDishForCartLine(key){const parsed=parseCartLineKey(key);const dish=findCustomerDish(parsed.menuId);const variant=dish?.variants?.find(v=>Number(v.id)===parsed.variantId);return {dish,variant,menuId:parsed.menuId,variantId:parsed.variantId,price:variant?Number(variant.price):Number(dish?.price||0),label:variant?.label||""}}
