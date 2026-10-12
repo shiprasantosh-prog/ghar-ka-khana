@@ -1488,6 +1488,24 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
    margin:0!important;box-sizing:border-box!important;background:#f8f5e9!important;
  }
 }
+</style><style id="mobile-menu-dock-robust-fix">
+@media(max-width:700px){
+ /* Keep the category/search dock below overlays and make search reliably visible. */
+ #menu .categories.menu-categories-pinned{z-index:900!important}
+ #menu .menu-search-sticky.menu-search-pinned{
+   display:block!important;visibility:visible!important;opacity:1!important;
+   position:fixed!important;top:var(--gkk-mobile-category-height,100px)!important;
+   left:0!important;right:0!important;width:100%!important;max-width:100%!important;
+   transform:none!important;z-index:899!important;box-sizing:border-box!important;
+   margin:0!important;padding:7px 12px 9px!important;background:#f8f5e9!important;
+ }
+ #menu .menu-search-sticky.menu-search-pinned input#customerMenuSearch{
+   display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;
+   box-sizing:border-box!important;
+ }
+ /* The ITEMS navigation popup must sit above the sticky dock, not behind it. */
+ .items-popup,.items-drawer,.items-overlay,.menu-items-popup,[id*="itemsPopup"],[class*="items-popup"]{z-index:11000!important}
+}
 </style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -2150,22 +2168,21 @@ function menuItemOrder(items,group){
 }
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Sandwich','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages','Extras','Single Plate Meal'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
 function setMenuCategory(value){
- category=value;
- renderCats();
- renderMenu();
+ category=value;renderCats();renderMenu();
  const active=document.querySelector('#categories .chip.active');
  if(active&&window.matchMedia('(max-width:700px)').matches)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
  setTimeout(()=>{
-   document.dispatchEvent(new Event("gkk:menu-layout-ready"));
-   const first=document.querySelector('#menuGrid .menu-category');
-   if(first){
-     const pinnedCats=document.querySelector('#categories.menu-categories-pinned');
-     const pinnedSearch=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
-     const offset=(pinnedCats?.getBoundingClientRect().height||0)+(pinnedSearch?.getBoundingClientRect().height||0)+16;
-     const top=first.getBoundingClientRect().top+window.scrollY-offset;
-     window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+   document.dispatchEvent(new Event('gkk:menu-layout-ready'));
+   if(window.matchMedia('(max-width:700px)').matches){
+     const first=document.querySelector('#menuGrid .menu-category');
+     if(first){
+       const cats=document.querySelector('#categories.menu-categories-pinned');
+       const search=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
+       const offset=(cats?cats.getBoundingClientRect().height:0)+(search?search.getBoundingClientRect().height:0)+18;
+       window.scrollTo({top:Math.max(0,first.getBoundingClientRect().top+window.scrollY-offset),behavior:'smooth'});
+     }
    }
- },120);
+ },180);
 }function renderCats(){
  const host=document.getElementById("categories");if(!host)return;
  const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];
