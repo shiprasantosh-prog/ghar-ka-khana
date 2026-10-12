@@ -80,14 +80,50 @@ jobs:
           });
           NODE
 
+      - name: Convert story thumbnail to WebP
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const sharp = require('sharp');
+
+          (async () => {
+            const imageDir = path.join(process.cwd(), 'public', 'images');
+            const input = path.join(imageDir, 'Ghar Ka Khana_ Homemade Thali Story.png');
+            const output = path.join(imageDir, 'Ghar Ka Khana_ Homemade Thali Story.webp');
+            if (!fs.existsSync(input)) throw new Error('Story thumbnail source PNG was not found.');
+
+            const before = fs.statSync(input).size;
+            await sharp(input, { failOn: 'none' })
+              .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 80, effort: 5 })
+              .toFile(output);
+            const after = fs.statSync(output).size;
+            console.log(`Story thumbnail: ${(before / 1024 / 1024).toFixed(2)} MB PNG -> ${(after / 1024 / 1024).toFixed(2)} MB WebP`);
+
+            const htmlPath = path.join(process.cwd(), 'public', 'index.html');
+            let html = fs.readFileSync(htmlPath, 'utf8');
+            const oldPoster = 'Ghar%20Ka%20Khana_%20Homemade%20Thali%20Story.png';
+            const newPoster = 'Ghar%20Ka%20Khana_%20Homemade%20Thali%20Story.webp';
+            if (!html.includes(oldPoster) && !html.includes(newPoster)) {
+              throw new Error('Story thumbnail poster reference was not found in public/index.html.');
+            }
+            html = html.replaceAll(oldPoster, newPoster);
+            fs.writeFileSync(htmlPath, html);
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
       - name: Commit optimized images
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/images
+          git add public/images public/index.html
           if git diff --cached --quiet; then
             echo "No image changes to commit."
           else
-            git commit -m "Optimize menu images [skip ci]"
+            git commit -m "Optimize website images [skip ci]"
             git push
           fi
