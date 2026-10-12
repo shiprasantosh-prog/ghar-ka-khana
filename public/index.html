@@ -1441,6 +1441,14 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  }
  #menu .categories .chip[data-category="All"] .category-chip-thumb{display:none!important}
 }
+</style><style id="mobile-sticky-category-highlight">
+@media(max-width:700px){
+ #menu .categories{position:sticky!important;top:0!important;z-index:10000!important;background:#f8f5e9!important;padding-top:8px!important;padding-bottom:10px!important;margin-top:0!important;box-shadow:0 5px 8px rgba(24,65,44,.06)}
+ #menu .categories .chip.active{color:#124f39!important;font-weight:800!important}
+ #menu .categories .chip.active .category-chip-thumb{border:3px solid #1b5a3a!important;box-shadow:0 0 0 3px #e3ebd4!important}
+ #menu .categories .chip.active span{text-decoration:underline;text-decoration-color:#b58a36;text-decoration-thickness:2px;text-underline-offset:4px}
+ #menu .menu-search-sticky.menu-search-pinned{top:var(--gkk-mobile-category-height,130px)!important}
+}
 </style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -3472,6 +3480,7 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    search.style.left=Math.max(0,rect.left)+'px';
    search.style.width=Math.max(0,rect.width)+'px';
    search.style.maxWidth='100vw';
+   if(window.matchMedia('(max-width:700px)').matches){const cats=document.getElementById('categories');const h=cats?cats.getBoundingClientRect().height:0;document.documentElement.style.setProperty('--gkk-mobile-category-height',Math.round(h)+'px')}else{document.documentElement.style.removeProperty('--gkk-mobile-category-height')}
  }
  function syncClear(){clear.hidden=!input.value;}
  clear.addEventListener('click',()=>{
