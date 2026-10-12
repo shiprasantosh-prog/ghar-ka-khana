@@ -1418,12 +1418,15 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 @media(max-width:700px){
  #menu .categories{gap:10px!important;padding:4px 4px 12px!important}
  #menu .categories .chip{
-   width:104px!important;min-width:104px!important;min-height:132px!important;
+   width:104px!important;min-width:104px!important;min-height:112px!important;
    flex:0 0 104px!important;flex-direction:column!important;justify-content:center!important;
-   gap:9px!important;padding:12px 8px!important;white-space:normal!important;
-   text-align:center!important;border-radius:18px!important;scroll-snap-align:start;
+   gap:9px!important;padding:8px 6px!important;white-space:normal!important;
+   text-align:center!important;border:0!important;border-radius:0!important;background:transparent!important;
+   box-shadow:none!important;scroll-snap-align:start;
    font-size:15px!important;line-height:1.2!important;font-weight:600!important;
  }
+ #menu .categories .chip.active{background:transparent!important;color:#124f39!important;border:0!important;box-shadow:none!important}
+
  #menu .categories .category-chip-thumb{
    display:block!important;width:68px!important;height:68px!important;flex:0 0 68px!important;
    object-fit:cover!important;border-radius:50%!important;border:2px solid #e5dbc3!important;
