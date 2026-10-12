@@ -1480,6 +1480,14 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  #menu .categories.menu-categories-pinned{height:auto!important;box-sizing:border-box!important}
  #menu .menu-search-sticky.menu-search-pinned{box-sizing:border-box!important;right:0!important}
 }
+</style><style id="mobile-sticky-search-visibility">
+@media(max-width:700px){
+ #menu .menu-search-sticky.menu-search-pinned{
+   display:block!important;position:fixed!important;left:0!important;right:0!important;
+   width:100vw!important;max-width:100vw!important;z-index:10001!important;
+   margin:0!important;box-sizing:border-box!important;background:#f8f5e9!important;
+ }
+}
 </style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -3509,7 +3517,7 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    if(!pinned)return;
    pinned=false;
    search.classList.remove('menu-search-pinned');
-   search.style.left='';search.style.width='';search.style.maxWidth='';
+   search.style.left='';search.style.width='';search.style.maxWidth='';search.style.top='';
    spacer.style.display='none';spacer.style.height='0px';
  }
  const cats=document.getElementById('categories');
@@ -3543,7 +3551,9 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    if(pinned){
      search.style.left='0px';search.style.width='100vw';search.style.maxWidth='100vw';
      const h=catsPinned&&cats?cats.getBoundingClientRect().height:0;
-     document.documentElement.style.setProperty('--gkk-mobile-category-height',Math.round(h)+'px');
+     const searchTop=Math.round(h);
+     document.documentElement.style.setProperty('--gkk-mobile-category-height',searchTop+'px');
+     search.style.top=searchTop+'px';
    }
  }
  function syncClear(){clear.hidden=!input.value;}
