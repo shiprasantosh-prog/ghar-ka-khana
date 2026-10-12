@@ -1935,8 +1935,8 @@ async function loadCustomerMenu(){
   const name=normalizeDishName(d.name);
   const category=menuGroup(d);
   const categoryImage=findCategoryImage(d.name,category);
-  const fallback=d.image||fallbackFoodImage;
-  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||d.image_url||fallback,fallbackImg:fallback,tag:'Kitchen special'};
+  const fallback=d.image_url||fallbackFoodImage;
+  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||fallback,fallbackImg:fallback,tag:'Kitchen special'};
  };
  dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
