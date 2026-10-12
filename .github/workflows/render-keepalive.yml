@@ -21,4 +21,4 @@ jobs:
             --retry 2 --retry-delay 5 --max-time 120 \
             -o /dev/null \
             -w 'HTTP status: %{http_code}\n' \
-            https://ghar-ka-khana-backend-pmxm.onrender.com/
+            https://ghar-ka-khana-backend-pmxm.onrender.com/health
