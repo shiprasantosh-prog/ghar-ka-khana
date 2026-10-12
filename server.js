@@ -1565,9 +1565,9 @@ app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
       console.warn("[Razorpay payment recovery] Could not inspect existing payment attempt:",{orderId,message:error.message});
     }
   }
-  if(hasInFlight||hadLookupError)return res.json({state:"pending",message:"We are still checking your payment. Please do not pay again yet."});
-  if(hasFailed || attempts.rowCount===0)return res.json({state:"failed",message:"No captured payment was found. You can safely retry using the existing order."});
-  return res.json({state:"pending",message:"Payment confirmation is still pending. Please do not pay again yet."});
+  if(hasInFlight||hadLookupError)return res.json({state:"pending",message:"We are still checking your payment. Please do not pay again yet.",order:await readOrder(orderId)});
+  if(hasFailed || attempts.rowCount===0)return res.json({state:"failed",message:"No captured payment was found. You can safely retry using the existing order.",order:await readOrder(orderId)});
+  return res.json({state:"pending",message:"Payment confirmation is still pending. Please do not pay again yet.",order:await readOrder(orderId)});
 }));
 
 app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
