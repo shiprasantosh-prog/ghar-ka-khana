@@ -2549,16 +2549,16 @@ async function startRazorpayPayment(order,checkoutData,form,button){
      // A failed browser callback is not proof of a failed payment. Check the server
      // and allow webhook/Razorpay reconciliation up to 30 seconds before showing pending.
      const deadline=Date.now()+30000;
-     let recovered=false;
+     let recovered=false,retryable=false;
      while(Date.now()<deadline){
       try{
        const status=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/payment-status");
        if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(order.id));finish(true);recovered=true;break;}
-       if(status.state==="failed")break;
+       if(status.state==="failed"){retryable=true;break;}
       }catch(_){}
       await new Promise(resolve=>setTimeout(resolve,2500));
      }
-     if(!recovered){showPaymentPending(order,checkoutData,form);finish(true);}
+     if(!recovered){if(retryable)showPaymentRetry(order,checkoutData,form);else showPaymentPending(order,checkoutData,form);finish(true);}
     }finally{verifyingPayment=false;}
    },
    prefill:{name:checkoutData.name||currentUser?.name||"",email:checkoutData.email||currentUser?.email||"",contact:checkoutData.phone||currentUser?.phone||""},
