@@ -1383,6 +1383,33 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  .hero-benefits .hero-benefit b svg{width:26px!important;height:26px!important}
 }
 </style>
+
+<style id="mobile-horizontal-menu-categories">
+/* Mobile-only: keep menu category filters on one horizontally scrollable row. */
+@media(max-width:700px){
+  #menu .categories{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    gap:8px!important;
+    padding:2px 2px 10px!important;
+    margin:0 -2px 20px!important;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    scroll-snap-type:x proximity;
+  }
+  #menu .categories .chip{
+    flex:0 0 auto!important;
+    white-space:nowrap!important;
+    scroll-snap-align:start;
+    padding:10px 17px!important;
+    font-size:15px!important;
+  }
+  #menu .categories::-webkit-scrollbar{height:4px}
+  #menu .categories::-webkit-scrollbar-thumb{background:#cfc4a9;border-radius:8px}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
