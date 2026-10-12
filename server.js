@@ -45,7 +45,23 @@ app.set("trust proxy", 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "3mb", verify: (req, res, buf) => { req.rawBody = Buffer.from(buf); } }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
+
+// Lightweight health check for uptime monitoring; never serves the homepage.
+app.get("/health", (req, res) => {
+  res.status(200).type("text/plain").send("OK");
+});
+
+// Cache image/video assets briefly to reduce repeat transfers while allowing
+// menu artwork to be refreshed without long-lived immutable caching.
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders(res, filePath) {
+    if (/\.(?:avif|gif|jpe?g|png|svg|webp|mp4|webm)$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "public, max-age=21600");
+    } else if (/\.html?$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "no-cache");
+    }
+  }
+}));
 
 // The Maps browser key is intentionally served to the frontend; protect it with
 // HTTP-referrer and API restrictions in Google Cloud Console.
