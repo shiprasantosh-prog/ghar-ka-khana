@@ -139,6 +139,19 @@ function menuImagePath(name, category) {
   }
   return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory])+"/"+encodeURIComponent(best.file) : "";
 }
+function publicMenuImageUrl(row) {
+  const staticImage = menuImagePath(row.name, row.category);
+  if (staticImage) return staticImage;
+  const storedImage = typeof row.image === "string" ? row.image : "";
+  if (storedImage.startsWith("data:image/")) return "/api/menu/" + encodeURIComponent(row.id) + "/image";
+  if (/^(https?:\/\/|\/)/i.test(storedImage)) return storedImage;
+  return "";
+}
+function publicMenuRow(row) {
+  const { image, ...safeRow } = row;
+  return { ...safeRow, image_url: publicMenuImageUrl(row) };
+}
+
 app.get("/api/menu-images", (req, res) => {
   const result={}; for(const category of Object.keys(MENU_IMAGE_FOLDERS)) result[category]=getMenuImageCandidates(category);
   res.set("Cache-Control","no-store"); res.json(result);
@@ -877,7 +890,7 @@ app.get("/api/popular-menu", asyncRoute(async (req, res) => {
      FROM popular_menu p JOIN menu m ON m.id = p.menu_id
      WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
-  res.json(await attachMenuVariants(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) }))));
+  res.json(await attachMenuVariants(result.rows.map(publicMenuRow)));
 }));
 
 app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
@@ -957,6 +970,21 @@ app.put("/api/admin/category-availability", auth, admin, asyncRoute(async (req, 
   res.json({ ok: true, schedules: readCategorySchedules(result.rows[0].schedules), updatedAt: result.rows[0].updated_at });
 }));
 
+app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
+  const result = await pool.query("SELECT image FROM menu WHERE id = $1", [req.params.id]);
+  const image = result.rows[0]?.image;
+  if (typeof image !== "string" || !image.startsWith("data:image/")) {
+    return res.status(404).end();
+  }
+  const match = image.match(/^data:(image\/(?:webp|jpeg|png|gif));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  if (!match) return res.status(404).end();
+  const body = Buffer.from(match[2], "base64");
+  res.set("Content-Type", match[1].toLowerCase());
+  res.set("Content-Length", String(body.length));
+  res.set("Cache-Control", "public, max-age=21600");
+  res.send(body);
+}));
+
 app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT id, name, description, category, price, image, available
@@ -964,7 +992,7 @@ app.get("/api/menu", asyncRoute(async (req, res) => {
      WHERE available = TRUE AND variant_parent_id IS NULL
      ORDER BY category, name`
   );
-  const rows = result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) }));
+  const rows = result.rows.map(publicMenuRow);
   res.json(await attachMenuVariants(rows));
 }));
 
@@ -1000,7 +1028,7 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
     [requestedDate || null]
   );
 
-  res.json(result.rows.map(row => ({ ...row, image_url: menuImagePath(row.name, row.category) })));
+  res.json(result.rows.map(publicMenuRow));
 }));
 
 // Get saved specials for the owner
