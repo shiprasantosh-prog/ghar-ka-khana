@@ -1,14 +1,6 @@
 name: Keep Ghar ka Khana Awake
 
 on:
-  schedule:
-    # India Standard Time: start at 7:45 AM, then every 10 minutes until 9:25 PM.
-    - cron: '45,55 7 * * *'
-      timezone: 'Asia/Kolkata'
-    - cron: '5,15,25,35,45,55 8-20 * * *'
-      timezone: 'Asia/Kolkata'
-    - cron: '5,15,25 21 * * *'
-      timezone: 'Asia/Kolkata'
   workflow_dispatch:
 
 permissions: {}
