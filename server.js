@@ -1549,6 +1549,7 @@ app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
     try{
       const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
       const payments=Array.isArray(response?.items)?response.items:[];
+      if(!payments.length)hasFailed=true;
       for(const payment of payments){
         if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
         if(payment.status==="captured"||payment.captured===true){
