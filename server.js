@@ -981,7 +981,7 @@ app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
   const body = Buffer.from(match[2], "base64");
   res.set("Content-Type", match[1].toLowerCase());
   res.set("Content-Length", String(body.length));
-  res.set("Cache-Control", "public, max-age=21600");
+  res.set("Cache-Control", "public, max-age=300");
   res.send(body);
 }));
 
