@@ -2,6 +2,11 @@ name: Keep Ghar ka Khana Awake
 
 on:
   workflow_dispatch:
+  schedule:
+    # 7:45 AM–8:25 AM IST, every 10 minutes (UTC is 5h30m behind IST)
+    - cron: '15,25,35,45,55 2 * * *'
+    # 8:30 AM–9:25 PM IST, every 10 minutes
+    - cron: '*/10 3-15 * * *'
 
 permissions: {}
 
