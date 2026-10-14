@@ -654,7 +654,7 @@ app.get("/api/firebase-config", (req, res) => {
     appId: process.env.FIREBASE_APP_ID,
     messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID
   };
-  if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId) {
+  if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId || !config.messagingSenderId) {
     return res.status(503).json({ error: "Google sign-in is not configured yet." });
   }
   res.set("Cache-Control", "no-store");
@@ -695,7 +695,11 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
     return res.status(400).json({ error: "Enter a valid phone number with at least 10 digits." });
   }
-  const existingByPhone = await pool.query("SELECT id FROM users WHERE phone = $1 LIMIT 1", [phone]);
+  const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
+  const existingByPhone = await pool.query(
+    "SELECT id FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    [normalizedPhone]
+  );
   if (existingByPhone.rowCount) {
     return res.status(409).json({ error: "This phone number already belongs to an account. Sign in with your existing phone and password first; automatic account linking is not enabled." });
   }
