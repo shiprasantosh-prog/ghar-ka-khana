@@ -1523,13 +1523,17 @@ async function refundDuplicateCapturedPayment(orderId, originalPaymentId, paymen
     const reason = "Captured payment amount does not match the order total; no automatic refund was submitted. Reconcile the payment in Razorpay manually.";
     // Record the exception for the owner/admin queue, but never refund an amount
     // that does not match the order total. The unique payment ID keeps repeats safe.
-    try {
-      await pool.query(
-        "INSERT INTO razorpay_duplicate_payments(order_id,original_payment_id,duplicate_payment_id,amount_paise,status,failure_reason) VALUES($1,$2,$3,$4,'manual_review',$5) ON CONFLICT(duplicate_payment_id) DO NOTHING",
-        [orderId, String(originalPaymentId), String(payment.id), capturedAmountPaise > 0 && Number.isSafeInteger(capturedAmountPaise) ? capturedAmountPaise : 1, reason]
-      );
-    } catch (error) {
-      console.error("[Duplicate payment] Could not record amount-mismatch exception; manual reconciliation required.", { orderId, paymentId: payment.id, message: error.message });
+    if (Number.isSafeInteger(capturedAmountPaise) && capturedAmountPaise > 0) {
+      try {
+        await pool.query(
+          "INSERT INTO razorpay_duplicate_payments(order_id,original_payment_id,duplicate_payment_id,amount_paise,status,failure_reason) VALUES($1,$2,$3,$4,'manual_review',$5) ON CONFLICT(duplicate_payment_id) DO NOTHING",
+          [orderId, String(originalPaymentId), String(payment.id), capturedAmountPaise, reason]
+        );
+      } catch (error) {
+        console.error("[Duplicate payment] Could not record amount-mismatch exception; manual reconciliation required.", { orderId, paymentId: payment.id, message: error.message });
+      }
+    } else {
+      console.error("[Duplicate payment] Invalid captured amount cannot be stored under the positive-amount database constraint; manual reconciliation required.", { orderId, paymentId: payment.id });
     }
     console.error("[Duplicate payment] Captured payment amount does not match order; no automatic refund submitted.", { orderId, paymentId: payment.id, expectedAmountPaise, capturedAmountPaise });
     return;
