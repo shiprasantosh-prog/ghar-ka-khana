@@ -30,3 +30,5 @@ new vm.Script(server, { filename: "server.js" });
 new vm.Script(inlineGoogleScript[1], { filename: "gkk-google-signin.inline.js" });
 
 console.log("Google sign-in staging checks passed.");
+
+// Trigger a fresh staging auto-deploy after the diagnostic changes passed CI.
