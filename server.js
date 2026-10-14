@@ -1960,6 +1960,15 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   return res.status(200).json({ ok: true });
 }));
 
+// Owner-only queue for duplicate captured payments that need refund reconciliation.
+// Never retries refunds automatically: uncertain outcomes must be checked in Razorpay first.
+app.get("/api/admin/duplicate-payment-refunds", auth, admin, asyncRoute(async (req, res) => {
+  const result = await pool.query(
+    "SELECT d.id,d.order_id,d.original_payment_id,d.duplicate_payment_id,d.amount_paise,d.status,d.razorpay_refund_id,d.failure_reason,d.created_at,d.updated_at,o.status AS order_status,o.payment_status AS order_payment_status FROM razorpay_duplicate_payments d JOIN orders o ON o.id=d.order_id WHERE d.status <> 'processed' OR d.failure_reason <> '' ORDER BY d.created_at DESC LIMIT 100"
+  );
+  res.json({ refunds: result.rows });
+}));
+
 // Owner-triggered full refund. Durable local records prevent duplicate requests.
 app.post("/api/admin/orders/:id/refund", auth, admin, asyncRoute(async (req, res) => {
   if (!razorpay) return res.status(503).json({ error: "Razorpay is not configured." });
