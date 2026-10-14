@@ -11,14 +11,14 @@ const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const { Pool } = require("pg");
 const path = require("path");
-const admin = require("firebase-admin");
+const firebaseAdminSdk = require("firebase-admin");
 
 // Firebase Admin is configured only from a server-side Render secret.
 let firebaseAdminReady = false;
 try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    firebaseAdminSdk.initializeApp({ credential: firebaseAdminSdk.credential.cert(serviceAccount) });
     firebaseAdminReady = true;
   }
 } catch (error) {
@@ -670,7 +670,7 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
 
   let decoded;
   try {
-    decoded = await admin.auth().verifyIdToken(idToken, true);
+    decoded = await firebaseAdminSdk.auth().verifyIdToken(idToken, true);
   } catch (error) {
     return res.status(401).json({ error: "Google sign-in could not be verified. Please try again." });
   }
