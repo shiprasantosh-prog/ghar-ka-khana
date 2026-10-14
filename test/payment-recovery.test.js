@@ -68,7 +68,8 @@ test("amount mismatch is recorded for manual review and never auto-refunded", as
   const insert = h.calls.queries.find(x => x.sql.includes("INSERT INTO razorpay_duplicate_payments"));
   assert.ok(insert, "mismatched captured payment should be recorded");
   assert.equal(insert.params[3], 20000);
-  assert.equal(insert.params[4], "manual_review");
+  assert.match(insert.sql, /'manual_review'/);
+  assert.match(insert.params[4], /no automatic refund was submitted/);
   assert.equal(h.calls.refunds.length, 0, "mismatched amount must not be refunded automatically");
 });
 
