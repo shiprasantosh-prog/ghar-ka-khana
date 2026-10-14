@@ -11,6 +11,19 @@ const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const { Pool } = require("pg");
 const path = require("path");
+const admin = require("firebase-admin");
+
+// Firebase Admin is configured only from a server-side Render secret.
+let firebaseAdminReady = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    firebaseAdminReady = true;
+  }
+} catch (error) {
+  console.error("Firebase Admin configuration is invalid; Google sign-in is disabled.", error.message);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -237,6 +250,8 @@ async function initializeDatabase() {
       UNIQUE (special_date, menu_id)
     );
   `);
+
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT UNIQUE");
 
   await pool.query("CREATE TABLE IF NOT EXISTS password_reset_tokens (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id)");
@@ -629,6 +644,78 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
+
+// Public Firebase web configuration. These values identify the web app and are not server secrets.
+app.get("/api/firebase-config", (req, res) => {
+  const config = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    appId: process.env.FIREBASE_APP_ID,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID
+  };
+  if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId) {
+    return res.status(503).json({ error: "Google sign-in is not configured yet." });
+  }
+  res.set("Cache-Control", "no-store");
+  res.json(config);
+});
+
+const googleAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
+  if (!firebaseAdminReady) return res.status(503).json({ error: "Google sign-in is not configured on this staging server yet." });
+  const idToken = String(req.body?.idToken || "");
+  const phone = String(req.body?.phone || "").trim();
+  if (!idToken) return res.status(400).json({ error: "Google sign-in token is missing." });
+
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken, true);
+  } catch (error) {
+    return res.status(401).json({ error: "Google sign-in could not be verified. Please try again." });
+  }
+  if (!decoded.uid || !decoded.email || decoded.email_verified !== true) {
+    return res.status(403).json({ error: "Please use a Google account with a verified email address." });
+  }
+  const email = String(decoded.email).trim().toLowerCase();
+  const existingByUid = await pool.query("SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE firebase_uid = $1", [decoded.uid]);
+  if (existingByUid.rowCount) {
+    const user = existingByUid.rows[0];
+    if (user.role !== "customer") return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false });
+  }
+
+  // Never auto-link an existing account merely because its email matches.
+  const existingByEmail = await pool.query("SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1", [email]);
+  if (existingByEmail.rowCount) {
+    return res.status(409).json({ error: "An account already uses this email. Sign in with your existing phone and password first; automatic account linking is not enabled." });
+  }
+  if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
+  if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\\D/g, "").length < 10) {
+    return res.status(400).json({ error: "Enter a valid phone number with at least 10 digits." });
+  }
+  const existingByPhone = await pool.query("SELECT id FROM users WHERE phone = $1 LIMIT 1", [phone]);
+  if (existingByPhone.rowCount) {
+    return res.status(409).json({ error: "This phone number already belongs to an account. Sign in with your existing phone and password first; automatic account linking is not enabled." });
+  }
+  const name = String(decoded.name || "").trim() || email.split("@")[0];
+  const randomPassword = crypto.randomBytes(48).toString("hex");
+  try {
+    const inserted = await pool.query(
+      `INSERT INTO users (name, phone, email, password_hash, role, referral_code, firebase_uid)
+       VALUES ($1, $2, $3, $4, 'customer', $5, $6)
+       RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+      [name, phone, email, bcrypt.hashSync(randomPassword, 12), "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), decoded.uid]
+    );
+    const user = inserted.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: true });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "An account with this phone number or email already exists. Sign in with your existing account; automatic account linking is not enabled." });
+    throw error;
+  }
+}));
 
 // Customer registration
 app.post("/api/auth/register", asyncRoute(async (req, res) => {
