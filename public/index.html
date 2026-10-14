@@ -3915,7 +3915,16 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       await finishGoogleSignIn(token, "");
     } catch(error) {
       const code = String(error && error.code || "");
-      message.textContent = code.includes("popup-closed-by-user") ? "Google sign-in closed before it finished. If this email is already registered, please sign in with your existing phone number and password. Google sign-in is not linked to existing accounts yet." : (error.message || "Google sign-in could not be completed. Please try again, or use your existing phone number and password if you already have an account.");
+      console.error("[GKK Google sign-in] Firebase authentication failed", { code: code || "unknown", message: String(error && error.message || "No error message") });
+      if (code.includes("popup-closed-by-user")) {
+        message.textContent = "Google's sign-in window closed before Ghar ka Khana received the result. Please try again. If this keeps happening, share the Firebase error code shown in the browser Console. If this email is already registered, use your existing phone number and password; Google accounts are not linked automatically.";
+      } else if (code.includes("unauthorized-domain")) {
+        message.textContent = "This staging website is not authorized in Firebase yet. Please contact support.";
+      } else if (code.includes("popup-blocked")) {
+        message.textContent = "Your browser blocked the Google sign-in window. Allow pop-ups for this staging website, then try again.";
+      } else {
+        message.textContent = "Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.";
+      }
     } finally { button.disabled = false; }
   });
   completeButton.addEventListener("click", async function(){
