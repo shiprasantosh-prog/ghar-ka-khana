@@ -3918,11 +3918,22 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   (async function handleGoogleRedirectResult() {
     try {
       const app = await getFirebaseApp();
+      console.info("[GKK Google sign-in] Checking Firebase redirect result");
       const result = await app.auth().getRedirectResult();
       if (result && result.user) {
+        console.info("[GKK Google sign-in] Redirect result received", {
+          providerId: result.credential && result.credential.providerId || "unknown",
+          hasEmail: Boolean(result.user.email)
+        });
         message.textContent = "Finishing Google sign-in…";
         const token = await result.user.getIdToken(true);
         await finishGoogleSignIn(token, "");
+      } else {
+        console.info("[GKK Google sign-in] No redirect result returned on this page load");
+        // Do not overwrite the normal sign-in screen when a visitor has not just returned from Google.
+        if (window.location.search.includes("apiKey=") || window.location.hash.includes("access_token")) {
+          message.textContent = "Google returned to the site, but no sign-in result was received. Please try again; if it repeats, contact support.";
+        }
       }
     } catch (error) {
       showFirebaseError(error);
