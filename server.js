@@ -1513,8 +1513,25 @@ async function refundDuplicateCapturedPayment(orderId, originalPaymentId, paymen
   if (!razorpay || !payment || !payment.id || !originalPaymentId || String(payment.id) === String(originalPaymentId)) return;
   if (payment.status !== "captured" && payment.captured !== true) return;
   const orderResult = await pool.query("SELECT total FROM orders WHERE id=$1", [orderId]);
-  if (!orderResult.rowCount || Number(payment.amount) !== Number(orderResult.rows[0].total) * 100) {
-    console.error("[Duplicate payment] Captured payment amount does not match order; manual reconciliation required.", { orderId, paymentId: payment.id });
+  if (!orderResult.rowCount) {
+    console.error("[Duplicate payment] Order was not found; captured payment requires manual reconciliation.", { orderId, paymentId: payment.id });
+    return;
+  }
+  const expectedAmountPaise = Number(orderResult.rows[0].total) * 100;
+  const capturedAmountPaise = Number(payment.amount);
+  if (!Number.isSafeInteger(capturedAmountPaise) || capturedAmountPaise <= 0 || capturedAmountPaise !== expectedAmountPaise) {
+    const reason = "Captured payment amount does not match the order total; no automatic refund was submitted. Reconcile the payment in Razorpay manually.";
+    // Record the exception for the owner/admin queue, but never refund an amount
+    // that does not match the order total. The unique payment ID keeps repeats safe.
+    try {
+      await pool.query(
+        "INSERT INTO razorpay_duplicate_payments(order_id,original_payment_id,duplicate_payment_id,amount_paise,status,failure_reason) VALUES($1,$2,$3,$4,'manual_review',$5) ON CONFLICT(duplicate_payment_id) DO NOTHING",
+        [orderId, String(originalPaymentId), String(payment.id), capturedAmountPaise > 0 && Number.isSafeInteger(capturedAmountPaise) ? capturedAmountPaise : 1, reason]
+      );
+    } catch (error) {
+      console.error("[Duplicate payment] Could not record amount-mismatch exception; manual reconciliation required.", { orderId, paymentId: payment.id, message: error.message });
+    }
+    console.error("[Duplicate payment] Captured payment amount does not match order; no automatic refund submitted.", { orderId, paymentId: payment.id, expectedAmountPaise, capturedAmountPaise });
     return;
   }
 
