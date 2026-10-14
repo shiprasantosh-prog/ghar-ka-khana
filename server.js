@@ -1574,7 +1574,7 @@ app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
 app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,res)=>{
   const orderId=Number(req.params.id);
   if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
-  const found=await pool.query("SELECT id,status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const found=await pool.query("SELECT id,status,payment_status,created_at FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
   const row=found.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
   if(row.payment_status==="paid")return res.status(409).json({error:"This order is already paid and cannot be cancelled as an unpaid order."});
@@ -1599,6 +1599,7 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
       return res.status(409).json({error:"We could not confirm the payment status. Your order remains pending; please try again shortly."});
     }
   }
+  if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This pending payment is from a previous IST calendar day and can no longer be cancelled from checkout. Please place a new order; check Order Status for updates."});
   await pool.query("UPDATE orders SET status='Cancelled',payment_status='failed',cancellation_reason='Customer cancelled pending payment' WHERE id=$1 AND user_id=$2 AND status='Payment Pending' AND payment_status<>'paid'",[orderId,req.user.id]);
   await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status<>'paid'",[orderId]);
   const final=await pool.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
@@ -1610,7 +1611,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
   const orderId=Number(req.params.id);
   if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
-  const found=await pool.query("SELECT id,total,status,payment_status,razorpay_order_id FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const found=await pool.query("SELECT id,total,status,payment_status,razorpay_order_id,created_at FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
   const row=found.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
   if(row.payment_status==="paid")return res.json({...await readOrder(orderId),payment:{method:"already-paid"}});
@@ -1636,6 +1637,8 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
       return res.status(409).json({error:"We could not confirm the previous payment status yet. Please check again shortly; do not pay again."});
     }
   }
+
+  if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This payment retry window ended at midnight IST. Please place a new order; we will still verify any previous payment before you pay again."});
 
   // Reuse the existing Razorpay order so a retry cannot create a second payable order.
   let rpOrderId=String(row.razorpay_order_id||attempts.rows[0]?.razorpay_order_id||"");
@@ -2640,6 +2643,13 @@ app.get("/webhooks/whatsapp", (req, res) => {
   }
   return res.sendStatus(403);
 });
+
+function isSameGkkIstDay(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return false;
+  const day = value => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
+  return day(date) === day(new Date());
+}
 
 function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").replace(/^0+/, "");
