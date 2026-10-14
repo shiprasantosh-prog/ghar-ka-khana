@@ -692,7 +692,7 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
     return res.status(409).json({ error: "An account already uses this email. Sign in with your existing phone and password first; automatic account linking is not enabled." });
   }
   if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
-  if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\\D/g, "").length < 10) {
+  if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
     return res.status(400).json({ error: "Enter a valid phone number with at least 10 digits." });
   }
   const existingByPhone = await pool.query("SELECT id FROM users WHERE phone = $1 LIMIT 1", [phone]);
