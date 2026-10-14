@@ -1687,7 +1687,8 @@ function cartStorageKey(owner){return owner==="guest"?"gkk_cart_guest":"gkk_cart
 function loadSavedCart(owner){try{return JSON.parse(localStorage.getItem(cartStorageKey(owner))|| (owner==="guest"?localStorage.getItem("gkk_cart")||"{}":"{}"))}catch(e){return {}}}
 function persistCart(){try{localStorage.setItem(cartStorageKey(cartOwnerKey),JSON.stringify(cart))}catch(e){}}
 function switchCartOwner(owner){const next=owner?.phone||"guest";if(String(next)===String(cartOwnerKey))return;persistCart();cartOwnerKey=String(next);cart=loadSavedCart(cartOwnerKey);appliedPromo=null;updateCart();}
-async function refreshKitchenBanner(){try{const status=await api("/api/kitchen/status");const banner=document.getElementById("kitchenClosedBanner");banner.style.display=status.isOpen?"none":"block";if(!status.isOpen)banner.textContent=status.reopenAt?"Our kitchen is currently closed. We plan to reopen at "+new Date(status.reopenAt).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})+" IST.":"Our kitchen is currently closed and we are not accepting orders. Please check back later."}catch(e){console.warn("Kitchen status unavailable",e)}}
+let kitchenIsOpen=false;
+async function refreshKitchenBanner(){try{const status=await api("/api/kitchen/status");kitchenIsOpen=Boolean(status.isOpen);const banner=document.getElementById("kitchenClosedBanner");banner.style.display=kitchenIsOpen?"none":"block";if(!kitchenIsOpen)banner.textContent=status.reopenAt?"Our kitchen is currently closed. We plan to reopen at "+new Date(status.reopenAt).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"})+" IST.":"Our kitchen is currently closed and we are not accepting orders. Please check back later.";updatePlaceOrderButton()}catch(e){kitchenIsOpen=false;updatePlaceOrderButton();console.warn("Kitchen status unavailable",e)}}
 
 function toggleSidebar(){
     const expanded=document.body.classList.toggle("sidebar-expanded");
@@ -2320,7 +2321,7 @@ function updatePlaceOrderButton(){
  if(!button)return;
  const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||"online";
  const minimumOrder=minimumOrderForAddress(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");
- const disabled=!selectedSavedAddress||deliveryCheckPending||!deliveryAreaAvailable||cartItemSubtotal()<minimumOrder;
+ const disabled=!kitchenIsOpen||!selectedSavedAddress||deliveryCheckPending||!deliveryAreaAvailable||cartItemSubtotal()<minimumOrder;
  button.disabled=disabled;
  button.style.opacity=disabled?".55":"1";
  button.style.cursor=disabled?"not-allowed":"pointer";
