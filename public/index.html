@@ -1578,7 +1578,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="field"><label>Password</label><input name="password" required type="password" minlength="8" placeholder="At least 8 characters" autocomplete="current-password"></div>
 <div class="field" id="referralSignupField" hidden><label>Referral code (optional)</label><input name="referralCode" placeholder="Enter a friend’s referral code" autocomplete="off"><small class="notice">Enter it while creating your account. It cannot be added later.</small></div>
 <div id="signupAddressFields" hidden style="border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0"><h3 style="margin:0 0 8px">Delivery address</h3><p class="notice">Search for your apartment, building, street or landmark, then select a Google Maps result to verify the location before creating your account.</p><div class="field"><label for="signupAddressSearch">Search your delivery address</label><input id="signupAddressSearch" autocomplete="off" placeholder="Search apartment, street, landmark or PIN code" required><div id="signupAddressSuggestions" class="notice address-suggestions" role="listbox"></div><small class="notice">Select a suggested location. Your delivery address cannot be verified by typing alone.</small></div><div class="field"><label>Address label</label><select name="addressLabel" style="width:100%;background:#fff;border:1px solid #cbd9cc;color:#203b2e;border-radius:5px;padding:12px"><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field"><label>House / Flat / Door number</label><input name="house" autocomplete="address-line1" placeholder="House, flat or door number" required></div><div class="field"><label>Street / Area</label><input name="street" autocomplete="address-line2" placeholder="Street, locality or area" required></div><div class="field"><label>City</label><input name="city" autocomplete="address-level2" value="Bengaluru" required></div><div class="field"><label>State</label><input name="state" autocomplete="address-level1" value="Karnataka" required></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="6-digit PIN code" required></div></div>
-<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button><div id="googleAuthArea" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost" id="googleSignInButton" type="button" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px"><span aria-hidden="true" style="font-weight:800;font-size:18px">G</span> Continue with Google</button><p class="notice" style="margin:8px 0 0">Quick and secure sign-in with your Google account.</p><div id="googlePhonePanel" hidden style="margin-top:12px"><label for="googlePhoneInput">Mobile number</label><input id="googlePhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="Enter your 10-digit mobile number" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><button class="btn" id="googleCompleteButton" type="button" style="width:100%">Continue</button></div><p id="googleAuthMessage" class="notice" role="status" aria-live="polite"></p></div>
 </form><form id="forgotPasswordForm" hidden style="margin-top:14px"><h3>Reset your password</h3><p class="notice">We’ll email a secure, one-time reset link to your registered email address.</p><div class="field"><label>Registered email address</label><input id="resetEmail" name="email" type="email" autocomplete="email" placeholder="Email address used for your account" required></div><button class="btn secondary" id="sendResetLink" type="button">Send Reset Link</button><div id="resetPasswordFields" hidden><div class="field" style="margin-top:12px"><label>New password (at least 8 characters)</label><input name="newPassword" type="password" minlength="8" autocomplete="new-password"></div><div class="field"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" autocomplete="new-password"></div><button class="btn" type="submit">Save Password</button></div><button class="btn ghost" id="backToSignIn" type="button" style="margin-top:10px">Back to sign in</button><p id="resetPasswordMessage" class="notice" role="status"></p></form><p class="notice" id="authMessage" role="status"></p></div></section>
 <section class="wrap page-view" id="myorders" style="border-top:1px solid #332b1d;padding-top:35px">
 <div class="section-head"><div><div class="eyebrow">Your account</div><h2>My orders</h2></div><p>Order history linked to your account</p></div>
@@ -3855,4 +3855,71 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
 
 <style id="password-visibility-controls">.password-input-wrap{position:relative;width:100%}.password-input-wrap>input{width:100%;padding-right:48px!important}.password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:7px;background:transparent;color:var(--muted,#52665a);cursor:pointer;font-size:20px;display:grid;place-items:center}.password-toggle:hover{background:rgba(32,59,46,.08)}.password-toggle:focus-visible{outline:2px solid var(--gold,#b58a3b);outline-offset:1px}</style>
 <script id="password-visibility-controls-script">(function(){function enhance(root){(root||document).querySelectorAll("input[type=password]").forEach(function(input){if(input.dataset.visibilityReady==="true")return;input.dataset.visibilityReady="true";var wrap=document.createElement("div");wrap.className="password-input-wrap";input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);var btn=document.createElement("button");btn.type="button";btn.className="password-toggle";btn.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';btn.setAttribute("aria-label","Show password");btn.title="Show password";btn.setAttribute("aria-pressed","false");btn.addEventListener("click",function(){var show=input.type==="password";input.type=show?"text":"password";btn.innerHTML=show?'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9"/><path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1 0 2-.2 2.9-.5"/></svg>':'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';btn.setAttribute("aria-label",show?"Hide password":"Show password");btn.title=show?"Hide password":"Show password";btn.setAttribute("aria-pressed",String(show));});wrap.appendChild(btn);});}function start(){enhance(document);var observer=new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1){if(node.matches&&node.matches("input[type=password]"))enhance(node.parentNode);else enhance(node);}});});});observer.observe(document.body,{childList:true,subtree:true});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();})();</script>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script id="gkk-google-signin">
+(function(){
+  let firebaseApp = null, pendingGoogleToken = null;
+  const button = document.getElementById("googleSignInButton");
+  const completeButton = document.getElementById("googleCompleteButton");
+  const message = document.getElementById("googleAuthMessage");
+  const phonePanel = document.getElementById("googlePhonePanel");
+  const phoneInput = document.getElementById("googlePhoneInput");
+  if (!button || !message) return;
+  async function getFirebaseApp(){
+    if (firebaseApp) return firebaseApp;
+    const response = await fetch("/api/firebase-config", {credentials:"same-origin",cache:"no-store"});
+    const config = await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(config.error || "Google sign-in is not configured yet.");
+    firebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
+    return firebaseApp;
+  }
+  async function finishGoogleSignIn(token, phone){
+    const response = await fetch("/api/auth/google", {method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:token,...(phone?{phone}: {})})});
+    const data = await response.json().catch(()=>({}));
+    if (response.status === 428 && data.code === "PHONE_REQUIRED") {
+      pendingGoogleToken = token;
+      phonePanel.hidden = false;
+      message.textContent = "One last step: enter your mobile number to create your customer account.";
+      phoneInput.focus();
+      return false;
+    }
+    if (!response.ok) throw new Error(data.error || "Google sign-in failed. Please try again.");
+    if (!data.user || !data.user.phone) throw new Error("Your account details could not be loaded. Please try again.");
+    pendingGoogleToken = null;
+    phonePanel.hidden = true;
+    window.currentUser = data.user;
+    try { switchCartOwner(data.user.phone); } catch (_) {}
+    message.textContent = "";
+    await renderAccount();
+    return true;
+  }
+  button.addEventListener("click", async function(){
+    button.disabled = true;
+    message.textContent = "Opening Google sign-in…";
+    try {
+      const app = await getFirebaseApp();
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({prompt:"select_account"});
+      const result = await app.auth().signInWithPopup(provider);
+      const token = await result.user.getIdToken(true);
+      await finishGoogleSignIn(token, "");
+    } catch(error) {
+      const code = String(error && error.code || "");
+      message.textContent = code.includes("popup-closed-by-user") ? "Sign-in was cancelled. You can try again." : (error.message || "Google sign-in failed. Please try again.");
+    } finally { button.disabled = false; }
+  });
+  completeButton.addEventListener("click", async function(){
+    const phone = phoneInput.value.trim();
+    if (!pendingGoogleToken) { message.textContent = "Please start Google sign-in again."; phonePanel.hidden = true; return; }
+    if (phone.replace(/\\D/g,"").length < 10) { message.textContent = "Enter a valid mobile number with at least 10 digits."; return; }
+    completeButton.disabled = true;
+    message.textContent = "Creating your customer account…";
+    try { await finishGoogleSignIn(pendingGoogleToken, phone); }
+    catch(error) { message.textContent = error.message || "Could not finish Google sign-in. Please try again."; }
+    finally { completeButton.disabled = false; }
+  });
+})();
+</script>
 </body></html>
