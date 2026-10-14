@@ -3889,7 +3889,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if (!data.user || !data.user.phone) throw new Error("Your account details could not be loaded. Please try again.");
     pendingGoogleToken = null;
     phonePanel.hidden = true;
-    window.currentUser = data.user;
+    currentUser = data.user;
     try { switchCartOwner(data.user.phone); } catch (_) {}
     message.textContent = "";
     await renderAccount();
@@ -3913,7 +3913,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   completeButton.addEventListener("click", async function(){
     const phone = phoneInput.value.trim();
     if (!pendingGoogleToken) { message.textContent = "Please start Google sign-in again."; phonePanel.hidden = true; return; }
-    if (phone.replace(/\\D/g,"").length < 10) { message.textContent = "Enter a valid mobile number with at least 10 digits."; return; }
+    if (phone.replace(/\D/g,"").length < 10) { message.textContent = "Enter a valid mobile number with at least 10 digits."; return; }
     completeButton.disabled = true;
     message.textContent = "Creating your customer account…";
     try { await finishGoogleSignIn(pendingGoogleToken, phone); }
