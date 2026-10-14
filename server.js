@@ -1571,6 +1571,41 @@ app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
   return res.json({state:"pending",message:"Payment confirmation is still pending. Please do not pay again yet.",order:await readOrder(orderId)});
 }));
 
+app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,res)=>{
+  const orderId=Number(req.params.id);
+  if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
+  const found=await pool.query("SELECT id,status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const row=found.rows[0];
+  if(!row)return res.status(404).json({error:"Order not found."});
+  if(row.payment_status==="paid")return res.status(409).json({error:"This order is already paid and cannot be cancelled as an unpaid order."});
+  if(row.status==="Cancelled")return res.json({success:true,status:"Cancelled"});
+  if(row.status!=="Payment Pending")return res.status(409).json({error:"Only payment-pending orders can be cancelled here."});
+  if(!razorpay)return res.status(503).json({error:"Payment status cannot be verified right now. Please try again shortly."});
+  const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+  for(const attempt of attempts.rows){
+    try{
+      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      for(const payment of (Array.isArray(response?.items)?response.items:[])){
+        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+        if(payment.status==="captured"||payment.captured===true){
+          await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+          return res.status(409).json({error:"Payment was captured. We updated your order; please refresh Order Status."});
+        }
+        if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
+          return res.status(409).json({error:"A payment is still processing. We cannot cancel safely yet. Please check again shortly."});
+      }
+    }catch(error){
+      console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
+      return res.status(409).json({error:"We could not confirm the payment status. Your order remains pending; please try again shortly."});
+    }
+  }
+  await pool.query("UPDATE orders SET status='Cancelled',payment_status='failed',cancellation_reason='Customer cancelled pending payment' WHERE id=$1 AND user_id=$2 AND status='Payment Pending' AND payment_status<>'paid'",[orderId,req.user.id]);
+  await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status<>'paid'",[orderId]);
+  const final=await pool.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  if(!final.rowCount||final.rows[0].status!=="Cancelled")return res.status(409).json({error:"The order status changed while cancelling. Please refresh Order Status."});
+  return res.json({success:true,status:"Cancelled",payment_status:final.rows[0].payment_status});
+}));
+
 app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
   const orderId=Number(req.params.id);
