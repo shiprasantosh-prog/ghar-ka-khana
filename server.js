@@ -393,6 +393,7 @@ async function initializeDatabase() {
   await pool.query("CREATE TABLE IF NOT EXISTS razorpay_payment_attempts (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_order_id TEXT NOT NULL UNIQUE, razorpay_payment_id TEXT, status TEXT NOT NULL DEFAULT 'created', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,razorpay_payment_id,status) SELECT id,razorpay_order_id,razorpay_payment_id,CASE WHEN payment_status='paid' THEN 'paid' WHEN payment_status='failed' THEN 'failed' ELSE 'created' END FROM orders WHERE razorpay_order_id IS NOT NULL ON CONFLICT(razorpay_order_id) DO NOTHING");
   await pool.query("CREATE TABLE IF NOT EXISTS order_refunds (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_refund_id TEXT UNIQUE, amount_paise INTEGER NOT NULL CHECK (amount_paise > 0), status TEXT NOT NULL DEFAULT 'pending', initiated_by TEXT NOT NULL DEFAULT 'owner', failure_reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("CREATE TABLE IF NOT EXISTS razorpay_duplicate_payments (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, original_payment_id TEXT NOT NULL, duplicate_payment_id TEXT NOT NULL UNIQUE, amount_paise INTEGER NOT NULL CHECK (amount_paise > 0), status TEXT NOT NULL DEFAULT 'processing', razorpay_refund_id TEXT UNIQUE, failure_reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS order_refunds_one_active_per_order ON order_refunds(order_id) WHERE status IN ('pending','processing','created')");
   await pool.query("CREATE INDEX IF NOT EXISTS order_refunds_order_id_idx ON order_refunds(order_id, created_at DESC)");
   await pool.query("CREATE TABLE IF NOT EXISTS promo_codes (id SERIAL PRIMARY KEY, code TEXT NOT NULL UNIQUE, customer_phone TEXT NOT NULL DEFAULT '', discount_type TEXT NOT NULL CHECK (discount_type IN ('percent','fixed')), discount_value INTEGER NOT NULL CHECK (discount_value > 0), minimum_order INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, valid_from DATE NOT NULL DEFAULT CURRENT_DATE, valid_until DATE NOT NULL DEFAULT CURRENT_DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
@@ -1508,6 +1509,54 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
 // Verify a successful Razorpay Checkout payment before confirming the customer order.
 // Retry by reusing the existing Razorpay order whenever possible. A browser failure
 // must never create a fresh payable order until existing attempts have been checked.
+async function refundDuplicateCapturedPayment(orderId, originalPaymentId, payment) {
+  if (!razorpay || !payment || !payment.id || !originalPaymentId || String(payment.id) === String(originalPaymentId)) return;
+  if (payment.status !== "captured" && payment.captured !== true) return;
+  const orderResult = await pool.query("SELECT total FROM orders WHERE id=$1", [orderId]);
+  if (!orderResult.rowCount || Number(payment.amount) !== Number(orderResult.rows[0].total) * 100) {
+    console.error("[Duplicate payment] Captured payment amount does not match order; manual reconciliation required.", { orderId, paymentId: payment.id });
+    return;
+  }
+
+  // The unique payment ID makes duplicate webhook deliveries idempotent.
+  // Claim the refund before calling Razorpay; never blindly resubmit an ambiguous refund.
+  let record;
+  try {
+    const inserted = await pool.query(
+      "INSERT INTO razorpay_duplicate_payments(order_id,original_payment_id,duplicate_payment_id,amount_paise,status) VALUES($1,$2,$3,$4,'processing') ON CONFLICT(duplicate_payment_id) DO NOTHING RETURNING id",
+      [orderId, String(originalPaymentId), String(payment.id), Number(payment.amount)]
+    );
+    if (!inserted.rowCount) {
+      console.info("[Duplicate payment] This captured payment was already recorded; no second refund request.", { orderId, paymentId: payment.id });
+      return;
+    }
+    record = inserted.rows[0];
+  } catch (error) {
+    console.error("[Duplicate payment] Could not persist refund guard; no refund was submitted.", { orderId, paymentId: payment.id, message: error.message });
+    return;
+  }
+
+  try {
+    const response = await razorpay.payments.refund(String(payment.id), {
+      amount: Number(payment.amount),
+      notes: { order_id: String(orderId), source: "Ghar ka Khana duplicate captured payment", original_payment_id: String(originalPaymentId) }
+    });
+    const status = ["processed", "pending", "failed"].includes(String(response.status || "").toLowerCase())
+      ? String(response.status).toLowerCase() : "processing";
+    await pool.query(
+      "UPDATE razorpay_duplicate_payments SET razorpay_refund_id=$1,status=$2,failure_reason=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$4",
+      [response.id || null, status, status === "failed" ? "Razorpay reported refund failure; owner review required." : "", record.id]
+    );
+    console.info("[Duplicate payment] Refund submitted for additional captured payment.", { orderId, paymentId: payment.id, refundId: response.id || null, status });
+  } catch (error) {
+    await pool.query(
+      "UPDATE razorpay_duplicate_payments SET status='processing',failure_reason=$1,updated_at=CURRENT_TIMESTAMP WHERE id=$2",
+      ["Refund submission outcome is unclear; reconcile this payment/refund in Razorpay before any retry.", record.id]
+    );
+    console.error("[Duplicate payment] Refund needs reconciliation; no automatic retry attempted.", { orderId, paymentId: payment.id, message: error.message });
+  }
+}
+
 async function reconcileCapturedPayment(orderId, razorpayOrderId, payment) {
   if (!payment || String(payment.order_id || "") !== String(razorpayOrderId)) return null;
   const totalResult = await pool.query("SELECT total FROM orders WHERE id=$1",[orderId]);
@@ -1523,6 +1572,9 @@ async function reconcileCapturedPayment(orderId, razorpayOrderId, payment) {
     [payment.id, orderId]
   );
   const order = await readOrder(orderId);
+  if (!updated.rowCount && order?.payment_status === "paid" && order.razorpay_payment_id && String(order.razorpay_payment_id) !== String(payment.id)) {
+    await refundDuplicateCapturedPayment(orderId, order.razorpay_payment_id, payment);
+  }
   if (updated.rowCount && order) {
     if (order.status === "Cancelled") await refundLateCapturedCancelledOrder(orderId);
     else {
@@ -1885,29 +1937,11 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   }
 
   if (event === "payment.captured") {
-    await pool.query("UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE razorpay_order_id=$2",[razorpayPaymentId,razorpayOrderId]);
     if (Number(payment.amount) !== Number(row.total) * 100) {
       console.error("Razorpay webhook amount mismatch for order:", row.id);
       return res.status(400).json({ error: "Payment amount does not match the order." });
     }
-
-    const updated = await pool.query(
-      "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",
-      [razorpayPaymentId, row.id]
-    );
-
-    if (updated.rowCount) {
-      if (row.status === "Cancelled") {
-        await refundLateCapturedCancelledOrder(row.id);
-      } else {
-        const order = await readOrder(row.id);
-        await creditReferralRewardForCompletedOrder(order.user_id);
-        await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);
-        notifyWhatsApp(order).catch(error =>
-          console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
-        );
-      }
-    }
+    await reconcileCapturedPayment(row.id, razorpayOrderId, payment);
   } else if (event === "payment.failed") {
     // Mark this specific attempt failed. An older attempt's delayed failure
     // must not overwrite the status of a newer retry attempt.
