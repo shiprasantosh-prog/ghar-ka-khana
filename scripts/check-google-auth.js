@@ -15,6 +15,8 @@ assert.match(server, /FIREBASE_SERVICE_ACCOUNT_JSON/, "Admin credentials must co
 assert.match(server, /FIREBASE_API_KEY/, "Firebase web config must be supplied from environment variables");
 assert.match(server, /RIGHT\(REGEXP_REPLACE\(COALESCE\(phone, ''\), '\[\^0-9\]', '', 'g'\), 10\) = \$1/, "Phone duplicate checks must compare normalized last 10 digits");
 assert.match(html, /id="googleSignInButton"/, "Customer auth UI must include a Google sign-in button");
+assert.match(html, /Google sign-in closed before it finished/, "Closed Google popup must explain how existing-account customers can sign in");
+assert.match(html, /google-signin-highlight/, "Google sign-in button must have a distinct visual treatment");
 assert.match(html, /fetch\("\/api\/auth\/google"/, "Browser must submit the Firebase token to the backend");
 assert.match(html, /PHONE_REQUIRED/, "New Google accounts must complete the phone onboarding step");
 assert.match(html, /currentUser = data\.user/, "Google sign-in must update the existing account state");
