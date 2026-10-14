@@ -3903,29 +3903,43 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     await renderAccount();
     return true;
   }
+  function showFirebaseError(error) {
+    const code = String(error && error.code || "");
+    console.error("[GKK Google sign-in] Firebase authentication failed", { code: code || "unknown", message: String(error && error.message || "No error message") });
+    if (code.includes("unauthorized-domain")) {
+      message.textContent = "This staging website is not authorized in Firebase yet. Please contact support.";
+    } else if (code.includes("account-exists-with-different-credential")) {
+      message.textContent = "An account already uses this email with another sign-in method. Please use your existing phone number and password. Automatic account linking is not enabled.";
+    } else {
+      message.textContent = "Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.";
+    }
+  }
+  // Redirect flow avoids popup lifecycle issues in browsers that close the Google chooser unexpectedly.
+  (async function handleGoogleRedirectResult() {
+    try {
+      const app = await getFirebaseApp();
+      const result = await app.auth().getRedirectResult();
+      if (result && result.user) {
+        message.textContent = "Finishing Google sign-in…";
+        const token = await result.user.getIdToken(true);
+        await finishGoogleSignIn(token, "");
+      }
+    } catch (error) {
+      showFirebaseError(error);
+    }
+  })();
   button.addEventListener("click", async function(){
     button.disabled = true;
-    message.textContent = "Opening Google sign-in…";
+    message.textContent = "Redirecting to Google sign-in…";
     try {
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
-      const result = await app.auth().signInWithPopup(provider);
-      const token = await result.user.getIdToken(true);
-      await finishGoogleSignIn(token, "");
+      await app.auth().signInWithRedirect(provider);
     } catch(error) {
-      const code = String(error && error.code || "");
-      console.error("[GKK Google sign-in] Firebase authentication failed", { code: code || "unknown", message: String(error && error.message || "No error message") });
-      if (code.includes("popup-closed-by-user")) {
-        message.textContent = "Google's sign-in window closed before Ghar ka Khana received the result. Please try again. If this keeps happening, share the Firebase error code shown in the browser Console. If this email is already registered, use your existing phone number and password; Google accounts are not linked automatically.";
-      } else if (code.includes("unauthorized-domain")) {
-        message.textContent = "This staging website is not authorized in Firebase yet. Please contact support.";
-      } else if (code.includes("popup-blocked")) {
-        message.textContent = "Your browser blocked the Google sign-in window. Allow pop-ups for this staging website, then try again.";
-      } else {
-        message.textContent = "Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.";
-      }
-    } finally { button.disabled = false; }
+      showFirebaseError(error);
+      button.disabled = false;
+    }
   });
   completeButton.addEventListener("click", async function(){
     const phone = phoneInput.value.trim();
