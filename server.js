@@ -1905,7 +1905,11 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
       "UPDATE order_refunds SET status=$1, failure_reason=$2, updated_at=CURRENT_TIMESTAMP WHERE razorpay_refund_id=$3 RETURNING id,order_id",
       [status, failureReason, refundId]
     );
-    if (!updatedRefund.rowCount) {
+    const updatedDuplicateRefund = await pool.query(
+      "UPDATE razorpay_duplicate_payments SET status=$1, failure_reason=$2, updated_at=CURRENT_TIMESTAMP WHERE razorpay_refund_id=$3 RETURNING id,order_id,duplicate_payment_id",
+      [status, failureReason, refundId]
+    );
+    if (!updatedRefund.rowCount && !updatedDuplicateRefund.rowCount) {
       console.warn("[Razorpay webhook] Refund event had no matching local refund record:", { diagnosticId, event, refundId });
     } else {
       console.info("[Razorpay webhook] Refund status updated:", {
@@ -1913,7 +1917,8 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
         event,
         refundId,
         status,
-        orderId: updatedRefund.rows[0].order_id
+        orderId: updatedRefund.rows[0]?.order_id || updatedDuplicateRefund.rows[0]?.order_id,
+        refundType: updatedDuplicateRefund.rowCount ? "duplicate-payment" : "order"
       });
     }
     return res.status(200).json({ ok: true });
