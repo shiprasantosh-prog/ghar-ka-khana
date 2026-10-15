@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --env-file=.env.development.local --watch server.js",
-    "check:google-auth": "node scripts/check-google-auth.js"
+    "check:google-auth": "node scripts/check-google-auth.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
