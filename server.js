@@ -1556,6 +1556,20 @@ async function creditReferralRewardForCompletedOrder(userId) {
     ON CONFLICT (referred_user_id) DO NOTHING`,[userId]);
 }
 
+// Keep the house/flat number separate from the geocoded address when composing an order address.
+function composeDeliveryAddress(house, formattedAddress) {
+  const h=String(house||"").trim();
+  let parts=String(formattedAddress||"").trim().split(",").map(part=>part.trim()).filter(Boolean);
+  const normalize=value=>String(value||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  const target=normalize(h);
+  while(parts.length){
+    const first=normalize(parts[0]);
+    if(first===target||first===normalize("flat no "+h)||first===normalize("flat "+h)||first===normalize("house no "+h)||first===normalize("house "+h)||first===normalize("plot no "+h)||first===normalize("unit "+h)){parts.shift();continue;}
+    break;
+  }
+  return [h,parts.join(", ")].filter(Boolean).join(", ");
+}
+
 // Place customer order
 app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   let { items, address, notes = "", orderMode = "now", scheduledAt = null, deliverySlot = "", promoCode = "", paymentMethod = "online" } = req.body || {};
@@ -1567,7 +1581,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   if(Number.isInteger(savedAddressId)&&savedAddressId>0){
     const saved=await pool.query("SELECT house,formatted_address,latitude,longitude FROM customer_addresses WHERE id=$1 AND user_id=$2",[savedAddressId,req.user.id]);
     if(!saved.rowCount)return res.status(400).json({error:"Please select a saved delivery address."});
-    address=[saved.rows[0].house,saved.rows[0].formatted_address].filter(Boolean).join(", ");
+    address=composeDeliveryAddress(saved.rows[0].house,saved.rows[0].formatted_address);
     customerLat=Number(saved.rows[0].latitude);customerLng=Number(saved.rows[0].longitude);
   }else if(req.body.addressId!==undefined){
     return res.status(400).json({error:"Please select a valid saved delivery address."});
