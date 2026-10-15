@@ -11,6 +11,7 @@ const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const { Pool } = require("pg");
 const path = require("path");
+const https = require("https");
 const firebaseAdminSdk = require("firebase-admin");
 
 // Firebase Admin is configured only from a server-side Render secret.
@@ -62,6 +63,44 @@ app.use(cookieParser());
 // Lightweight health check for uptime monitoring; never serves the homepage.
 app.get("/health", (req, res) => {
   res.status(200).type("text/plain").send("OK");
+});
+
+// Firebase Auth helper reverse proxy for redirect sign-in on browsers that block
+// third-party storage. Keep this route before static/API fallthrough and use a fixed
+// Firebase project host (never a request-controlled destination).
+app.use("/__/auth", (req, res) => {
+  const projectId = String(process.env.FIREBASE_PROJECT_ID || "").trim();
+  if (!/^[a-z0-9-]+$/.test(projectId)) {
+    return res.status(503).type("text/plain").send("Firebase Auth proxy is not configured.");
+  }
+  const targetHost = projectId + ".firebaseapp.com";
+  const proxyReq = https.request({
+    hostname: targetHost,
+    port: 443,
+    path: req.originalUrl,
+    method: req.method,
+    headers: {
+      ...req.headers,
+      host: targetHost,
+      "x-forwarded-host": req.headers.host || "",
+      "x-forwarded-proto": "https"
+    }
+  }, (proxyRes) => {
+    res.status(proxyRes.statusCode || 502);
+    for (const [name, value] of Object.entries(proxyRes.headers)) {
+      if (value !== undefined && !["connection", "transfer-encoding"].includes(name.toLowerCase())) {
+        res.setHeader(name, value);
+      }
+    }
+    proxyRes.pipe(res);
+  });
+  proxyReq.setTimeout(15000, () => proxyReq.destroy(new Error("Firebase Auth proxy timed out")));
+  proxyReq.on("error", (error) => {
+    console.error("Firebase Auth proxy request failed:", error.message);
+    if (!res.headersSent) res.status(502).type("text/plain").send("Firebase Auth helper is temporarily unavailable.");
+    else res.destroy(error);
+  });
+  req.pipe(proxyReq);
 });
 
 // Cache image/video assets briefly to reduce repeat transfers while allowing
