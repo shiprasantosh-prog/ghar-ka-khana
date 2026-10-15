@@ -1977,6 +1977,13 @@ document.getElementById("backToSignIn").addEventListener("click",()=>{const rese
 
 
 document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.target,data=Object.fromEntries(new FormData(f)),msg=document.getElementById("authMessage");msg.textContent="Please wait…";const submit=document.getElementById("authSubmit");submit.disabled=true;try{const registering=authMode==="register";let verifiedLocation=null;if(registering){const pin=String(data.pincode||"").trim(),selectedLat=Number(f.dataset.selectedLat),selectedLng=Number(f.dataset.selectedLng),selectedPin=String(f.dataset.selectedPostcode||"").replace(/\D/g,""),selectedCountry=String(f.dataset.selectedCountry||"").trim().toLowerCase();if(!/^[0-9]{6}$/.test(pin))throw new Error("Please enter a valid 6-digit delivery PIN code.");if(!f.dataset.selectedLat||!f.dataset.selectedLng||!Number.isFinite(selectedLat)||!Number.isFinite(selectedLng))throw new Error("Please search for your delivery address and select a Google Maps suggestion before creating your account.");if(!selectedPin||selectedPin!==pin)throw new Error("The selected Google Maps location does not match the PIN code entered. Please select the correct address or update the PIN code.");if(!selectedCountry.includes("india"))throw new Error("Please select a delivery address in India.");verifiedLocation={latitude:selectedLat,longitude:selectedLng};}const addressText=registering?[data.house,data.street,data.city,data.state,data.pincode].filter(Boolean).join(", "):"";const payload=registering?{name:data.name,phone:data.phone,email:data.email||null,password:data.password,address:addressText,referralCode:data.referralCode||""}:{phone:data.phone,password:data.password};const result=await api(registering?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});currentUser=result.user;switchCartOwner(currentUser.phone);if(registering){const formatted=[data.house,data.street,data.city,data.state,data.pincode].filter(Boolean).join(", ");await api("/api/addresses",{method:"POST",body:JSON.stringify({label:data.addressLabel||"Home",house:data.house,street:data.street,city:data.city,state:data.state,pincode:data.pincode,formatted_address:formatted,latitude:verifiedLocation.latitude,longitude:verifiedLocation.longitude})});}msg.textContent="";await renderAccount()}catch(err){msg.textContent=err.message||"We couldn’t complete your request. Please try again."}finally{submit.disabled=false}});
+async function navigateToPaymentReturn(payment, orderId){
+ const url=new URL(window.location.href);
+ url.searchParams.set("payment",payment);
+ url.searchParams.set("orderId",String(orderId));
+ history.replaceState({},document.title,url.pathname+url.search);
+ await handlePaymentReturn();
+}
 async function handlePaymentReturn(){
  const params=new URLSearchParams(window.location.search);
  const payment=params.get("payment");
@@ -2558,14 +2565,14 @@ function showPaymentPending(order,checkoutData,form){
   check.disabled=true;check.textContent="Checking payment…";
   try{
    const status=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/payment-status");
-   if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(order.id));return;}
+   if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", order.id);return;}
    if(status.state==="failed"){check.remove();showPaymentRetry(order,checkoutData,form);return;}
    if(success.firstChild)success.firstChild.textContent="Payment is still being verified. Please do not pay again. You can check again shortly.";
   }catch(_){if(success.firstChild)success.firstChild.textContent="We could not refresh payment status yet. Please do not pay again; check again shortly."}
   finally{if(check.isConnected){check.disabled=false;check.textContent="Check Payment Status"}}
  };
 }
-function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const status=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/payment-status");if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(p.order.id));return;}if(status.state==="pending"){showPaymentPending(p.order,p.checkoutData,p.form);return;}const retryOrder=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"});if(retryOrder.payment?.method==="already-paid"){window.location.href="/?payment=success&orderId="+encodeURIComponent(String(p.order.id));return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);showPaymentPending(p.order,p.checkoutData,p.form)}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";try{await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";else alert(err.message||"The order could not be cancelled safely. Please check its status.");cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}
+function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const status=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/payment-status");if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", p.order.id);return;}if(status.state==="pending"){showPaymentPending(p.order,p.checkoutData,p.form);return;}const retryOrder=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"});if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);showPaymentPending(p.order,p.checkoutData,p.form)}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";try{await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";else alert(err.message||"The order could not be cancelled safely. Please check its status.");cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}
 async function startRazorpayPayment(order,checkoutData,form,button){
  const success=document.getElementById("success");
  return new Promise(resolve=>{
@@ -2588,7 +2595,7 @@ async function startRazorpayPayment(order,checkoutData,form,button){
     try{
      await api("/api/payments/verify",{method:"POST",body:JSON.stringify({orderId:order.id,razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
      localStorage.removeItem("gkk_pending_payment_order_id");
-     window.location.href="/?payment=success&orderId="+encodeURIComponent(String(order.id));
+     await navigateToPaymentReturn("success", order.id);
      finish(true);
     }catch(err){
      // A failed browser callback is not proof of a failed payment. Check the server
@@ -2598,7 +2605,7 @@ async function startRazorpayPayment(order,checkoutData,form,button){
      while(Date.now()<deadline){
       try{
        const status=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/payment-status");
-       if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(order.id));finish(true);recovered=true;break;}
+       if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", order.id);finish(true);recovered=true;break;}
        if(status.state==="failed"){retryable=true;break;}
       }catch(_){}
       await new Promise(resolve=>setTimeout(resolve,2500));
@@ -2628,27 +2635,27 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
   if(paymentMethod==="online"&&!pendingCheckoutRetry?.order&&localStorage.getItem("gkk_pending_payment_order_id")){
    const previousId=localStorage.getItem("gkk_pending_payment_order_id");
    const previousStatus=await api("/api/orders/"+encodeURIComponent(String(previousId))+"/payment-status");
-   if(previousStatus.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(previousId));return;}
+   if(previousStatus.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", previousId);return;}
    if(previousStatus.order)pendingCheckoutRetry={order:previousStatus.order,checkoutData:data,form:e.target};
    if(previousStatus.state==="pending"){showPaymentPending(previousStatus.order||pendingCheckoutRetry?.order,data,e.target);return;}
    if(previousStatus.state==="failed"&&pendingCheckoutRetry?.order){
     const retryOrder=await api("/api/orders/"+encodeURIComponent(String(previousId))+"/retry-payment",{method:"POST",body:"{}"});
-    if(retryOrder.payment?.method==="already-paid"){window.location.href="/?payment=success&orderId="+encodeURIComponent(String(previousId));return;}
+    if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", previousId);return;}
     const opened=await startRazorpayPayment(retryOrder,data,e.target,button);if(!opened)showPaymentRetry(retryOrder,data,e.target);return;
    }
   }
   if(paymentMethod==="online"&&pendingCheckoutRetry?.order){
    const pending=pendingCheckoutRetry;
    const status=await api("/api/orders/"+encodeURIComponent(String(pending.order.id))+"/payment-status");
-   if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");window.location.href="/?payment=success&orderId="+encodeURIComponent(String(pending.order.id));return;}
+   if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", pending.order.id);return;}
    if(status.state==="pending"){showPaymentPending(pending.order,data,e.target);return;}
    const retryOrder=await api("/api/orders/"+encodeURIComponent(String(pending.order.id))+"/retry-payment",{method:"POST",body:"{}"});
-   if(retryOrder.payment?.method==="already-paid"){window.location.href="/?payment=success&orderId="+encodeURIComponent(String(pending.order.id));return;}
+   if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", pending.order.id);return;}
    const opened=await startRazorpayPayment(retryOrder,data,e.target,button);if(!opened)showPaymentRetry(retryOrder,data,e.target);return;
   }
   const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:appliedPromo?document.getElementById("promoCode").value.trim():"",addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude),paymentMethod})});
   if(paymentMethod==="cod"){
-   window.location.href="/?payment=cod&orderId="+encodeURIComponent(String(order.id));
+   await navigateToPaymentReturn("cod", order.id);
    return;
   }
   localStorage.setItem("gkk_pending_payment_order_id",String(order.id));
