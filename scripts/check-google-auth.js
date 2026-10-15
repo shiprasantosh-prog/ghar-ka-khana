@@ -22,7 +22,7 @@ assert.match(html, /code === "EXISTING_EMAIL"/, "Frontend must show existing-acc
 assert.match(html, /error\.status = response\.status/, "Frontend must retain backend HTTP status for account conflict handling");
 assert.match(html, /id="googleSignInButton"/, "Customer auth UI must include a Google sign-in button");
 assert.match(html, /signInWithRedirect\(provider\)/, "Closed Google popup must explain how existing-account customers can sign in");
-assert.match(html, /GKK Google sign-in.*Firebase authentication failed/, "Firebase failures must be logged with a diagnostic code");
+assert.match(html, /GKK Google sign-in.*Authentication failed/, "Firebase failures must be logged with a diagnostic code");
 assert.match(html, /signInWithRedirect\(provider\)/, "Google sign-in must use redirect flow to avoid popup lifecycle issues");
 assert.match(html, /getRedirectResult\(\)/, "Google redirect result must be handled after returning to the site");
 assert.match(html, /unauthorized-domain/, "Unauthorized Firebase domains must show a specific message");
