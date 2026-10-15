@@ -3879,11 +3879,16 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const linkPassword = document.getElementById("googleLinkPassword");
   const linkButton = document.getElementById("googleLinkCompleteButton");
   if (!button || !message) return;
-  // Avoid showing the homepage while Firebase restores the pending Google redirect.
+  // Keep the account section visible and show immediate feedback while Firebase
+  // restores the redirect result and the backend checks the existing customer.
+  let googleRedirectWasPending = false;
   try {
-    if (sessionStorage.getItem("gkkGoogleRedirectPending") === "1") {
+    googleRedirectWasPending = sessionStorage.getItem("gkkGoogleRedirectPending") === "1";
+    if (googleRedirectWasPending) {
       sessionStorage.removeItem("gkkGoogleRedirectPending");
       showPage("account");
+      message.textContent = "Finishing Google sign-in…";
+      if (button) button.disabled = true;
     }
   } catch (_) {}
   async function getFirebaseApp(){
@@ -3962,10 +3967,14 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
         showPage("account");
         const token = await result.user.getIdToken(true);
         await finishGoogleSignIn(token, "");
+      } else if (googleRedirectWasPending) {
+        message.textContent = "Google sign-in is taking longer than expected. Please try again.";
+        if (button) button.disabled = false;
       }
     } catch (error) {
       showPage("account");
       showFirebaseError(error);
+      if (button) button.disabled = false;
     }
   })();
   button.addEventListener("click", async function(){
