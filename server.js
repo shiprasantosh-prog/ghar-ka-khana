@@ -11,6 +11,20 @@ const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const { Pool } = require("pg");
 const path = require("path");
+const https = require("https");
+const firebaseAdminSdk = require("firebase-admin");
+
+// Firebase Admin is configured only from a server-side Render secret.
+let firebaseAdminReady = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    firebaseAdminSdk.initializeApp({ credential: firebaseAdminSdk.credential.cert(serviceAccount) });
+    firebaseAdminReady = true;
+  }
+} catch (error) {
+  console.error("Firebase Admin configuration is invalid; Google sign-in is disabled.", error.message);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +63,44 @@ app.use(cookieParser());
 // Lightweight health check for uptime monitoring; never serves the homepage.
 app.get("/health", (req, res) => {
   res.status(200).type("text/plain").send("OK");
+});
+
+// Firebase Auth helper reverse proxy for redirect sign-in on browsers that block
+// third-party storage. Keep this route before static/API fallthrough and use a fixed
+// Firebase project host (never a request-controlled destination).
+app.use("/__/auth", (req, res) => {
+  const projectId = String(process.env.FIREBASE_PROJECT_ID || "").trim();
+  if (!/^[a-z0-9-]+$/.test(projectId)) {
+    return res.status(503).type("text/plain").send("Firebase Auth proxy is not configured.");
+  }
+  const targetHost = projectId + ".firebaseapp.com";
+  const proxyReq = https.request({
+    hostname: targetHost,
+    port: 443,
+    path: req.originalUrl,
+    method: req.method,
+    headers: {
+      ...req.headers,
+      host: targetHost,
+      "x-forwarded-host": req.headers.host || "",
+      "x-forwarded-proto": "https"
+    }
+  }, (proxyRes) => {
+    res.status(proxyRes.statusCode || 502);
+    for (const [name, value] of Object.entries(proxyRes.headers)) {
+      if (value !== undefined && !["connection", "transfer-encoding"].includes(name.toLowerCase())) {
+        res.setHeader(name, value);
+      }
+    }
+    proxyRes.pipe(res);
+  });
+  proxyReq.setTimeout(15000, () => proxyReq.destroy(new Error("Firebase Auth proxy timed out")));
+  proxyReq.on("error", (error) => {
+    console.error("Firebase Auth proxy request failed:", error.message);
+    if (!res.headersSent) res.status(502).type("text/plain").send("Firebase Auth helper is temporarily unavailable.");
+    else res.destroy(error);
+  });
+  req.pipe(proxyReq);
 });
 
 // Cache image/video assets briefly to reduce repeat transfers while allowing
@@ -238,6 +290,8 @@ async function initializeDatabase() {
     );
   `);
 
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT UNIQUE");
+
   await pool.query("CREATE TABLE IF NOT EXISTS password_reset_tokens (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id)");
 
@@ -393,6 +447,7 @@ async function initializeDatabase() {
   await pool.query("CREATE TABLE IF NOT EXISTS razorpay_payment_attempts (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_order_id TEXT NOT NULL UNIQUE, razorpay_payment_id TEXT, status TEXT NOT NULL DEFAULT 'created', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,razorpay_payment_id,status) SELECT id,razorpay_order_id,razorpay_payment_id,CASE WHEN payment_status='paid' THEN 'paid' WHEN payment_status='failed' THEN 'failed' ELSE 'created' END FROM orders WHERE razorpay_order_id IS NOT NULL ON CONFLICT(razorpay_order_id) DO NOTHING");
   await pool.query("CREATE TABLE IF NOT EXISTS order_refunds (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_refund_id TEXT UNIQUE, amount_paise INTEGER NOT NULL CHECK (amount_paise > 0), status TEXT NOT NULL DEFAULT 'pending', initiated_by TEXT NOT NULL DEFAULT 'owner', failure_reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  await pool.query("CREATE TABLE IF NOT EXISTS razorpay_duplicate_payments (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, original_payment_id TEXT NOT NULL, duplicate_payment_id TEXT NOT NULL UNIQUE, amount_paise INTEGER NOT NULL CHECK (amount_paise > 0), status TEXT NOT NULL DEFAULT 'processing', razorpay_refund_id TEXT UNIQUE, failure_reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS order_refunds_one_active_per_order ON order_refunds(order_id) WHERE status IN ('pending','processing','created')");
   await pool.query("CREATE INDEX IF NOT EXISTS order_refunds_order_id_idx ON order_refunds(order_id, created_at DESC)");
   await pool.query("CREATE TABLE IF NOT EXISTS promo_codes (id SERIAL PRIMARY KEY, code TEXT NOT NULL UNIQUE, customer_phone TEXT NOT NULL DEFAULT '', discount_type TEXT NOT NULL CHECK (discount_type IN ('percent','fixed')), discount_value INTEGER NOT NULL CHECK (discount_value > 0), minimum_order INTEGER NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, valid_from DATE NOT NULL DEFAULT CURRENT_DATE, valid_until DATE NOT NULL DEFAULT CURRENT_DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
@@ -629,6 +684,153 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
+
+// Public Firebase web configuration. These values identify the web app and are not server secrets.
+app.get("/api/firebase-config", (req, res) => {
+  const config = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    appId: process.env.FIREBASE_APP_ID,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID
+  };
+  if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId || !config.messagingSenderId) {
+    return res.status(503).json({ error: "Google sign-in is not configured yet." });
+  }
+  res.set("Cache-Control", "no-store");
+  res.json(config);
+});
+
+const googleAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
+  if (!firebaseAdminReady) return res.status(503).json({ error: "Google sign-in is not configured on this staging server yet." });
+  const idToken = String(req.body?.idToken || "");
+  const phone = String(req.body?.phone || "").trim();
+  if (!idToken) return res.status(400).json({ error: "Google sign-in token is missing." });
+
+  let decoded;
+  try {
+    decoded = await firebaseAdminSdk.auth().verifyIdToken(idToken, true);
+  } catch (error) {
+    return res.status(401).json({ error: "Google sign-in could not be verified. Please try again." });
+  }
+  if (!decoded.uid || !decoded.email || decoded.email_verified !== true) {
+    return res.status(403).json({ error: "Please use a Google account with a verified email address." });
+  }
+  const email = String(decoded.email).trim().toLowerCase();
+  const existingByUid = await pool.query("SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE firebase_uid = $1", [decoded.uid]);
+  if (existingByUid.rowCount) {
+    const existing = existingByUid.rows[0];
+    if (existing.role !== "customer") return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    // The Firebase UID may already be linked from an earlier sign-in. Keep the
+    // same PostgreSQL user/order history, and fill in the verified email only
+    // when the email field is empty or already matches this Google identity.
+    let refreshed;
+    try {
+      refreshed = await pool.query(
+        "UPDATE users SET email = COALESCE(NULLIF(BTRIM(email), ''), $2) WHERE firebase_uid = $1 AND (email IS NULL OR BTRIM(email) = '' OR LOWER(BTRIM(email)) = $2) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+        [decoded.uid, email]
+      );
+    } catch (error) {
+      if (error.code === "23505") {
+        return res.status(409).json({ code: "EMAIL_ALREADY_IN_USE", error: "This verified Google email is already associated with another customer account. Please contact support so the accounts can be reviewed safely." });
+      }
+      throw error;
+    }
+    if (!refreshed.rowCount) {
+      return res.status(409).json({ code: "EMAIL_ALREADY_IN_USE", error: "This account already has a different email address. Please contact support before changing it." });
+    }
+    const user = refreshed.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false });
+  }
+
+  // Existing accounts may be linked only after the customer proves ownership with
+  // both their existing phone/password credentials and a verified Google identity.
+  const existingByEmail = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid FROM users WHERE LOWER(BTRIM(email)) = $1 LIMIT 1",
+    [email]
+  );
+  if (existingByEmail.rowCount) {
+    const existing = existingByEmail.rows[0];
+    if (existing.role !== "customer") {
+      return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    }
+    if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account is already linked to a different Google account. Please contact support." });
+    }
+    const submittedPhone = phone.replace(/\D/g, "").slice(-10);
+    const existingPhone = String(existing.phone || "").replace(/\D/g, "").slice(-10);
+    const password = String(req.body?.password || "");
+    if (!phone || !password) {
+      return res.status(409).json({ code: "EXISTING_EMAIL", error: "This email belongs to an existing customer account. Enter your existing mobile number and password to securely link Google sign-in." });
+    }
+    if (!submittedPhone || submittedPhone !== existingPhone || !bcrypt.compareSync(password, existing.password_hash)) {
+      return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The mobile number or password does not match this existing account. Please try again." });
+    }
+    const linked = await pool.query(
+      "UPDATE users SET email = COALESCE(NULLIF(BTRIM(email), ''), $2), firebase_uid = $1 WHERE id = $3 AND (firebase_uid IS NULL OR firebase_uid = $1) AND (email IS NULL OR BTRIM(email) = '' OR LOWER(BTRIM(email)) = $2) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+      [decoded.uid, email, existing.id]
+    );
+    if (!linked.rowCount) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
+    }
+    const user = linked.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false, linked: true });
+  }
+  if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
+  if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
+    return res.status(400).json({ error: "Enter a valid phone number with at least 10 digits." });
+  }
+  const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
+  const existingByPhone = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    [normalizedPhone]
+  );
+  if (existingByPhone.rowCount) {
+    const existing = existingByPhone.rows[0];
+    if (existing.role !== "customer") {
+      return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    }
+    if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This customer account is already linked to a different Google account. Please contact support." });
+    }
+    const password = String(req.body?.password || "");
+    if (!password) {
+      return res.status(409).json({ code: "EXISTING_PHONE", error: "This mobile number already belongs to a customer account. Enter the existing account password to link Google sign-in." });
+    }
+    if (!bcrypt.compareSync(password, existing.password_hash)) {
+      return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The password does not match this existing account. Please try again." });
+    }
+    const linked = await pool.query(
+      "UPDATE users SET email = COALESCE(NULLIF(BTRIM(email), ''), $2), firebase_uid = $1 WHERE id = $3 AND (firebase_uid IS NULL OR firebase_uid = $1) AND (email IS NULL OR BTRIM(email) = '' OR LOWER(BTRIM(email)) = $2) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+      [decoded.uid, email, existing.id]
+    );
+    if (!linked.rowCount) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
+    }
+    const user = linked.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false, linked: true });
+  }
+  const name = String(decoded.name || "").trim() || email.split("@")[0];
+  const randomPassword = crypto.randomBytes(48).toString("hex");
+  try {
+    const inserted = await pool.query(
+      `INSERT INTO users (name, phone, email, password_hash, role, referral_code, firebase_uid)
+       VALUES ($1, $2, $3, $4, 'customer', $5, $6)
+       RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+      [name, phone, email, bcrypt.hashSync(randomPassword, 12), "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), decoded.uid]
+    );
+    const user = inserted.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: true });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "An account with this phone number or email already exists. Sign in with your existing account; automatic account linking is not enabled." });
+    throw error;
+  }
+}));
 
 // Customer registration
 app.post("/api/auth/register", asyncRoute(async (req, res) => {
@@ -1506,44 +1708,235 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
 
  
 // Verify a successful Razorpay Checkout payment before confirming the customer order.
-app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
-  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
+// Retry by reusing the existing Razorpay order whenever possible. A browser failure
+// must never create a fresh payable order until existing attempts have been checked.
+async function refundDuplicateCapturedPayment(orderId, originalPaymentId, payment) {
+  if (!razorpay || !payment || !payment.id || !originalPaymentId || String(payment.id) === String(originalPaymentId)) return;
+  if (payment.status !== "captured" && payment.captured !== true) return;
+  const orderResult = await pool.query("SELECT total FROM orders WHERE id=$1", [orderId]);
+  if (!orderResult.rowCount) {
+    console.error("[Duplicate payment] Order was not found; captured payment requires manual reconciliation.", { orderId, paymentId: payment.id });
+    return;
+  }
+  const expectedAmountPaise = Number(orderResult.rows[0].total) * 100;
+  const capturedAmountPaise = Number(payment.amount);
+  if (!Number.isSafeInteger(capturedAmountPaise) || capturedAmountPaise <= 0 || capturedAmountPaise !== expectedAmountPaise) {
+    const reason = "Captured payment amount does not match the order total; no automatic refund was submitted. Reconcile the payment in Razorpay manually.";
+    // Record the exception for the owner/admin queue, but never refund an amount
+    // that does not match the order total. The unique payment ID keeps repeats safe.
+    if (Number.isSafeInteger(capturedAmountPaise) && capturedAmountPaise > 0) {
+      try {
+        await pool.query(
+          "INSERT INTO razorpay_duplicate_payments(order_id,original_payment_id,duplicate_payment_id,amount_paise,status,failure_reason) VALUES($1,$2,$3,$4,'manual_review',$5) ON CONFLICT(duplicate_payment_id) DO NOTHING",
+          [orderId, String(originalPaymentId), String(payment.id), capturedAmountPaise, reason]
+        );
+      } catch (error) {
+        console.error("[Duplicate payment] Could not record amount-mismatch exception; manual reconciliation required.", { orderId, paymentId: payment.id, message: error.message });
+      }
+    } else {
+      console.error("[Duplicate payment] Invalid captured amount cannot be stored under the positive-amount database constraint; manual reconciliation required.", { orderId, paymentId: payment.id });
+    }
+    console.error("[Duplicate payment] Captured payment amount does not match order; no automatic refund submitted.", { orderId, paymentId: payment.id, expectedAmountPaise, capturedAmountPaise });
+    return;
+  }
+
+  // The unique payment ID makes duplicate webhook deliveries idempotent.
+  // Claim the refund before calling Razorpay; never blindly resubmit an ambiguous refund.
+  let record;
+  try {
+    const inserted = await pool.query(
+      "INSERT INTO razorpay_duplicate_payments(order_id,original_payment_id,duplicate_payment_id,amount_paise,status) VALUES($1,$2,$3,$4,'processing') ON CONFLICT(duplicate_payment_id) DO NOTHING RETURNING id",
+      [orderId, String(originalPaymentId), String(payment.id), Number(payment.amount)]
+    );
+    if (!inserted.rowCount) {
+      console.info("[Duplicate payment] This captured payment was already recorded; no second refund request.", { orderId, paymentId: payment.id });
+      return;
+    }
+    record = inserted.rows[0];
+  } catch (error) {
+    console.error("[Duplicate payment] Could not persist refund guard; no refund was submitted.", { orderId, paymentId: payment.id, message: error.message });
+    return;
+  }
+
+  try {
+    const response = await razorpay.payments.refund(String(payment.id), {
+      amount: Number(payment.amount),
+      notes: { order_id: String(orderId), source: "Ghar ka Khana duplicate captured payment", original_payment_id: String(originalPaymentId) }
+    });
+    const status = ["processed", "pending", "failed"].includes(String(response.status || "").toLowerCase())
+      ? String(response.status).toLowerCase() : "processing";
+    await pool.query(
+      "UPDATE razorpay_duplicate_payments SET razorpay_refund_id=$1,status=$2,failure_reason=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$4",
+      [response.id || null, status, status === "failed" ? "Razorpay reported refund failure; owner review required." : "", record.id]
+    );
+    console.info("[Duplicate payment] Refund submitted for additional captured payment.", { orderId, paymentId: payment.id, refundId: response.id || null, status });
+  } catch (error) {
+    await pool.query(
+      "UPDATE razorpay_duplicate_payments SET status='processing',failure_reason=$1,updated_at=CURRENT_TIMESTAMP WHERE id=$2",
+      ["Refund submission outcome is unclear; reconcile this payment/refund in Razorpay before any retry.", record.id]
+    );
+    console.error("[Duplicate payment] Refund needs reconciliation; no automatic retry attempted.", { orderId, paymentId: payment.id, message: error.message });
+  }
+}
+
+async function reconcileCapturedPayment(orderId, razorpayOrderId, payment) {
+  if (!payment || String(payment.order_id || "") !== String(razorpayOrderId)) return null;
+  const totalResult = await pool.query("SELECT total FROM orders WHERE id=$1",[orderId]);
+  if (!totalResult.rowCount || Number(payment.amount) !== Number(totalResult.rows[0].total) * 100) return null;
+  if (payment.status !== "captured" && payment.captured !== true) return null;
+
+  await pool.query(
+    "UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE order_id=$2 AND razorpay_order_id=$3",
+    [payment.id, orderId, razorpayOrderId]
+  );
+  const updated = await pool.query(
+    "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",
+    [payment.id, orderId]
+  );
+  const order = await readOrder(orderId);
+  if (!updated.rowCount && order?.payment_status === "paid" && order.razorpay_payment_id && String(order.razorpay_payment_id) !== String(payment.id)) {
+    await refundDuplicateCapturedPayment(orderId, order.razorpay_payment_id, payment);
+  }
+  if (updated.rowCount && order) {
+    if (order.status === "Cancelled") await refundLateCapturedCancelledOrder(orderId);
+    else {
+      await creditReferralRewardForCompletedOrder(order.user_id);
+      await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[orderId]);
+      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
+    }
+  }
+  return order;
+}
+
+app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
   const orderId=Number(req.params.id);
   if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
   const found=await pool.query("SELECT id,total,status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
   const row=found.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
-  if(row.status!=="Payment Pending"||row.payment_status==="paid")return res.status(409).json({error:"Only unpaid orders with Payment Pending status can be retried."});
-  if(!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))return res.status(409).json({error:"This order is not eligible for payment retry."});
-  const rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId)+"-R"+Date.now().toString().slice(-6),notes:{ghar_ka_khana_order_id:String(orderId),payment_retry:"true"}});
-  // Atomically re-check eligibility: an owner/customer cancellation or successful
-  // payment may have happened after the initial read while Razorpay created this order.
-  const client=await pool.connect();
-  try{
-    await client.query("BEGIN");
-    const locked=await client.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE",[orderId,req.user.id]);
-    const current=locked.rows[0];
-    if(!current){await client.query("ROLLBACK");return res.status(404).json({error:"Order not found."});}
-    if(current.status!=="Payment Pending"||current.payment_status==="paid"||!["created","failed","unpaid"].includes(String(current.payment_status||"").toLowerCase())){
-      await client.query("ROLLBACK");
-      return res.status(409).json({error:"This order is no longer eligible for payment retry. Refresh your orders and check its current status."});
+  if(!razorpay){
+    if(row.payment_status==="paid")return res.json({state:"paid",order:await readOrder(orderId)});
+    return res.json({state:"pending",message:"Payment status is not available yet. Please do not pay again."});
+  }
+
+  const attempts=await pool.query("SELECT razorpay_order_id,status FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+  let hasInFlight=false, hasFailed=false, hadLookupError=false, reconciledOrder=null;
+  for(const attempt of attempts.rows){
+    try{
+      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const payments=Array.isArray(response?.items)?response.items:[];
+      if(!payments.length)hasFailed=true;
+      for(const payment of payments){
+        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+        if(payment.status==="captured"||payment.captured===true){
+          const order=await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+          if(order)reconciledOrder=order;
+        }else if(["authorized","created"].includes(String(payment.status||"").toLowerCase())){
+          hasInFlight=true;
+        }else if(["failed","refunded"].includes(String(payment.status||"").toLowerCase())){
+          hasFailed=true;
+        }
+      }
+    }catch(error){
+      hadLookupError=true;
+      console.warn("[Razorpay payment recovery] Could not inspect existing payment attempt:",{orderId,message:error.message});
     }
-    await client.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created')",[orderId,rpOrder.id]);
-    await client.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2",[rpOrder.id,orderId]);
-    await client.query("COMMIT");
-  }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error;}
-  finally{client.release();}
-  const order=await readOrder(orderId);
-  return res.status(201).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrder.id,amount:rpOrder.amount,currency:rpOrder.currency}});
+  }
+  if(reconciledOrder || (await readOrder(orderId))?.payment_status==="paid")return res.json({state:"paid",order:reconciledOrder || await readOrder(orderId)});
+  if(hasInFlight||hadLookupError)return res.json({state:"pending",message:"We are still checking your payment. Please do not pay again yet.",order:await readOrder(orderId)});
+  if(hasFailed || attempts.rowCount===0)return res.json({state:"failed",message:"No captured payment was found. You can safely retry using the existing order.",order:await readOrder(orderId)});
+  return res.json({state:"pending",message:"Payment confirmation is still pending. Please do not pay again yet.",order:await readOrder(orderId)});
 }));
 
-app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
+app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,res)=>{
+  const orderId=Number(req.params.id);
+  if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
+  const found=await pool.query("SELECT id,status,payment_status,created_at FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const row=found.rows[0];
+  if(!row)return res.status(404).json({error:"Order not found."});
+  if(row.payment_status==="paid")return res.status(409).json({error:"This order is already paid and cannot be cancelled as an unpaid order."});
+  if(row.status==="Cancelled")return res.json({success:true,status:"Cancelled"});
+  if(row.status!=="Payment Pending")return res.status(409).json({error:"Only payment-pending orders can be cancelled here."});
+  if(!razorpay)return res.status(503).json({error:"Payment status cannot be verified right now. Please try again shortly."});
+  const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+  for(const attempt of attempts.rows){
+    try{
+      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      for(const payment of (Array.isArray(response?.items)?response.items:[])){
+        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+        if(payment.status==="captured"||payment.captured===true){
+          await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+          return res.status(409).json({error:"Payment was captured. We updated your order; please refresh Order Status."});
+        }
+        if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
+          return res.status(409).json({error:"A payment is still processing. We cannot cancel safely yet. Please check again shortly."});
+      }
+    }catch(error){
+      console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
+      return res.status(409).json({error:"We could not confirm the payment status. Your order remains pending; please try again shortly."});
+    }
+  }
+  if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This pending payment is from a previous IST calendar day and can no longer be cancelled from checkout. Please place a new order; check Order Status for updates."});
+  await pool.query("UPDATE orders SET status='Cancelled',payment_status='failed',cancellation_reason='Customer cancelled pending payment' WHERE id=$1 AND user_id=$2 AND status='Payment Pending' AND payment_status<>'paid'",[orderId,req.user.id]);
+  await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status<>'paid'",[orderId]);
+  const final=await pool.query("SELECT status,payment_status FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  if(!final.rowCount||final.rows[0].status!=="Cancelled")return res.status(409).json({error:"The order status changed while cancelling. Please refresh Order Status."});
+  return res.json({success:true,status:"Cancelled",payment_status:final.rows[0].payment_status});
+}));
+
+app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
+  if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
+  const orderId=Number(req.params.id);
+  if(!Number.isInteger(orderId)||orderId<1)return res.status(400).json({error:"Invalid order."});
+  const found=await pool.query("SELECT id,total,status,payment_status,razorpay_order_id,created_at FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]);
+  const row=found.rows[0];
+  if(!row)return res.status(404).json({error:"Order not found."});
+  if(row.payment_status==="paid")return res.json({...await readOrder(orderId),payment:{method:"already-paid"}});
+  if(row.status!=="Payment Pending"||!["created","failed","unpaid"].includes(String(row.payment_status||"").toLowerCase()))
+    return res.status(409).json({error:"This order is not eligible for payment retry. Check its current status."});
+
+  const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+  for(const attempt of attempts.rows){
+    try{
+      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const payments=Array.isArray(response?.items)?response.items:[];
+      for(const payment of payments){
+        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+        if(payment.status==="captured"||payment.captured===true){
+          const recovered=await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+          if(recovered)return res.json({...recovered,payment:{method:"already-paid"}});
+        }
+        if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
+          return res.status(409).json({error:"Your payment is still being processed. Please check payment status before trying again."});
+      }
+    }catch(error){
+      console.warn("[Razorpay payment recovery] Existing attempt lookup failed; refusing a new payment order:",{orderId,message:error.message});
+      return res.status(409).json({error:"We could not confirm the previous payment status yet. Please check again shortly; do not pay again."});
+    }
+  }
+
+  if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This payment retry window ended at midnight IST. Please place a new order; we will still verify any previous payment before you pay again."});
+
+  // Reuse the existing Razorpay order so a retry cannot create a second payable order.
+  let rpOrderId=String(row.razorpay_order_id||attempts.rows[0]?.razorpay_order_id||"");
+  let rpOrder;
+  if(rpOrderId){
+    try{rpOrder=await razorpay.orders.fetch(rpOrderId);}
+    catch(error){return res.status(409).json({error:"The existing payment session could not be checked. Please check payment status before retrying."});}
+  }else{
+    rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
+    rpOrderId=rpOrder.id;
+    await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created') ON CONFLICT(razorpay_order_id) DO NOTHING",[orderId,rpOrderId]);
+    await pool.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2 AND payment_status<>'paid'",[rpOrderId,orderId]);
+  }
+  const order=await readOrder(orderId);
+  return res.status(200).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrderId,amount:Number(row.total)*100,currency:"INR"}});
+}));app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   const orderId=Number(req.body?.orderId),razorpayOrderId=String(req.body?.razorpay_order_id||""),razorpayPaymentId=String(req.body?.razorpay_payment_id||""),razorpaySignature=String(req.body?.razorpay_signature||"");
   if(!Number.isInteger(orderId)||orderId<1||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.status(400).json({error:"Incomplete payment verification details."});
   if(!razorpay)return res.status(503).json({error:"Online payment is not configured yet."});
   const result=await pool.query("SELECT id,total,payment_status,razorpay_order_id FROM orders WHERE id=$1 AND user_id=$2",[orderId,req.user.id]),row=result.rows[0];
   if(!row)return res.status(404).json({error:"Order not found."});
-  if(row.payment_status==="paid")return res.json(await readOrder(orderId));
   const attempt=await pool.query("SELECT id FROM razorpay_payment_attempts WHERE order_id=$1 AND razorpay_order_id=$2",[orderId,razorpayOrderId]);
   if(!attempt.rowCount)return res.status(400).json({error:"Payment order does not match this order."});
   const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
@@ -1553,17 +1946,8 @@ app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
   if(String(payment.order_id||"")!==razorpayOrderId)return res.status(400).json({error:"Payment order does not match this order."});
   if(Number(payment.amount)!==Number(row.total)*100)return res.status(400).json({error:"Payment amount does not match this order."});
   if(payment.status!=="captured" && payment.captured!==true)return res.status(400).json({error:"Payment has not been captured yet. Your order remains pending."});
-  await pool.query("UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE order_id=$2 AND razorpay_order_id=$3",[razorpayPaymentId,orderId,razorpayOrderId]);
-  const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND user_id=$3 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,orderId,req.user.id]);
-  const order=await readOrder(orderId);
-  if(updated.rowCount){
-    if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(orderId);
-    else {
-      await creditReferralRewardForCompletedOrder(req.user.id);
-      await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[orderId]);
-      notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));
-    }
-  }
+  const order=await reconcileCapturedPayment(orderId,razorpayOrderId,payment);
+  if(!order)return res.status(409).json({error:"Payment could not be reconciled safely. Please check Order Status before retrying."});
   res.json(order);
 }));
 
@@ -1575,24 +1959,18 @@ app.post("/api/payments/callback", express.urlencoded({extended:false}), asyncRo
   const razorpayPaymentId=String(req.body?.razorpay_payment_id||"");
   const razorpaySignature=String(req.body?.razorpay_signature||"");
   if(!razorpay||!razorpayOrderId||!razorpayPaymentId||!razorpaySignature)return res.redirect("/?payment=failed&reason=invalid_callback");
-  const result=await pool.query("SELECT id,total,payment_status,status FROM orders WHERE razorpay_order_id=$1",[razorpayOrderId]);
+  const result=await pool.query("SELECT o.id,o.total,o.payment_status,o.status FROM orders o JOIN razorpay_payment_attempts a ON a.order_id=o.id WHERE a.razorpay_order_id=$1",[razorpayOrderId]);
   const row=result.rows[0];
   if(!row)return res.redirect("/?payment=failed&reason=order_not_found");
-  if(row.payment_status!=="paid"){
-    const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
-    const ok=expected.length===razorpaySignature.length&&crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(razorpaySignature));
-    if(!ok)return res.redirect("/?payment=failed&reason=verification_failed");
-    const payment=await razorpay.payments.fetch(razorpayPaymentId);
-    if(String(payment.order_id||"")!==razorpayOrderId || Number(payment.amount)!==Number(row.total)*100 || (payment.status!=="captured" && payment.captured!==true)){
-      return res.redirect("/?payment=failed&reason=payment_not_captured");
-    }
-    const updated=await pool.query("UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",[razorpayPaymentId,row.id]);
-    if(updated.rowCount){
-      const order=await readOrder(row.id);
-      if(order.status==="Cancelled")await refundLateCapturedCancelledOrder(row.id);
-      else {await creditReferralRewardForCompletedOrder(order.user_id);await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);notifyWhatsApp(order).catch(e=>console.error("WhatsApp notification failed:",e.message));}
-    }
+  const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId+"|"+razorpayPaymentId).digest("hex");
+  const ok=expected.length===razorpaySignature.length&&crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(razorpaySignature));
+  if(!ok)return res.redirect("/?payment=failed&reason=verification_failed");
+  const payment=await razorpay.payments.fetch(razorpayPaymentId);
+  if(String(payment.order_id||"")!==razorpayOrderId || Number(payment.amount)!==Number(row.total)*100 || (payment.status!=="captured" && payment.captured!==true)){
+    return res.redirect("/?payment=failed&reason=payment_not_captured");
   }
+  const order=await reconcileCapturedPayment(row.id,razorpayOrderId,payment);
+  if(!order)return res.redirect("/?payment=failed&reason=payment_reconciliation_pending");
   return res.redirect("/?payment=success&orderId="+encodeURIComponent(String(row.id)));
 }));
 
@@ -1736,7 +2114,11 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
       "UPDATE order_refunds SET status=$1, failure_reason=$2, updated_at=CURRENT_TIMESTAMP WHERE razorpay_refund_id=$3 RETURNING id,order_id",
       [status, failureReason, refundId]
     );
-    if (!updatedRefund.rowCount) {
+    const updatedDuplicateRefund = await pool.query(
+      "UPDATE razorpay_duplicate_payments SET status=$1, failure_reason=$2, updated_at=CURRENT_TIMESTAMP WHERE razorpay_refund_id=$3 RETURNING id,order_id,duplicate_payment_id",
+      [status, failureReason, refundId]
+    );
+    if (!updatedRefund.rowCount && !updatedDuplicateRefund.rowCount) {
       console.warn("[Razorpay webhook] Refund event had no matching local refund record:", { diagnosticId, event, refundId });
     } else {
       console.info("[Razorpay webhook] Refund status updated:", {
@@ -1744,7 +2126,8 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
         event,
         refundId,
         status,
-        orderId: updatedRefund.rows[0].order_id
+        orderId: updatedRefund.rows[0]?.order_id || updatedDuplicateRefund.rows[0]?.order_id,
+        refundType: updatedDuplicateRefund.rowCount ? "duplicate-payment" : "order"
       });
     }
     return res.status(200).json({ ok: true });
@@ -1768,29 +2151,11 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   }
 
   if (event === "payment.captured") {
-    await pool.query("UPDATE razorpay_payment_attempts SET razorpay_payment_id=$1,status='paid',updated_at=CURRENT_TIMESTAMP WHERE razorpay_order_id=$2",[razorpayPaymentId,razorpayOrderId]);
     if (Number(payment.amount) !== Number(row.total) * 100) {
       console.error("Razorpay webhook amount mismatch for order:", row.id);
       return res.status(400).json({ error: "Payment amount does not match the order." });
     }
-
-    const updated = await pool.query(
-      "UPDATE orders SET payment_status='paid',razorpay_payment_id=$1,status=CASE WHEN status='Cancelled' THEN status ELSE 'Received' END WHERE id=$2 AND payment_status<>'paid' RETURNING id",
-      [razorpayPaymentId, row.id]
-    );
-
-    if (updated.rowCount) {
-      if (row.status === "Cancelled") {
-        await refundLateCapturedCancelledOrder(row.id);
-      } else {
-        const order = await readOrder(row.id);
-        await creditReferralRewardForCompletedOrder(order.user_id);
-        await pool.query("UPDATE referral_rewards SET status='used',used_at=CURRENT_TIMESTAMP WHERE reserved_order_id=$1 AND status='reserved'",[row.id]);
-        notifyWhatsApp(order).catch(error =>
-          console.error("WhatsApp notification failed after Razorpay webhook:", error.message)
-        );
-      }
-    }
+    await reconcileCapturedPayment(row.id, razorpayOrderId, payment);
   } else if (event === "payment.failed") {
     // Mark this specific attempt failed. An older attempt's delayed failure
     // must not overwrite the status of a newer retry attempt.
@@ -1802,6 +2167,15 @@ app.post("/api/payments/razorpay-webhook", asyncRoute(async (req, res) => {
   }
 
   return res.status(200).json({ ok: true });
+}));
+
+// Owner-only queue for duplicate captured payments that need refund reconciliation.
+// Never retries refunds automatically: uncertain outcomes must be checked in Razorpay first.
+app.get("/api/admin/duplicate-payment-refunds", auth, admin, asyncRoute(async (req, res) => {
+  const result = await pool.query(
+    "SELECT d.id,d.order_id,d.original_payment_id,d.duplicate_payment_id,d.amount_paise,d.status,d.razorpay_refund_id,d.failure_reason,d.created_at,d.updated_at,o.status AS order_status,o.payment_status AS order_payment_status FROM razorpay_duplicate_payments d JOIN orders o ON o.id=d.order_id WHERE d.status <> 'processed' OR d.failure_reason <> '' ORDER BY d.created_at DESC LIMIT 100"
+  );
+  res.json({ refunds: result.rows });
 }));
 
 // Owner-triggered full refund. Durable local records prevent duplicate requests.
@@ -2526,6 +2900,13 @@ app.get("/webhooks/whatsapp", (req, res) => {
   }
   return res.sendStatus(403);
 });
+
+function isSameGkkIstDay(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return false;
+  const day = value => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
+  return day(date) === day(new Date());
+}
 
 function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").replace(/^0+/, "");
