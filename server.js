@@ -719,8 +719,27 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   const email = String(decoded.email).trim().toLowerCase();
   const existingByUid = await pool.query("SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE firebase_uid = $1", [decoded.uid]);
   if (existingByUid.rowCount) {
-    const user = existingByUid.rows[0];
-    if (user.role !== "customer") return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    const existing = existingByUid.rows[0];
+    if (existing.role !== "customer") return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    // The Firebase UID may already be linked from an earlier sign-in. Keep the
+    // same PostgreSQL user/order history, and fill in the verified email only
+    // when the email field is empty or already matches this Google identity.
+    let refreshed;
+    try {
+      refreshed = await pool.query(
+        "UPDATE users SET email = COALESCE(NULLIF(BTRIM(email), ''), $2) WHERE firebase_uid = $1 AND (email IS NULL OR BTRIM(email) = '' OR LOWER(BTRIM(email)) = $2) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+        [decoded.uid, email]
+      );
+    } catch (error) {
+      if (error.code === "23505") {
+        return res.status(409).json({ code: "EMAIL_ALREADY_IN_USE", error: "This verified Google email is already associated with another customer account. Please contact support so the accounts can be reviewed safely." });
+      }
+      throw error;
+    }
+    if (!refreshed.rowCount) {
+      return res.status(409).json({ code: "EMAIL_ALREADY_IN_USE", error: "This account already has a different email address. Please contact support before changing it." });
+    }
+    const user = refreshed.rows[0];
     res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
     return res.json({ user, created: false });
   }
