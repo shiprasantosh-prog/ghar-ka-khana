@@ -765,11 +765,34 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   }
   const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
   const existingByPhone = await pool.query(
-    "SELECT id FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
     [normalizedPhone]
   );
   if (existingByPhone.rowCount) {
-    return res.status(409).json({ error: "This phone number already belongs to an account. Sign in with your existing phone and password first; automatic account linking is not enabled." });
+    const existing = existingByPhone.rows[0];
+    if (existing.role !== "customer") {
+      return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    }
+    if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This customer account is already linked to a different Google account. Please contact support." });
+    }
+    const password = String(req.body?.password || "");
+    if (!password) {
+      return res.status(409).json({ code: "EXISTING_PHONE", error: "This mobile number already belongs to a customer account. Enter the existing account password to link Google sign-in." });
+    }
+    if (!bcrypt.compareSync(password, existing.password_hash)) {
+      return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The password does not match this existing account. Please try again." });
+    }
+    const linked = await pool.query(
+      "UPDATE users SET firebase_uid = $1 WHERE id = $2 AND (firebase_uid IS NULL OR firebase_uid = $1) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+      [decoded.uid, existing.id]
+    );
+    if (!linked.rowCount) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
+    }
+    const user = linked.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false, linked: true });
   }
   const name = String(decoded.name || "").trim() || email.split("@")[0];
   const randomPassword = crypto.randomBytes(48).toString("hex");
