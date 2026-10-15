@@ -1,0 +1,24 @@
+name: Staging Integration Checks
+
+on:
+  pull_request:
+    branches: [feature/firebase-google-signin]
+  push:
+    branches: [feature/firebase-google-signin]
+
+jobs:
+  staging-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check server syntax
+        run: node --check server.js
+      - name: Check Google authentication
+        run: npm run check:google-auth
+      - name: Run payment recovery regression tests
+        run: npm test
