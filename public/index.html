@@ -4027,11 +4027,11 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       phoneInput.focus();
       return false;
     }
-    if (response.status === 409 && data.code === "EXISTING_EMAIL") {
+    if (response.status === 409 && (data.code === "EXISTING_EMAIL" || data.code === "EXISTING_PHONE")) {
       pendingGoogleToken = token;
       linkPanel.hidden = false;
       phonePanel.hidden = true;
-      message.textContent = data.error || "Verify your existing account to link Google sign-in.";
+      message.textContent = data.error || "Verify your existing account to link Google sign-in."; if (phone) linkPhone.value = phone;
       linkPhone.focus();
       return false;
     }
