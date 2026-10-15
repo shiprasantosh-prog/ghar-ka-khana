@@ -40,6 +40,7 @@ assert.match(server, /code: "EXISTING_PHONE"/, "Existing phone numbers must requ
 assert.match(server, /bcrypt\\.compareSync\\(password, existing\\.password_hash\\)/, "Existing customer linking must verify the existing password");
 assert.match(html, /data.code === "EXISTING_PHONE"/, "Frontend must show verification when the submitted phone already exists");
 assert.match(html, /gkkGoogleRedirectPending/, "Google redirect return should keep the account section visible");
+assert.match(html, /async function signOut\(\)[\s\S]*?googleButton\.disabled=false/, "Signing out must re-enable the Google sign-in button for the next attempt");
 
 const inlineGoogleScript = html.match(/<script id="gkk-google-signin">([\s\S]*?)<\/script>/);
 assert.ok(inlineGoogleScript, "Google sign-in browser script must exist");
