@@ -3893,7 +3893,12 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       phoneInput.focus();
       return false;
     }
-    if (!response.ok) throw new Error(data.error || "Google sign-in failed. Please try again.");
+    if (!response.ok) {
+      const error = new Error(data.error || "Google sign-in failed. Please try again.");
+      error.code = data.code || "";
+      error.status = response.status;
+      throw error;
+    }
     if (!data.user || !data.user.phone) throw new Error("Your account details could not be loaded. Please try again.");
     pendingGoogleToken = null;
     phonePanel.hidden = true;
@@ -3908,10 +3913,12 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     console.error("[GKK Google sign-in] Firebase authentication failed", { code: code || "unknown", message: String(error && error.message || "No error message") });
     if (code.includes("unauthorized-domain")) {
       message.textContent = "This staging website is not authorized in Firebase yet. Please contact support.";
+    } else if (code === "EXISTING_EMAIL" || (error && error.status === 409)) {
+      message.textContent = "An account already uses this email. Please sign in with your existing phone number and password. Automatic account linking is not enabled.";
     } else if (code.includes("account-exists-with-different-credential")) {
       message.textContent = "An account already uses this email with another sign-in method. Please use your existing phone number and password. Automatic account linking is not enabled.";
     } else {
-      message.textContent = "Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.";
+      message.textContent = (error && error.message) || ("Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.");
     }
   }
   // Redirect flow avoids popup lifecycle issues in browsers that close the Google chooser unexpectedly.
