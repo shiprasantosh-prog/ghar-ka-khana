@@ -3879,6 +3879,13 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const linkPassword = document.getElementById("googleLinkPassword");
   const linkButton = document.getElementById("googleLinkCompleteButton");
   if (!button || !message) return;
+  // Avoid showing the homepage while Firebase restores the pending Google redirect.
+  try {
+    if (sessionStorage.getItem("gkkGoogleRedirectPending") === "1") {
+      sessionStorage.removeItem("gkkGoogleRedirectPending");
+      showPage("account");
+    }
+  } catch (_) {}
   async function getFirebaseApp(){
     if (firebaseApp) return firebaseApp;
     const response = await fetch("/api/firebase-config", {credentials:"same-origin",cache:"no-store"});
@@ -3966,6 +3973,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     message.textContent = "Opening Google sign-in…";
     try {
       showPage("account");
+      try { sessionStorage.setItem("gkkGoogleRedirectPending", "1"); } catch (_) {}
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
