@@ -1,0 +1,22 @@
+name: Payment Recovery Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [fix/razorpay-duplicate-payment-recovery]
+
+jobs:
+  payment-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check server syntax
+        run: node --check server.js
+      - name: Run payment recovery tests
+        run: npm test
