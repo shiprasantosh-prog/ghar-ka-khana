@@ -37,7 +37,7 @@ assert.match(server, /code: "EMAIL_ALREADY_IN_USE"/, "Existing UID email conflic
 assert.match(server, /LOWER\(BTRIM\(email\)\) = \$2/, "Account linking must avoid overwriting an email already associated with a different account");
 assert.match(html, /Finishing Google sign-in…/, "Redirect return must show immediate progress feedback");
 assert.match(server, /code: "EXISTING_PHONE"/, "Existing phone numbers must require verification instead of creating duplicate accounts");
-assert.match(server, /bcrypt\\.compareSync\\(password, existing\\.password_hash\\)/, "Existing customer linking must verify the existing password");
+assert.match(server, /bcrypt\.compareSync\(password, existing\.password_hash\)/, "Existing customer linking must verify the existing password");
 assert.match(html, /data.code === "EXISTING_PHONE"/, "Frontend must show verification when the submitted phone already exists");
 assert.match(html, /gkkGoogleRedirectPending/, "Google redirect return should keep the account section visible");
 assert.match(html, /async function signOut\(\)[\s\S]*?googleButton\.disabled=false/, "Signing out must re-enable the Google sign-in button for the next attempt");
