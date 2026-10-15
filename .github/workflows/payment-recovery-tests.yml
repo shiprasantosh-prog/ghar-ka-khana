@@ -1,13 +1,13 @@
-name: Payment Recovery Tests
+name: Staging Integration Checks
 
 on:
   pull_request:
-    branches: [feature/firebase-google-signin, integration/payment-recovery-staging]
+    branches: [feature/firebase-google-signin]
   push:
-    branches: [integration/payment-recovery-staging]
+    branches: [feature/firebase-google-signin]
 
 jobs:
-  payment-recovery:
+  staging-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -18,5 +18,7 @@ jobs:
           node-version: 24
       - name: Check server syntax
         run: node --check server.js
-      - name: Run payment recovery tests
+      - name: Check Google authentication
+        run: npm run check:google-auth
+      - name: Run payment recovery regression tests
         run: npm test
