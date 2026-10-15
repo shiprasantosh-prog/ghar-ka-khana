@@ -739,8 +739,8 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
     if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
       return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account is already linked to a different Google account. Please contact support." });
     }
-    const submittedPhone = phone.replace(/\\D/g, "").slice(-10);
-    const existingPhone = String(existing.phone || "").replace(/\\D/g, "").slice(-10);
+    const submittedPhone = phone.replace(/\D/g, "").slice(-10);
+    const existingPhone = String(existing.phone || "").replace(/\D/g, "").slice(-10);
     const password = String(req.body?.password || "");
     if (!phone || !password) {
       return res.status(409).json({ code: "EXISTING_EMAIL", error: "This email belongs to an existing customer account. Enter your existing mobile number and password to securely link Google sign-in." });
