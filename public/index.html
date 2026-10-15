@@ -2292,7 +2292,7 @@ function updateCart(){
     // Revalidate checkout whenever the basket changes, including quantity decreases.
     updatePlaceOrderButton();
 }
-function openCart(){if(window.matchMedia("(max-width:900px)").matches&&document.body.classList.contains("sidebar-expanded"))toggleSidebar();paymentAddressSelectionId=null;const onlinePayment=document.querySelector('input[name="paymentMethod"][value="online"]');if(onlinePayment)onlinePayment.checked=true;document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";loadSavedAddresses();showCheckoutPendingOrder()}}
+function openCart(){const checkoutNotice=document.getElementById("success");if(checkoutNotice){checkoutNotice.classList.remove("show");checkoutNotice.replaceChildren();}if(window.matchMedia("(max-width:900px)").matches&&document.body.classList.contains("sidebar-expanded"))toggleSidebar();paymentAddressSelectionId=null;const onlinePayment=document.querySelector('input[name="paymentMethod"][value="online"]');if(onlinePayment)onlinePayment.checked=true;document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";loadSavedAddresses();showCheckoutPendingOrder()}}
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
 async function loadSavedAddresses(){
  if(!currentUser){savedAddresses=[];return}
