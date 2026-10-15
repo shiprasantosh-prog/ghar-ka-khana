@@ -13,6 +13,8 @@ assert.match(server, /decoded\.email_verified !== true/, "Backend must require a
 assert.match(server, /ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT UNIQUE/, "Database migration must persist Firebase UIDs");
 assert.match(server, /FIREBASE_SERVICE_ACCOUNT_JSON/, "Admin credentials must come from a server-side environment variable");
 assert.match(server, /FIREBASE_API_KEY/, "Firebase web config must be supplied from environment variables");
+assert.match(server, /app\.use\("\/\_\_\/auth", \(req, res\) => \{/, "Firebase auth helper requests must use the same-origin reverse proxy");
+assert.match(server, /projectId \+ "\.firebaseapp\.com"/, "Firebase auth proxy must target the configured Firebase project, not a request-controlled host");
 assert.match(server, /RIGHT\(REGEXP_REPLACE\(COALESCE\(phone, ''\), '\[\^0-9\]', '', 'g'\), 10\) = \$1/, "Phone duplicate checks must compare normalized last 10 digits");
 assert.match(html, /id="googleSignInButton"/, "Customer auth UI must include a Google sign-in button");
 assert.match(html, /signInWithRedirect\(provider\)/, "Closed Google popup must explain how existing-account customers can sign in");
