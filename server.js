@@ -65,6 +65,23 @@ app.get("/health", (req, res) => {
   res.status(200).type("text/plain").send("OK");
 });
 
+// Serve the Firebase helper configuration on this Render auth domain.
+// Firebase Hosting normally supplies this endpoint, but this staging app is hosted on Render.
+app.get("/__/firebase/init.json", (req, res) => {
+  const config = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    appId: process.env.FIREBASE_APP_ID,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID
+  };
+  if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId || !config.messagingSenderId) {
+    return res.status(503).json({ error: "Firebase web configuration is incomplete." });
+  }
+  res.set("Cache-Control", "no-store");
+  res.json(config);
+});
+
 // Firebase Auth helper reverse proxy for redirect sign-in on browsers that block
 // third-party storage. Keep this route before static/API fallthrough and use a fixed
 // Firebase project host (never a request-controlled destination).
