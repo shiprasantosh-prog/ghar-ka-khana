@@ -2484,12 +2484,18 @@ document.addEventListener("click",e=>{
  const button=e.target.closest("[data-address-result]");if(!button)return;
  const isSaved=button.dataset.addressForm==="saved",host=document.getElementById(isSaved?"addressSuggestions":"signupAddressSuggestions"),feature=host._features?.[Number(button.dataset.addressResult)];if(!feature)return;
  const p=feature.properties||{},form=document.getElementById(isSaved?"savedAddressForm":"authForm"),[lng,lat]=feature.geometry.coordinates;
- // Google often returns the society name as displayName but omits it from formattedAddress.
- // Preserve Brigade 7 Gardens explicitly so checkout and server-side minimum-order rules agree.
+ // Google may return a street/plot address even when the customer searched for the society.
+ // Preserve the explicit Brigade 7 Gardens search when that is what they selected.
  const formattedAddress=String(p.formatted_address||"").trim(),placeName=String(p.name||"").trim();
- const selectedAddress=/\bbrigade\s*7\s*gardens\b/i.test(placeName)&&!/\bbrigade\s*7\s*gardens\b/i.test(formattedAddress)
-  ? [placeName,formattedAddress].filter(Boolean).join(", ")
-  : (formattedAddress||placeName||button.textContent.trim());
+ const searchInput=document.getElementById(isSaved?"addressSearch":"signupAddressSearch");
+ const searchedText=String(searchInput?.value||"").trim();
+ const brigadeQuery=/\bbrigade\s*7\s*gardens\b/i.test(searchedText);
+ const hasBrigade=/\bbrigade\s*7\s*gardens\b/i.test(formattedAddress)||/\bbrigade\s*7\s*gardens\b/i.test(placeName);
+ const selectedAddress=brigadeQuery&&!hasBrigade
+  ? ["Brigade 7 Gardens",formattedAddress||placeName||button.textContent.trim()].filter(Boolean).join(", ")
+  : (hasBrigade&&!/\bbrigade\s*7\s*gardens\b/i.test(formattedAddress)
+    ? [placeName,formattedAddress].filter(Boolean).join(", ")
+    : (formattedAddress||placeName||button.textContent.trim()));
  form.dataset.selectedLat=String(lat);form.dataset.selectedLng=String(lng);form.dataset.selectedPostcode=String(p.postcode||"").replace(/\D/g,"");form.dataset.selectedCountry=String(p.country||"");form.dataset.selectedFormatted=selectedAddress;
  form.elements.street.value=p.street||p.suburb||p.neighbourhood||p.locality||"";
  form.elements.city.value=p.city||"Bengaluru";form.elements.state.value=p.state||"Karnataka";
