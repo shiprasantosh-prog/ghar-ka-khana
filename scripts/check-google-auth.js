@@ -31,6 +31,10 @@ assert.match(html, /google-signin-highlight/, "Google sign-in button must have a
 assert.match(html, /fetch\("\/api\/auth\/google"/, "Browser must submit the Firebase token to the backend");
 assert.match(html, /PHONE_REQUIRED/, "New Google accounts must complete the phone onboarding step");
 assert.match(html, /currentUser = data\.user/, "Google sign-in must update the existing account state");
+assert.match(server, /code: "EXISTING_PHONE"/, "Existing phone numbers must require verification instead of creating duplicate accounts");
+assert.match(server, /bcrypt\\.compareSync\\(password, existing\\.password_hash\\)/, "Existing customer linking must verify the existing password");
+assert.match(html, /data.code === "EXISTING_PHONE"/, "Frontend must show verification when the submitted phone already exists");
+assert.match(html, /gkkGoogleRedirectPending/, "Google redirect return should keep the account section visible");
 
 const inlineGoogleScript = html.match(/<script id="gkk-google-signin">([\s\S]*?)<\/script>/);
 assert.ok(inlineGoogleScript, "Google sign-in browser script must exist");
