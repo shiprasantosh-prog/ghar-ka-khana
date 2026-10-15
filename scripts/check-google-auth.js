@@ -31,6 +31,9 @@ assert.match(html, /google-signin-highlight/, "Google sign-in button must have a
 assert.match(html, /fetch\("\/api\/auth\/google"/, "Browser must submit the Firebase token to the backend");
 assert.match(html, /PHONE_REQUIRED/, "New Google accounts must complete the phone onboarding step");
 assert.match(html, /currentUser = data\.user/, "Google sign-in must update the existing account state");
+assert.match(server, /SET email = COALESCE\(NULLIF\(BTRIM\(email\), ''\), \$2\), firebase_uid = \$1/, "Linking an existing phone account must save the verified Google email and Firebase UID on the same user row");
+assert.match(server, /LOWER\(BTRIM\(email\)\) = \$2/, "Account linking must avoid overwriting an email already associated with a different account");
+assert.match(html, /Finishing Google sign-in…/, "Redirect return must show immediate progress feedback");
 assert.match(server, /code: "EXISTING_PHONE"/, "Existing phone numbers must require verification instead of creating duplicate accounts");
 assert.match(server, /bcrypt\\.compareSync\\(password, existing\\.password_hash\\)/, "Existing customer linking must verify the existing password");
 assert.match(html, /data.code === "EXISTING_PHONE"/, "Frontend must show verification when the submitted phone already exists");
