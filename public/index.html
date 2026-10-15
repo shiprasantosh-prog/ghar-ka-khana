@@ -3898,10 +3898,11 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       phoneInput.focus();
       return false;
     }
-    if (response.status === 409 && data.code === "EXISTING_EMAIL") {
+    if (response.status === 409 && (data.code === "EXISTING_EMAIL" || data.code === "EXISTING_PHONE")) {
       pendingGoogleToken = token;
       linkPanel.hidden = false;
       phonePanel.hidden = true;
+      if (phone) linkPhone.value = phone;
       message.textContent = data.error || "Verify your existing account to link Google sign-in.";
       linkPhone.focus();
       return false;
@@ -3979,7 +3980,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if (!pendingGoogleToken) { message.textContent = "Please start Google sign-in again."; phonePanel.hidden = true; return; }
     if (phone.replace(/\D/g,"").length < 10) { message.textContent = "Enter a valid mobile number with at least 10 digits."; return; }
     completeButton.disabled = true;
-    message.textContent = "Creating your customer account…";
+    message.textContent = "Checking your customer account…";
     try { await finishGoogleSignIn(pendingGoogleToken, phone); }
     catch(error) { showFirebaseError(error); }
     finally { completeButton.disabled = false; }
