@@ -32,6 +32,8 @@ assert.match(html, /fetch\("\/api\/auth\/google"/, "Browser must submit the Fire
 assert.match(html, /PHONE_REQUIRED/, "New Google accounts must complete the phone onboarding step");
 assert.match(html, /currentUser = data\.user/, "Google sign-in must update the existing account state");
 assert.match(server, /SET email = COALESCE\(NULLIF\(BTRIM\(email\), ''\), \$2\), firebase_uid = \$1/, "Linking an existing phone account must save the verified Google email and Firebase UID on the same user row");
+assert.match(server, /UPDATE users SET email = COALESCE\(NULLIF\(BTRIM\(email\), ''\), \$2\) WHERE firebase_uid = \$1 AND \(email IS NULL OR BTRIM\(email\) = '' OR LOWER\(BTRIM\(email\)\) = \$2\)/, "Repeat sign-ins for an existing Firebase UID must save a missing verified email without overwriting a different email");
+assert.match(server, /code: "EMAIL_ALREADY_IN_USE"/, "Existing UID email conflicts must be handled without creating or overwriting user accounts");
 assert.match(server, /LOWER\(BTRIM\(email\)\) = \$2/, "Account linking must avoid overwriting an email already associated with a different account");
 assert.match(html, /Finishing Google sign-in…/, "Redirect return must show immediate progress feedback");
 assert.match(server, /code: "EXISTING_PHONE"/, "Existing phone numbers must require verification instead of creating duplicate accounts");
