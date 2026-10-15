@@ -725,10 +725,39 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
     return res.json({ user, created: false });
   }
 
-  // Never auto-link an existing account merely because its email matches.
-  const existingByEmail = await pool.query("SELECT id FROM users WHERE LOWER(BTRIM(email)) = $1 LIMIT 1", [email]);
+  // Existing accounts may be linked only after the customer proves ownership with
+  // both their existing phone/password credentials and a verified Google identity.
+  const existingByEmail = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid FROM users WHERE LOWER(BTRIM(email)) = $1 LIMIT 1",
+    [email]
+  );
   if (existingByEmail.rowCount) {
-    return res.status(409).json({ code: "EXISTING_EMAIL", error: "An account already uses this email. Sign in with your existing phone and password first; automatic account linking is not enabled." });
+    const existing = existingByEmail.rows[0];
+    if (existing.role !== "customer") {
+      return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    }
+    if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account is already linked to a different Google account. Please contact support." });
+    }
+    const submittedPhone = phone.replace(/\D/g, "").slice(-10);
+    const existingPhone = String(existing.phone || "").replace(/\D/g, "").slice(-10);
+    const password = String(req.body?.password || "");
+    if (!phone || !password) {
+      return res.status(409).json({ code: "EXISTING_EMAIL", error: "This email belongs to an existing customer account. Enter your existing mobile number and password to securely link Google sign-in." });
+    }
+    if (!submittedPhone || submittedPhone !== existingPhone || !bcrypt.compareSync(password, existing.password_hash)) {
+      return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The mobile number or password does not match this existing account. Please try again." });
+    }
+    const linked = await pool.query(
+      "UPDATE users SET firebase_uid = $1 WHERE id = $2 AND (firebase_uid IS NULL OR firebase_uid = $1) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+      [decoded.uid, existing.id]
+    );
+    if (!linked.rowCount) {
+      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
+    }
+    const user = linked.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false, linked: true });
   }
   if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
   if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
