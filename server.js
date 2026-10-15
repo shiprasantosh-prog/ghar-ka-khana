@@ -749,8 +749,8 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
       return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The mobile number or password does not match this existing account. Please try again." });
     }
     const linked = await pool.query(
-      "UPDATE users SET firebase_uid = $1 WHERE id = $2 AND (firebase_uid IS NULL OR firebase_uid = $1) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
-      [decoded.uid, existing.id]
+      "UPDATE users SET email = COALESCE(NULLIF(BTRIM(email), ''), $2), firebase_uid = $1 WHERE id = $3 AND (firebase_uid IS NULL OR firebase_uid = $1) AND (email IS NULL OR BTRIM(email) = '' OR LOWER(BTRIM(email)) = $2) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+      [decoded.uid, email, existing.id]
     );
     if (!linked.rowCount) {
       return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
@@ -784,8 +784,8 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
       return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The password does not match this existing account. Please try again." });
     }
     const linked = await pool.query(
-      "UPDATE users SET firebase_uid = $1 WHERE id = $2 AND (firebase_uid IS NULL OR firebase_uid = $1) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
-      [decoded.uid, existing.id]
+      "UPDATE users SET email = COALESCE(NULLIF(BTRIM(email), ''), $2), firebase_uid = $1 WHERE id = $3 AND (firebase_uid IS NULL OR firebase_uid = $1) AND (email IS NULL OR BTRIM(email) = '' OR LOWER(BTRIM(email)) = $2) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+      [decoded.uid, email, existing.id]
     );
     if (!linked.rowCount) {
       return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
