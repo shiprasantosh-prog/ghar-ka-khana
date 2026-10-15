@@ -1578,7 +1578,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="field"><label>Password</label><input name="password" required type="password" minlength="8" placeholder="At least 8 characters" autocomplete="current-password"></div>
 <div class="field" id="referralSignupField" hidden><label>Referral code (optional)</label><input name="referralCode" placeholder="Enter a friend’s referral code" autocomplete="off"><small class="notice">Enter it while creating your account. It cannot be added later.</small></div>
 <div id="signupAddressFields" hidden style="border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0"><h3 style="margin:0 0 8px">Delivery address</h3><p class="notice">Search for your apartment, building, street or landmark, then select a Google Maps result to verify the location before creating your account.</p><div class="field"><label for="signupAddressSearch">Search your delivery address</label><input id="signupAddressSearch" autocomplete="off" placeholder="Search apartment, street, landmark or PIN code" required><div id="signupAddressSuggestions" class="notice address-suggestions" role="listbox"></div><small class="notice">Select a suggested location. Your delivery address cannot be verified by typing alone.</small></div><div class="field"><label>Address label</label><select name="addressLabel" style="width:100%;background:#fff;border:1px solid #cbd9cc;color:#203b2e;border-radius:5px;padding:12px"><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field"><label>House / Flat / Door number</label><input name="house" autocomplete="address-line1" placeholder="House, flat or door number" required></div><div class="field"><label>Street / Area</label><input name="street" autocomplete="address-line2" placeholder="Street, locality or area" required></div><div class="field"><label>City</label><input name="city" autocomplete="address-level2" value="Bengaluru" required></div><div class="field"><label>State</label><input name="state" autocomplete="address-level1" value="Karnataka" required></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="6-digit PIN code" required></div></div>
-<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button><div id="googleAuthArea" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost" id="googleSignInButton" type="button" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px"><span aria-hidden="true" style="font-weight:800;font-size:18px">G</span> Continue with Google</button><p class="notice" style="margin:8px 0 0">Quick and secure sign-in with your Google account.</p><div id="googlePhonePanel" hidden style="margin-top:12px"><label for="googlePhoneInput">Mobile number</label><input id="googlePhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="Enter your 10-digit mobile number" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><button class="btn" id="googleCompleteButton" type="button" style="width:100%">Continue</button></div><p id="googleAuthMessage" class="notice" role="status" aria-live="polite"></p></div>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button><div id="googleAuthArea" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost" id="googleSignInButton" type="button" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px"><span aria-hidden="true" style="font-weight:800;font-size:18px">G</span> Continue with Google</button><p class="notice" style="margin:8px 0 0">Quick and secure sign-in with your Google account.</p><div id="googlePhonePanel" hidden style="margin-top:12px"><label for="googlePhoneInput">Mobile number</label><input id="googlePhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="Enter your 10-digit mobile number" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><button class="btn" id="googleCompleteButton" type="button" style="width:100%">Continue</button></div><div id="googleLinkPanel" hidden style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:8px"><p class="notice" style="margin-top:0">This Google email belongs to an existing Ghar ka Khana account. Verify your existing account to link Google sign-in without creating a duplicate.</p><div class="field"><label for="googleLinkPhone">Existing mobile number</label><input id="googleLinkPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Your account mobile number" style="width:100%"></div><div class="field"><label for="googleLinkPassword">Existing account password</label><input id="googleLinkPassword" type="password" autocomplete="current-password" placeholder="Your existing password" style="width:100%"></div><button class="btn" id="googleLinkCompleteButton" type="button" style="width:100%">Verify &amp; link Google</button></div><p id="googleAuthMessage" class="notice" role="status" aria-live="polite"></p></div>
 </form><form id="forgotPasswordForm" hidden style="margin-top:14px"><h3>Reset your password</h3><p class="notice">We’ll email a secure, one-time reset link to your registered email address.</p><div class="field"><label>Registered email address</label><input id="resetEmail" name="email" type="email" autocomplete="email" placeholder="Email address used for your account" required></div><button class="btn secondary" id="sendResetLink" type="button">Send Reset Link</button><div id="resetPasswordFields" hidden><div class="field" style="margin-top:12px"><label>New password (at least 8 characters)</label><input name="newPassword" type="password" minlength="8" autocomplete="new-password"></div><div class="field"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" autocomplete="new-password"></div><button class="btn" type="submit">Save Password</button></div><button class="btn ghost" id="backToSignIn" type="button" style="margin-top:10px">Back to sign in</button><p id="resetPasswordMessage" class="notice" role="status"></p></form><p class="notice" id="authMessage" role="status"></p></div></section>
 <section class="wrap page-view" id="myorders" style="border-top:1px solid #332b1d;padding-top:35px">
 <div class="section-head"><div><div class="eyebrow">Your account</div><h2>My orders</h2></div><p>Order history linked to your account</p></div>
@@ -3874,6 +3874,10 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const message = document.getElementById("googleAuthMessage");
   const phonePanel = document.getElementById("googlePhonePanel");
   const phoneInput = document.getElementById("googlePhoneInput");
+  const linkPanel = document.getElementById("googleLinkPanel");
+  const linkPhone = document.getElementById("googleLinkPhone");
+  const linkPassword = document.getElementById("googleLinkPassword");
+  const linkButton = document.getElementById("googleLinkCompleteButton");
   if (!button || !message) return;
   async function getFirebaseApp(){
     if (firebaseApp) return firebaseApp;
@@ -3883,14 +3887,23 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     firebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
     return firebaseApp;
   }
-  async function finishGoogleSignIn(token, phone){
-    const response = await fetch("/api/auth/google", {method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:token,...(phone?{phone}: {})})});
+  async function finishGoogleSignIn(token, phone, password){
+    const response = await fetch("/api/auth/google", {method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:token,...(phone?{phone}: {}),...(password?{password}: {})})});
     const data = await response.json().catch(()=>({}));
     if (response.status === 428 && data.code === "PHONE_REQUIRED") {
       pendingGoogleToken = token;
       phonePanel.hidden = false;
+      linkPanel.hidden = true;
       message.textContent = "One last step: enter your mobile number to create your customer account.";
       phoneInput.focus();
+      return false;
+    }
+    if (response.status === 409 && data.code === "EXISTING_EMAIL") {
+      pendingGoogleToken = token;
+      linkPanel.hidden = false;
+      phonePanel.hidden = true;
+      message.textContent = data.error || "Verify your existing account to link Google sign-in.";
+      linkPhone.focus();
       return false;
     }
     if (!response.ok) {
@@ -3902,54 +3915,56 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if (!data.user || !data.user.phone) throw new Error("Your account details could not be loaded. Please try again.");
     pendingGoogleToken = null;
     phonePanel.hidden = true;
+    linkPanel.hidden = true;
     currentUser = data.user;
     try { switchCartOwner(data.user.phone); } catch (_) {}
     message.textContent = "";
+    showPage("account");
     await renderAccount();
+    showPage("account");
     return true;
   }
   function showFirebaseError(error) {
     const code = String(error && error.code || "");
-    console.error("[GKK Google sign-in] Firebase authentication failed", { code: code || "unknown", message: String(error && error.message || "No error message") });
+    console.error("[GKK Google sign-in] Authentication failed", { code: code || "unknown", message: String(error && error.message || "No error message") });
     if (code.includes("unauthorized-domain")) {
-      message.textContent = "This staging website is not authorized in Firebase yet. Please contact support.";
-    } else if (code === "EXISTING_EMAIL" || (error && error.status === 409)) {
-      message.textContent = "An account already uses this email. Please sign in with your existing phone number and password. Automatic account linking is not enabled.";
+      message.textContent = "This website is not authorized in Firebase yet. Please contact support.";
+    } else if (code === "EXISTING_EMAIL") {
+      linkPanel.hidden = false;
+      phonePanel.hidden = true;
+      message.textContent = error.message || "Verify your existing account to link Google sign-in.";
+    } else if (code === "LINK_CREDENTIALS_INVALID") {
+      linkPanel.hidden = false;
+      message.textContent = error.message || "The mobile number or password does not match. Please try again.";
+    } else if (code === "GOOGLE_ALREADY_LINKED") {
+      message.textContent = error.message || "This account is linked to another Google account. Please contact support.";
     } else if (code.includes("account-exists-with-different-credential")) {
-      message.textContent = "An account already uses this email with another sign-in method. Please use your existing phone number and password. Automatic account linking is not enabled.";
+      message.textContent = "An account already uses this email. Verify your existing account to link Google sign-in.";
     } else {
       message.textContent = (error && error.message) || ("Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.");
     }
   }
-  // Redirect flow avoids popup lifecycle issues in browsers that close the Google chooser unexpectedly.
+  // Always return to the customer account section after the Google redirect.
   (async function handleGoogleRedirectResult() {
     try {
       const app = await getFirebaseApp();
-      console.info("[GKK Google sign-in] Checking Firebase redirect result");
       const result = await app.auth().getRedirectResult();
       if (result && result.user) {
-        console.info("[GKK Google sign-in] Redirect result received", {
-          providerId: result.credential && result.credential.providerId || "unknown",
-          hasEmail: Boolean(result.user.email)
-        });
         message.textContent = "Finishing Google sign-in…";
+        showPage("account");
         const token = await result.user.getIdToken(true);
         await finishGoogleSignIn(token, "");
-      } else {
-        console.info("[GKK Google sign-in] No redirect result returned on this page load");
-        // Do not overwrite the normal sign-in screen when a visitor has not just returned from Google.
-        if (window.location.search.includes("apiKey=") || window.location.hash.includes("access_token")) {
-          message.textContent = "Google returned to the site, but no sign-in result was received. Please try again; if it repeats, contact support.";
-        }
       }
     } catch (error) {
+      showPage("account");
       showFirebaseError(error);
     }
   })();
   button.addEventListener("click", async function(){
     button.disabled = true;
-    message.textContent = "Redirecting to Google sign-in…";
+    message.textContent = "Opening Google sign-in…";
     try {
+      showPage("account");
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
@@ -3966,8 +3981,18 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     completeButton.disabled = true;
     message.textContent = "Creating your customer account…";
     try { await finishGoogleSignIn(pendingGoogleToken, phone); }
-    catch(error) { message.textContent = error.message || "Could not finish Google sign-in. Please try again."; }
+    catch(error) { showFirebaseError(error); }
     finally { completeButton.disabled = false; }
+  });
+  linkButton.addEventListener("click", async function(){
+    const phone = linkPhone.value.trim(), password = linkPassword.value;
+    if (!pendingGoogleToken) { message.textContent = "Please start Google sign-in again."; linkPanel.hidden = true; return; }
+    if (phone.replace(/\D/g,"").length < 10 || !password) { message.textContent = "Enter your existing mobile number and password."; return; }
+    linkButton.disabled = true;
+    message.textContent = "Verifying your existing account…";
+    try { await finishGoogleSignIn(pendingGoogleToken, phone, password); }
+    catch(error) { showFirebaseError(error); }
+    finally { linkButton.disabled = false; }
   });
 })();
 </script>
