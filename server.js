@@ -726,9 +726,9 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   }
 
   // Never auto-link an existing account merely because its email matches.
-  const existingByEmail = await pool.query("SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1", [email]);
+  const existingByEmail = await pool.query("SELECT id FROM users WHERE LOWER(BTRIM(email)) = $1 LIMIT 1", [email]);
   if (existingByEmail.rowCount) {
-    return res.status(409).json({ error: "An account already uses this email. Sign in with your existing phone and password first; automatic account linking is not enabled." });
+    return res.status(409).json({ code: "EXISTING_EMAIL", error: "An account already uses this email. Sign in with your existing phone and password first; automatic account linking is not enabled." });
   }
   if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
   if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
