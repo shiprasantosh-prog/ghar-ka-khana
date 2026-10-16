@@ -5,6 +5,7 @@
 <script>
 (function(){
   function hasPendingReturn(){
+    try{if(new URLSearchParams(window.location.search).get("googleAuthReturn")==="1")return true}catch(_){}
     try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")return true}catch(_){}
     return /(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"");
   }
@@ -4334,7 +4335,8 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   // first pass; never reveal the homepage while a redirect return is pending.
   (async function handleGoogleRedirectResult() {
     let redirectPending = false;
-    try { redirectPending = localStorage.getItem("gkkGoogleAuthReturnPending") === "1"; } catch (_) {}
+    try { redirectPending = new URLSearchParams(window.location.search).get("googleAuthReturn") === "1"; } catch (_) {}
+    try { if (localStorage.getItem("gkkGoogleAuthReturnPending") === "1") redirectPending = true; } catch (_) {}
     try {
       const app = await getFirebaseApp();
       const result = await app.auth().getRedirectResult();
@@ -4354,6 +4356,13 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       document.documentElement.classList.remove("google-auth-return-pending");
       try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
       try { document.cookie = "gkkGoogleAuthReturnPending=; Path=/; Max-Age=0; SameSite=Lax; Secure"; } catch (_) {}
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("googleAuthReturn")) {
+          url.searchParams.delete("googleAuthReturn");
+          history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+        }
+      } catch (_) {}
     }
   })();
   button.addEventListener("click", async function(){
@@ -4364,8 +4373,13 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
-      // Mark the outgoing document before navigating so mobile Safari’s back-forward cache
-      // snapshot already contains the account progress screen, not the homepage.
+      // Put the pending state in the return URL itself. The browser must restore this
+      // marker before the app's normal homepage markup can be shown after Google returns.
+      try {
+        const returnUrl = new URL(window.location.href);
+        returnUrl.searchParams.set("googleAuthReturn", "1");
+        history.replaceState(history.state, "", returnUrl.pathname + returnUrl.search + returnUrl.hash);
+      } catch (_) {}
       document.documentElement.classList.add("google-auth-return-pending");
       try { localStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
       // A first-party Lax cookie survives the top-level Google redirect more reliably
