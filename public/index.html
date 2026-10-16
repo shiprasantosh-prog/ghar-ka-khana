@@ -2012,12 +2012,24 @@ function openMenuCategories(trigger){
   showPage("menu");
   setMenuCategory(cat);
   setTimeout(()=>{
-    // Preserve the existing Items popup behavior: return to the Full Menu heading.
+    // Preserve the Items popup's Full Menu landing position, then re-center
+    // the selected chip after pinning/reparenting has settled.
     document.dispatchEvent(new Event("gkk:menu-layout-ready"));
     const heading=[...document.querySelectorAll("#menu .section-head h2")]
       .find(el=>el.textContent.trim()==="Full Menu");
     if(heading)heading.closest(".section-head").scrollIntoView({behavior:"smooth",block:"start"});
-  },180);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const host=document.getElementById("categories");
+      const selected=host?.querySelector('.chip.active');
+      if(host&&selected&&window.matchMedia("(max-width:700px)").matches){
+        const hostRect=host.getBoundingClientRect();
+        const chipRect=selected.getBoundingClientRect();
+        const nextLeft=host.scrollLeft+(chipRect.left-hostRect.left)-(hostRect.width-chipRect.width)/2;
+        host.scrollTo({left:Math.max(0,nextLeft),behavior:"smooth"});
+        host.querySelectorAll(".chip").forEach(chip=>chip.classList.toggle("active",chip.dataset.category===cat));
+      }
+    }));
+  },220);
  });
  overlay.classList.add("show");
  requestAnimationFrame(()=>positionMenuCategoryPopup(menuCategoryAnchorRect));
