@@ -4360,6 +4360,9 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
+      // Mark the outgoing document before navigating so mobile Safari’s back-forward cache
+      // snapshot already contains the account progress screen, not the homepage.
+      document.documentElement.classList.add("google-auth-return-pending");
       try { localStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
       await app.auth().signInWithRedirect(provider);
     } catch(error) {
