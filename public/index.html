@@ -7,7 +7,11 @@
   function hasPendingReturn(){
     try{if(new URLSearchParams(window.location.search).get("googleAuthReturn")==="1")return true}catch(_){}
     try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")return true}catch(_){}
-    return /(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"");
+    try{if(/(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||""))return true}catch(_){}
+    // Firebase returns through the same-origin /__/auth helper when authDomain is
+    // first-party. Use that navigation as a fallback if browsers drop URL/storage markers.
+    try{const ref=new URL(document.referrer);if(ref.origin===window.location.origin&&ref.pathname.startsWith("/__/auth/"))return true}catch(_){}
+    return false;
   }
   try{if(hasPendingReturn())document.documentElement.classList.add("google-auth-return-pending")}catch(_){}
 })();
@@ -4338,9 +4342,13 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   // Some mobile browsers can resolve getRedirectResult() without a user on the
   // first pass; never reveal the homepage while a redirect return is pending.
   (async function handleGoogleRedirectResult() {
-    let redirectPending = false;
-    try { redirectPending = new URLSearchParams(window.location.search).get("googleAuthReturn") === "1"; } catch (_) {}
+    // Reuse the early-page guard as a source of truth. It also detects the
+    // same-origin Firebase helper referrer when the browser drops stored markers.
+    let redirectPending = document.documentElement.classList.contains("google-auth-return-pending");
+    try { if (new URLSearchParams(window.location.search).get("googleAuthReturn") === "1") redirectPending = true; } catch (_) {}
     try { if (localStorage.getItem("gkkGoogleAuthReturnPending") === "1") redirectPending = true; } catch (_) {}
+    try { if (/(?:^|;\\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"")) redirectPending = true; } catch (_) {}
+    try { const ref = new URL(document.referrer); if (ref.origin === window.location.origin && ref.pathname.startsWith("/__/auth/")) redirectPending = true; } catch (_) {}
     try {
       const app = await getFirebaseApp();
       const result = await app.auth().getRedirectResult();
