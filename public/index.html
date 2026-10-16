@@ -1626,7 +1626,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
     border-radius:50%!important;
     margin:0!important;
   }
-  body[data-current-page="menu"] .global-items-tile{display:none!important}
+  /* Keep the floating Items popup available while browsing the menu. */
 }
 </style>
 
@@ -2344,22 +2344,23 @@ function setMenuCategory(value){
  renderMenu();
  const mobile=window.matchMedia('(max-width:700px)').matches;
  const host=document.getElementById('categories');
- const active=host?.querySelector('.chip.active');
  if(mobile){
-   requestAnimationFrame(()=>{
-     // Keep category navigation horizontal-only: scrollIntoView() on a chip
-     // inside the fixed sticky bar can move the page back to that bar.
+   // Wait for filtering, sticky-bar relocation, and layout to settle before
+   // calculating the target; target the selected category's actual results.
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+     const active=host?.querySelector('.chip.active');
      if(host&&active){
        const left=active.offsetLeft-(host.clientWidth-active.clientWidth)/2;
        host.scrollTo({left:Math.max(0,left),behavior:'smooth'});
      }
-     const grid=document.getElementById('menuGrid');
-     if(!grid)return;
+     const sections=[...document.querySelectorAll('#menuGrid .menu-category[data-menu-category]')];
+     const targetSection=value==='All'?sections[0]:sections.find(section=>section.dataset.menuCategory===value);
+     if(!targetSection)return;
      const sticky=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
      const offset=sticky?sticky.getBoundingClientRect().height:0;
-     const target=grid.getBoundingClientRect().top+window.scrollY-offset-8;
+     const target=targetSection.getBoundingClientRect().top+window.scrollY-offset-8;
      window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
-   });
+   }));
  }
 }
 function renderCats(){
@@ -3860,6 +3861,9 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
      search.classList.add('menu-search-pinned');
      if(categories&&window.matchMedia('(max-width:700px)').matches){
        categoriesSpacer.style.display='block';
+       // Preserve the category row's original document space when moving it
+       // into the fixed search bar; otherwise the page jumps to the wrong section.
+       categoriesSpacer.style.height=categories.offsetHeight+'px';
        categories.classList.add('mobile-pinned-real-categories');
        search.insertBefore(categories,search.firstChild);
      }
