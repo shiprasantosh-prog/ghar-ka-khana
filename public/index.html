@@ -4301,18 +4301,23 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       message.textContent = (error && error.message) || ("Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.");
     }
   }
-  // Always return to the customer account section after the Google redirect.
+  // Restore the account view before revealing the page after a Google redirect.
+  // Some mobile browsers can resolve getRedirectResult() without a user on the
+  // first pass; never reveal the homepage while a redirect return is pending.
   (async function handleGoogleRedirectResult() {
+    let redirectPending = false;
+    try { redirectPending = localStorage.getItem("gkkGoogleAuthReturnPending") === "1"; } catch (_) {}
     try {
       const app = await getFirebaseApp();
       const result = await app.auth().getRedirectResult();
       if (result && result.user) {
         message.textContent = "Finishing Google sign-in…";
         showPage("account");
-        document.documentElement.classList.remove("google-auth-return-pending");
-        try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
         const token = await result.user.getIdToken(true);
         await finishGoogleSignIn(token, "");
+      } else if (redirectPending) {
+        showPage("account");
+        message.textContent = "If Google sign-in did not complete, please try again.";
       }
     } catch (error) {
       showPage("account");
