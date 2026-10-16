@@ -4347,7 +4347,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     let redirectPending = document.documentElement.classList.contains("google-auth-return-pending");
     try { if (new URLSearchParams(window.location.search).get("googleAuthReturn") === "1") redirectPending = true; } catch (_) {}
     try { if (localStorage.getItem("gkkGoogleAuthReturnPending") === "1") redirectPending = true; } catch (_) {}
-    try { if (/(?:^|;\\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"")) redirectPending = true; } catch (_) {}
+    try { if (/(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"")) redirectPending = true; } catch (_) {}
     try { const ref = new URL(document.referrer); if (ref.origin === window.location.origin && ref.pathname.startsWith("/__/auth/")) redirectPending = true; } catch (_) {}
     try {
       const app = await getFirebaseApp();
