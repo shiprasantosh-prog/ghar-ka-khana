@@ -1551,6 +1551,85 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 }
 </style>
 
+
+<style id="mobile-sticky-search-with-real-categories">
+@media(max-width:700px){
+  #menu .menu-search-sticky.menu-search-pinned{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:7px!important;
+    width:100%!important;
+    padding:7px 0 9px!important;
+    border-radius:0!important;
+    box-shadow:0 4px 12px rgba(24,65,44,.14)!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned .menu-search-input-wrap{
+    width:100%!important;
+    padding:0 12px!important;
+    box-sizing:border-box!important;
+    gap:0!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned .pinned-menu-categories-button{display:none!important}
+  #menu .menu-search-sticky.menu-search-pinned #customerMenuSearch{
+    width:100%!important;
+    flex:1 1 auto!important;
+    min-width:0!important;
+    padding:10px 42px 10px 12px!important;
+    font-size:15px!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned #clearCustomerMenuSearch{right:18px!important}
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories{
+    display:flex!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    max-width:100vw!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    flex-wrap:nowrap!important;
+    gap:8px!important;
+    margin:0!important;
+    padding:0 12px 2px!important;
+    box-sizing:border-box!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-x:contain!important;
+  }
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories::-webkit-scrollbar{display:none!important}
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories .chip{
+    display:inline-flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-height:42px!important;
+    padding:6px 13px!important;
+    border:1px solid #e5dcc5!important;
+    border-radius:999px!important;
+    background:#f8f2e3!important;
+    color:#4b4b40!important;
+    font-size:14px!important;
+    font-weight:500!important;
+    white-space:nowrap!important;
+  }
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories .chip.active{
+    background:#1b5a3a!important;
+    border-color:#1b5a3a!important;
+    color:#fff!important;
+    font-weight:700!important;
+  }
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories .category-chip-thumb{
+    display:block!important;
+    width:30px!important;
+    height:30px!important;
+    flex:0 0 30px!important;
+    object-fit:cover!important;
+    border-radius:50%!important;
+    margin:0!important;
+  }
+  body[data-current-page="menu"] .global-items-tile{display:none!important}
+}
+</style>
+
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -3681,7 +3760,13 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  const menu=document.getElementById('menu');
  const input=document.getElementById('customerMenuSearch');
  const clear=document.getElementById('clearCustomerMenuSearch');
+ const categories=document.getElementById('categories');
  if(!search||!menu||!input||!clear)return;
+ const categoriesHome=categories?categories.parentNode:null;
+ const categoriesAnchor=categories?categories.nextSibling:null;
+ const categoriesSpacer=document.createElement('div');
+ categoriesSpacer.className='mobile-categories-spacer';
+ if(categories&&categoriesHome)categoriesHome.insertBefore(categoriesSpacer,categories);
  const spacer=document.createElement('div');
  spacer.className='menu-search-spacer';
  spacer.setAttribute('aria-hidden','true');
@@ -3695,6 +3780,12 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    search.classList.remove('menu-search-pinned');
    search.style.left='';search.style.width='';search.style.maxWidth='';
    spacer.style.display='none';spacer.style.height='0px';
+   if(categories&&categoriesHome&&categories.parentNode===search){
+     categories.classList.remove('mobile-pinned-real-categories');
+     if(categoriesAnchor&&categoriesAnchor.parentNode===categoriesHome)categoriesHome.insertBefore(categories,categoriesAnchor);
+     else categoriesHome.appendChild(categories);
+   }
+   categoriesSpacer.style.display='none';
  }
  function update(){
    const active=document.body.dataset.currentPage==='menu'&&menu.classList.contains('active-view');
@@ -3704,9 +3795,14 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    if(!shouldPin){unpin();return;}
    if(!pinned){
      spacer.style.display='block';
-     spacer.style.height=(search.offsetHeight+12)+'px';
      pinned=true;
      search.classList.add('menu-search-pinned');
+     if(categories&&window.matchMedia('(max-width:700px)').matches){
+       categoriesSpacer.style.display='block';
+       categories.classList.add('mobile-pinned-real-categories');
+       search.insertBefore(categories,search.firstChild);
+     }
+     spacer.style.height=(search.offsetHeight+12)+'px';
    }
    const rect=spacer.getBoundingClientRect();
    search.style.left=Math.max(0,rect.left)+'px';
