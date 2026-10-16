@@ -2003,13 +2003,21 @@ function openMenuCategories(trigger){
   showPage("menu");
   setMenuCategory(cat);
   setTimeout(()=>{
-    // Re-measure only after the hidden menu becomes visible; otherwise the sticky
-    // search threshold can be incorrectly calculated as zero.
+    // Re-measure after the menu becomes visible. Do not scroll back to the
+    // "Full Menu" heading here: that would override the selected category's
+    // scroll position and leave customers halfway between the category bar
+    // and the first result.
     document.dispatchEvent(new Event("gkk:menu-layout-ready"));
-    const heading=[...document.querySelectorAll("#menu .section-head h2")]
-      .find(el=>el.textContent.trim()==="Full Menu");
-    if(heading)heading.closest(".section-head").scrollIntoView({behavior:"smooth",block:"start"});
-  },180);
+    if(window.matchMedia("(max-width:700px)").matches){
+      const grid=document.getElementById("menuGrid");
+      const sticky=document.querySelector("#menu .menu-search-sticky.menu-search-pinned");
+      if(grid){
+        const offset=sticky?sticky.getBoundingClientRect().height:0;
+        const target=grid.getBoundingClientRect().top+window.scrollY-offset-10;
+        window.scrollTo({top:Math.max(0,target),behavior:"smooth"});
+      }
+    }
+  },220);
  });
  overlay.classList.add("show");
  requestAnimationFrame(()=>positionMenuCategoryPopup(menuCategoryAnchorRect));
