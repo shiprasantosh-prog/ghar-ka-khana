@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>try{if(sessionStorage.getItem("gkkGoogleAuthReturnPending")==="1")document.documentElement.classList.add("google-auth-return-pending")}catch(_){}</script>
+<script>try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")document.documentElement.classList.add("google-auth-return-pending")}catch(_){}</script>
 <title>Ghar ka Khana | Homemade with Love</title>
 <style>
 html.google-auth-return-pending body{visibility:hidden}
@@ -4310,7 +4310,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
         message.textContent = "Finishing Google sign-in…";
         showPage("account");
         document.documentElement.classList.remove("google-auth-return-pending");
-        try { sessionStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
+        try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
         const token = await result.user.getIdToken(true);
         await finishGoogleSignIn(token, "");
       }
@@ -4319,7 +4319,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       showFirebaseError(error);
     } finally {
       document.documentElement.classList.remove("google-auth-return-pending");
-      try { sessionStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
+      try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
     }
   })();
   button.addEventListener("click", async function(){
@@ -4330,11 +4330,11 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
-      try { sessionStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
+      try { localStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
       await app.auth().signInWithRedirect(provider);
     } catch(error) {
       document.documentElement.classList.remove("google-auth-return-pending");
-      try { sessionStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
+      try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
       showFirebaseError(error);
       button.disabled = false;
     }
