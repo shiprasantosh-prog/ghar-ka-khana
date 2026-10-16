@@ -2339,7 +2339,24 @@ function menuItemOrder(items,group){
  });
 }
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Sandwich','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages','Extras','Single Plate Meal'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
-function setMenuCategory(value){category=value;renderCats();renderMenu();const active=document.querySelector('#categories .chip.active');if(active&&window.matchMedia('(max-width:700px)').matches)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
+function setMenuCategory(value){
+ category=value;
+ renderCats();
+ renderMenu();
+ const mobile=window.matchMedia('(max-width:700px)').matches;
+ const active=document.querySelector('#categories .chip.active');
+ if(active&&mobile)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+ if(mobile){
+   requestAnimationFrame(()=>{
+     const grid=document.getElementById('menuGrid');
+     const sticky=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
+     if(!grid)return;
+     const offset=sticky?sticky.getBoundingClientRect().height:0;
+     const target=grid.getBoundingClientRect().top+window.scrollY-offset-10;
+     window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+   });
+ }
+}
 function renderCats(){
  const host=document.getElementById("categories");if(!host)return;
  const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];
