@@ -2003,21 +2003,12 @@ function openMenuCategories(trigger){
   showPage("menu");
   setMenuCategory(cat);
   setTimeout(()=>{
-    // Re-measure after the menu becomes visible. Do not scroll back to the
-    // "Full Menu" heading here: that would override the selected category's
-    // scroll position and leave customers halfway between the category bar
-    // and the first result.
+    // Preserve the existing Items popup behavior: return to the Full Menu heading.
     document.dispatchEvent(new Event("gkk:menu-layout-ready"));
-    if(window.matchMedia("(max-width:700px)").matches){
-      const grid=document.getElementById("menuGrid");
-      const sticky=document.querySelector("#menu .menu-search-sticky.menu-search-pinned");
-      if(grid){
-        const offset=sticky?sticky.getBoundingClientRect().height:0;
-        const target=grid.getBoundingClientRect().top+window.scrollY-offset-10;
-        window.scrollTo({top:Math.max(0,target),behavior:"smooth"});
-      }
-    }
-  },220);
+    const heading=[...document.querySelectorAll("#menu .section-head h2")]
+      .find(el=>el.textContent.trim()==="Full Menu");
+    if(heading)heading.closest(".section-head").scrollIntoView({behavior:"smooth",block:"start"});
+  },180);
  });
  overlay.classList.add("show");
  requestAnimationFrame(()=>positionMenuCategoryPopup(menuCategoryAnchorRect));
@@ -2352,15 +2343,21 @@ function setMenuCategory(value){
  renderCats();
  renderMenu();
  const mobile=window.matchMedia('(max-width:700px)').matches;
- const active=document.querySelector('#categories .chip.active');
- if(active&&mobile)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+ const host=document.getElementById('categories');
+ const active=host?.querySelector('.chip.active');
  if(mobile){
    requestAnimationFrame(()=>{
+     // Keep category navigation horizontal-only: scrollIntoView() on a chip
+     // inside the fixed sticky bar can move the page back to that bar.
+     if(host&&active){
+       const left=active.offsetLeft-(host.clientWidth-active.clientWidth)/2;
+       host.scrollTo({left:Math.max(0,left),behavior:'smooth'});
+     }
      const grid=document.getElementById('menuGrid');
-     const sticky=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
      if(!grid)return;
+     const sticky=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
      const offset=sticky?sticky.getBoundingClientRect().height:0;
-     const target=grid.getBoundingClientRect().top+window.scrollY-offset-10;
+     const target=grid.getBoundingClientRect().top+window.scrollY-offset-8;
      window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
    });
  }
