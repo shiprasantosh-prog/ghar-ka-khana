@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")document.documentElement.classList.add("google-auth-return-pending")}catch(_){}</script>
+<script>
+(function(){
+  function hasPendingReturn(){
+    try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")return true}catch(_){}
+    return /(?:^|;\\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"");
+  }
+  try{if(hasPendingReturn())document.documentElement.classList.add("google-auth-return-pending")}catch(_){}
+})();
+</script>
 <title>Ghar ka Khana | Homemade with Love</title>
 <style>
 html.google-auth-return-pending body{visibility:visible!important}
@@ -2011,25 +2019,20 @@ function openMenuCategories(trigger){
   menuCategoryAnchorRect=null;
   showPage("menu");
   setMenuCategory(cat);
-  setTimeout(()=>{
-    // Preserve the Items popup's Full Menu landing position, then re-center
-    // the selected chip after pinning/reparenting has settled.
-    document.dispatchEvent(new Event("gkk:menu-layout-ready"));
-    const heading=[...document.querySelectorAll("#menu .section-head h2")]
-      .find(el=>el.textContent.trim()==="Full Menu");
-    if(heading)heading.closest(".section-head").scrollIntoView({behavior:"smooth",block:"start"});
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      const host=document.getElementById("categories");
-      const selected=host?.querySelector('.chip.active');
-      if(host&&selected&&window.matchMedia("(max-width:700px)").matches){
-        const hostRect=host.getBoundingClientRect();
-        const chipRect=selected.getBoundingClientRect();
-        const nextLeft=host.scrollLeft+(chipRect.left-hostRect.left)-(hostRect.width-chipRect.width)/2;
-        host.scrollTo({left:Math.max(0,nextLeft),behavior:"smooth"});
-        host.querySelectorAll(".chip").forEach(chip=>chip.classList.toggle("active",chip.dataset.category===cat));
-      }
-    }));
-  },220);
+  // Let the category filter render first, then pin the sticky bar and center the
+  // selected chip. Do not launch a second page scroll to "Full Menu" afterward.
+  document.dispatchEvent(new Event("gkk:menu-layout-ready"));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const host=document.getElementById("categories");
+    const selected=host?.querySelector('.chip.active');
+    if(host&&selected&&window.matchMedia("(max-width:700px)").matches){
+      const hostRect=host.getBoundingClientRect();
+      const chipRect=selected.getBoundingClientRect();
+      const nextLeft=host.scrollLeft+(chipRect.left-hostRect.left)-(hostRect.width-chipRect.width)/2;
+      host.scrollTo({left:Math.max(0,nextLeft),behavior:"smooth"});
+      host.querySelectorAll(".chip").forEach(chip=>chip.classList.toggle("active",chip.dataset.category===cat));
+    }
+  }));
  });
  overlay.classList.add("show");
  requestAnimationFrame(()=>positionMenuCategoryPopup(menuCategoryAnchorRect));
@@ -4350,6 +4353,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     } finally {
       document.documentElement.classList.remove("google-auth-return-pending");
       try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
+      try { document.cookie = "gkkGoogleAuthReturnPending=; Path=/; Max-Age=0; SameSite=Lax; Secure"; } catch (_) {}
     }
   })();
   button.addEventListener("click", async function(){
@@ -4364,6 +4368,9 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       // snapshot already contains the account progress screen, not the homepage.
       document.documentElement.classList.add("google-auth-return-pending");
       try { localStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
+      // A first-party Lax cookie survives the top-level Google redirect more reliably
+      // than Web Storage in some iOS Safari/private-browsing configurations.
+      try { document.cookie = "gkkGoogleAuthReturnPending=1; Path=/; Max-Age=300; SameSite=Lax; Secure"; } catch (_) {}
       await app.auth().signInWithRedirect(provider);
     } catch(error) {
       document.documentElement.classList.remove("google-auth-return-pending");
