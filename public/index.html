@@ -4333,6 +4333,8 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       try { sessionStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
       await app.auth().signInWithRedirect(provider);
     } catch(error) {
+      document.documentElement.classList.remove("google-auth-return-pending");
+      try { sessionStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
       showFirebaseError(error);
       button.disabled = false;
     }
