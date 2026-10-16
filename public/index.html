@@ -6,7 +6,7 @@
 (function(){
   function hasPendingReturn(){
     try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")return true}catch(_){}
-    return /(?:^|;\\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"");
+    return /(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"");
   }
   try{if(hasPendingReturn())document.documentElement.classList.add("google-auth-return-pending")}catch(_){}
 })();
