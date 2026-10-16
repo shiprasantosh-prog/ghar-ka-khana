@@ -4270,6 +4270,10 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     const response = await fetch("/api/firebase-config", {credentials:"same-origin",cache:"no-store"});
     const config = await response.json().catch(()=>({}));
     if (!response.ok) throw new Error(config.error || "Google sign-in is not configured yet.");
+    // Use this app's own origin for Firebase Auth helpers so /__/auth is served
+    // through the first-party reverse proxy on the same host. A separate authDomain
+    // host can trigger cross-site storage restrictions in Safari and other browsers.
+    config.authDomain = window.location.hostname;
     firebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
     return firebaseApp;
   }
