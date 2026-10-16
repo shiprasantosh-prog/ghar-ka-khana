@@ -2359,8 +2359,14 @@ function setMenuCategory(value){
    requestAnimationFrame(()=>requestAnimationFrame(()=>{
      const active=host?.querySelector('.chip.active');
      if(host&&active){
-       const left=active.offsetLeft-(host.clientWidth-active.clientWidth)/2;
-       host.scrollTo({left:Math.max(0,left),behavior:'smooth'});
+       // The category strip can be moved into the sticky search container on mobile.
+       // Use its live geometry instead of offsetLeft, which is unreliable after reparenting.
+       const hostRect=host.getBoundingClientRect();
+       const activeRect=active.getBoundingClientRect();
+       const currentLeft=host.scrollLeft;
+       const desiredLeft=currentLeft+(activeRect.left-hostRect.left)-(hostRect.width-activeRect.width)/2;
+       host.scrollTo({left:Math.max(0,desiredLeft),behavior:'smooth'});
+       host.querySelectorAll('.chip').forEach(chip=>chip.classList.toggle('active',chip.dataset.category===value));
      }
      const sections=[...document.querySelectorAll('#menuGrid .menu-category[data-menu-category]')];
      const targetSection=value==='All'?sections[0]:sections.find(section=>section.dataset.menuCategory===value);
