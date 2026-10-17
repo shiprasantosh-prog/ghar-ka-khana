@@ -2076,6 +2076,8 @@ const money=n=>"₹"+n;
 function titleCase(value){return String(value??"").toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g,(_,sep,letter)=>sep+letter.toUpperCase()).replace(/(\d+)(pcs|ml|kg)\b/gi,(_,n,u)=>n+u.toUpperCase());}
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
+function setPendingPaymentMessage(container,message){if(!container)return;let node=container.querySelector("#checkoutPendingMessage");if(!node){node=document.createElement("p");node.id="checkoutPendingMessage";node.className="notice";node.setAttribute("role","status");node.style.cssText="display:block;margin:12px 0;line-height:1.5";container.appendChild(node)}node.textContent=message}
+function apiWithTimeout(url,options={},timeoutMs=20000){let timeoutId;const timeout=new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(Object.assign(new Error("Payment status is taking longer than expected. Please refresh Order Status before taking another action."),{code:"PAYMENT_CHECK_TIMEOUT"})),timeoutMs)});return Promise.race([api(url,options),timeout]).finally(()=>clearTimeout(timeoutId))}
 async function loadCustomerMenu(){
  await refreshKitchenBanner();
  const [rows,specialRows,breakfastCatalogue,popularRows,imageCatalog,availabilityData]=await Promise.all([
@@ -2155,9 +2157,18 @@ async function loadCustomerMenu(){
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
  renderPopularDishes();
  todaySpecials=specialRows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
+ // Reconcile persisted carts against the latest server menu before checkout.
+ const currentCartDishes=new Map([...dishes,...popularDishes,...todaySpecials].map(d=>[Number(d.id),d]));
+ let removedStaleCartItem=false;
+ Object.keys(cart).forEach(key=>{
+  const parsed=parseCartLineKey(key),dish=currentCartDishes.get(parsed.menuId);
+  if(!dish || !Number.isInteger(Number(cart[key])) || Number(cart[key])<1 || Number(cart[key])>50){delete cart[key];removedStaleCartItem=true;return;}
+  if(parsed.variantId && !(dish.variants||[]).some(v=>Number(v.id)===parsed.variantId)){delete cart[key];removedStaleCartItem=true;}
+ });
  renderCats();
  renderMenu();
  updateCart();
+ if(removedStaleCartItem){const notice=document.getElementById("success");if(notice){notice.textContent="Some saved cart items or options were no longer available and have been removed. Please review your cart before placing the order.";notice.classList.add("show");}}
 }
 function navratriDishCardHTML(d){
   const name=titleCase(d.name),image=d.img||d.fallbackImg||fallbackFoodImage;
@@ -2508,6 +2519,7 @@ function change(id,n,variantId=0,ignoreAvailability=false){
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
 function minimumOrderForAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens")?60:100;}
+function currentCheckoutAddressForMinimum(){const field=document.getElementById("checkoutAddressText");return String(field?.value||"").trim()||String(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");}
 function cartItemSubtotal(){return Object.entries(cart).reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);}
 function updateCart(){
     persistCart();
@@ -2530,7 +2542,7 @@ function updateCart(){
     const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=discount>0?"flex":"none";
     if(discount>0){document.getElementById("promoDiscountLabel").textContent=appliedPromo?"Promo discount ("+appliedPromo.code+")":(referralInfo?.firstOrderEligible?"First order offer (10% off)":"Referral reward (10% off)");document.getElementById("promoDiscountAmount").textContent="−"+money(discount)}
     document.getElementById("payableTotal").textContent=money(Math.max(0,subtotal-discount)+handlingFee+deliveryFee);
-    const minimumOrder=minimumOrderForAddress(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");const minimumNotice=document.getElementById("minimumOrderNotice");if(minimumNotice)minimumNotice.textContent=selectedSavedAddress?"Minimum order value for this address: Rs. "+minimumOrder+".":"Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).";
+    const minimumOrder=minimumOrderForAddress(currentCheckoutAddressForMinimum());const minimumNotice=document.getElementById("minimumOrderNotice");if(minimumNotice)minimumNotice.textContent=selectedSavedAddress?"Minimum order value for this address: Rs. "+minimumOrder+".":"Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).";
     if(appliedPromo){const line=document.getElementById("promoBreakdown");line.innerHTML="<strong>"+escapeHTML(appliedPromo.code)+" applied</strong>"+(appliedPromo.excludedItems.length?"<br>Excluded from discount: "+appliedPromo.excludedItems.map(x=>escapeHTML(x.name)).join(", "):"")}else if(discount>0){const line=document.getElementById("promoBreakdown");if(line)line.textContent=referralInfo?.firstOrderEligible?"Your first-order offer is automatically applied.": "One available referral reward is automatically applied."}
     // Revalidate checkout whenever the basket changes, including quantity decreases.
     updatePlaceOrderButton();
@@ -2571,7 +2583,7 @@ function updatePlaceOrderButton(){
  const button=document.querySelector('#orderForm button[type="submit"]');
  if(!button)return;
  const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||"online";
- const minimumOrder=minimumOrderForAddress(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");
+ const minimumOrder=minimumOrderForAddress(currentCheckoutAddressForMinimum());
  const disabled=!kitchenIsOpen||!selectedSavedAddress||deliveryCheckPending||!deliveryAreaAvailable||cartItemSubtotal()<minimumOrder;
  button.disabled=disabled;
  button.style.opacity=disabled?".55":"1";
@@ -2791,14 +2803,14 @@ async function showCheckoutPendingOrder(){
   };
   document.getElementById("checkoutCancelPendingPayment").onclick=async function(){
    if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;
-   const b=this,msg=document.getElementById("checkoutPendingMessage");b.disabled=true;b.textContent="Checking payment…";
+   const b=this;b.disabled=true;b.textContent="Checking payment…";setPendingPaymentMessage(host,"Checking Razorpay to confirm this order is unpaid. Please do not place another order while this check is running.");
    try{
-    const result=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
+    await apiWithTimeout("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
     localStorage.removeItem("gkk_pending_payment_order_id");
     host.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';host.classList.add("show");
     pendingCheckoutRetry=null;
     await loadMyOrders();
-   }catch(err){msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";b.disabled=false;b.textContent="Cancel Pending Order"}
+   }catch(err){setPendingPaymentMessage(host,err.message||"The order could not be cancelled safely. Please refresh Order Status.");if(err.code==="PAYMENT_CHECK_TIMEOUT"){b.textContent="Check status in My Orders";b.disabled=true;}else{b.disabled=false;b.textContent="Cancel Pending Order"}}
   };
  }catch(err){console.warn("Could not check pending orders for checkout",err)}
 }
@@ -2822,7 +2834,7 @@ function showPaymentPending(order,checkoutData,form){
   finally{if(check.isConnected){check.disabled=false;check.textContent="Check Payment Status"}}
  };
 }
-function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const status=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/payment-status");if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", p.order.id);return;}if(status.state==="pending"){showPaymentPending(p.order,p.checkoutData,p.form);return;}const retryOrder=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"});if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);showPaymentPending(p.order,p.checkoutData,p.form)}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";try{await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";else alert(err.message||"The order could not be cancelled safely. Please check its status.");cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}
+function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const status=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/payment-status");if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", p.order.id);return;}if(status.state==="pending"){showPaymentPending(p.order,p.checkoutData,p.form);return;}const retryOrder=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"});if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);showPaymentPending(p.order,p.checkoutData,p.form)}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";setPendingPaymentMessage(success,"Checking Razorpay to confirm this order is unpaid. Please do not place another order while this check is running.");try{await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){setPendingPaymentMessage(success,err.message||"The order could not be cancelled safely. Please refresh Order Status.");if(err.code==="PAYMENT_CHECK_TIMEOUT"){cancel.textContent="Check status in My Orders";cancel.disabled=true;}else{cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}}
 async function startRazorpayPayment(order,checkoutData,form,button){
  const success=document.getElementById("success");
  return new Promise(resolve=>{
