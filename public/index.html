@@ -2563,7 +2563,7 @@ async function showCheckoutPendingOrder(){
   };
   document.getElementById("checkoutCancelPendingPayment").onclick=async function(){
    if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;
-   const b=this;b.disabled=true;b.textContent="Checking payment…";setPendingPaymentMessage(host,"Checking Razorpay to confirm this order is unpaid. Please do not place another order while this check is running.");
+   const b=this;b.disabled=true;b.textContent="Checking payment…";setPendingPaymentMessage(host,"Verifying payment with Razorpay. If verification times out, the order will remain pending for safety.");
    try{
     await apiWithTimeout("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
     localStorage.removeItem("gkk_pending_payment_order_id");
