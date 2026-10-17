@@ -1687,7 +1687,7 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
   for(const attempt of attempts.rows){
     try{
-      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment check timed out")),10000))]);
       for(const payment of (Array.isArray(response?.items)?response.items:[])){
         if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
         if(payment.status==="captured"||payment.captured===true){
