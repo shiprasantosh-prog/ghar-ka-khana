@@ -1762,7 +1762,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   let rpOrderId=String(row.razorpay_order_id||attempts.rows[0]?.razorpay_order_id||"");
   let rpOrder;
   if(rpOrderId){
-    try{rpOrder=await razorpay.orders.fetch(rpOrderId);}
+    try{rpOrder=await Promise.race([razorpay.orders.fetch(rpOrderId),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay order lookup timed out")),10000))]);}
     catch(error){return res.status(409).json({error:"The existing payment session could not be checked. Please check payment status before retrying."});}
   }else{
     rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
