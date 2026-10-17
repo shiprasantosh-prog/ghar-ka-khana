@@ -2,8 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  function hasPendingReturn(){
+    try{if(new URLSearchParams(window.location.search).get("googleAuthReturn")==="1")return true}catch(_){}
+    try{if(localStorage.getItem("gkkGoogleAuthReturnPending")==="1")return true}catch(_){}
+    try{if(/(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||""))return true}catch(_){}
+    // Firebase returns through the same-origin /__/auth helper when authDomain is
+    // first-party. Use that navigation as a fallback if browsers drop URL/storage markers.
+    try{const ref=new URL(document.referrer);if(ref.origin===window.location.origin&&ref.pathname.startsWith("/__/auth/"))return true}catch(_){}
+    return false;
+  }
+  try{if(hasPendingReturn())document.documentElement.classList.add("google-auth-return-pending")}catch(_){}
+})();
+</script>
 <title>Ghar ka Khana | Homemade with Love</title>
 <style>
+html.google-auth-return-pending body{visibility:visible!important}
+html.google-auth-return-pending body main>.page-view{display:none!important}
+html.google-auth-return-pending body main>#account.page-view{display:block!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;min-height:65vh}
+html.google-auth-return-pending body main>#account.page-view>*{visibility:hidden!important}
+html.google-auth-return-pending body main>#account.page-view:before{content:"Signing you in securely…";display:block;visibility:visible!important;max-width:620px;margin:28px auto;padding:24px 20px;border:1px solid #d9cfb6;border-radius:12px;background:#fffdf7;color:#174d35;text-align:center;font:700 20px/1.4 system-ui,-apple-system,sans-serif}
+html.google-auth-return-pending body main>#account.page-view:after{content:"Please wait while we open your profile.";display:block;visibility:visible!important;max-width:620px;margin:-14px auto 24px;color:#52665a;text-align:center;font:14px/1.5 system-ui,-apple-system,sans-serif}
+html.google-auth-return-pending body main>#account.page-view .section-head,
+html.google-auth-return-pending body main>#account.page-view .card{display:none!important}
 :root{--bg:#12110f;--panel:#1d1b17;--panel2:#242119;--gold:#c9a45c;--gold2:#e3c783;--cream:#f4eddf;--muted:#b7ad9b;--line:#4a3d26;--green:#64734d}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--cream);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}
 header{position:sticky;top:0;z-index:10;background:#12110fee;backdrop-filter:blur(12px);border-bottom:1px solid #332b1d}.nav{max-width:1180px;margin:auto;padding:17px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{font-family:Georgia,serif;font-size:25px;color:var(--gold2);letter-spacing:.3px}.brand small{display:block;font:10px system-ui;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:3px}.navlinks{display:flex;gap:24px;align-items:center}.navlinks a{color:var(--cream);text-decoration:none;font-size:14px}.btn{border:1px solid var(--gold);background:var(--gold);color:#1a160e;padding:11px 18px;border-radius:6px;font-weight:700}.btn.ghost{background:transparent;color:var(--gold2)}.hero{max-width:1180px;margin:auto;padding:55px 24px 44px;display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}.eyebrow{color:var(--gold);letter-spacing:3px;text-transform:uppercase;font-size:12px;font-weight:700}.hero h1{font:clamp(42px,6vw,70px)/1.04 Georgia,serif;margin:16px 0 20px;max-width:620px}.hero h1 em{color:var(--gold2);font-weight:400}.hero p{color:var(--muted);font-size:17px;line-height:1.75;max-width:520px}.hero-actions{display:flex;gap:12px;margin-top:27px;flex-wrap:wrap}.hero-image{height:420px;border-radius:14px;overflow:hidden;border:1px solid #514126;position:relative;background:linear-gradient(140deg,#4b3820,#17140f)}.hero-image img{width:100%;height:100%;object-fit:cover;opacity:.85}.hero-image:after{content:"";position:absolute;inset:45% 0 0;background:linear-gradient(transparent,#100e0bcc)}.image-tag{position:absolute;z-index:1;bottom:22px;left:24px;color:#fff;font:italic 23px Georgia,serif}
@@ -1486,7 +1508,190 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
    background:#b58a36;border-radius:2px;
  }
 }
-</style></head>
+</style>
+<style id="staging-mobile-home-hero-balance">
+/* Staging trial: give the mobile hero a clear food-photo focal point on the right,
+   while keeping the brand, headline and CTA readable on the left. */
+@media(max-width:700px){
+  main > .hero.page-view.active-view{
+    height:auto!important;
+    min-height:590px!important;
+    background-size:cover!important;
+    background-position:72% center!important;
+    overflow:hidden!important;
+  }
+  main > .hero.page-view.active-view:before{
+    background:linear-gradient(90deg,
+      rgba(251,247,232,.99) 0%,
+      rgba(251,247,232,.96) 36%,
+      rgba(251,247,232,.78) 57%,
+      rgba(251,247,232,.22) 100%)!important;
+  }
+  main > .hero.page-view.active-view .hero-copy{
+    position:relative!important;
+    top:auto!important;
+    left:auto!important;
+    transform:none!important;
+    width:min(76%,520px)!important;
+    max-width:520px!important;
+    padding:28px 0 150px 22px!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+  main > .hero.page-view.active-view .hero-brand{
+    max-width:100%!important;
+    margin-bottom:20px!important;
+  }
+  main > .hero.page-view.active-view .hero-copy h1{
+    font-size:clamp(40px,9.7vw,50px)!important;
+    line-height:1.02!important;
+    overflow-wrap:normal!important;
+  }
+  main > .hero.page-view.active-view .hero-copy p{
+    max-width:100%!important;
+    font-size:15px!important;
+    line-height:1.5!important;
+  }
+  main > .hero.page-view.active-view .hero-photo-credit{
+    right:12px!important;
+    top:42%!important;
+    width:30%!important;
+    max-width:150px!important;
+    font-size:clamp(13px,3.7vw,19px)!important;
+    line-height:1.2!important;
+    overflow-wrap:anywhere!important;
+  }
+  main > .hero.page-view.active-view .hero-actions .btn{
+    padding:13px 18px!important;
+    font-size:16px!important;
+  }
+}
+@media(max-width:390px){
+  main > .hero.page-view.active-view{min-height:610px!important}
+  main > .hero.page-view.active-view .hero-copy{width:79%!important;padding-left:17px!important}
+  main > .hero.page-view.active-view .hero-photo-credit{width:27%!important;right:8px!important}
+}
+</style>
+
+
+<style id="mobile-sticky-search-with-real-categories">
+@media(max-width:700px){
+  #menu .menu-search-sticky.menu-search-pinned{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:7px!important;
+    width:100%!important;
+    padding:7px 0 9px!important;
+    border-radius:0!important;
+    box-shadow:0 4px 12px rgba(24,65,44,.14)!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned .menu-search-input-wrap{
+    width:100%!important;
+    padding:0 12px!important;
+    box-sizing:border-box!important;
+    gap:0!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned .pinned-menu-categories-button{display:none!important}
+  #menu .menu-search-sticky.menu-search-pinned #customerMenuSearch{
+    width:100%!important;
+    flex:1 1 auto!important;
+    min-width:0!important;
+    padding:10px 42px 10px 12px!important;
+    font-size:15px!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned #clearCustomerMenuSearch{right:18px!important}
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories{
+    display:flex!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    max-width:100vw!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    flex-wrap:nowrap!important;
+    gap:8px!important;
+    margin:0!important;
+    padding:0 12px 2px!important;
+    box-sizing:border-box!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior-x:contain!important;
+  }
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories::-webkit-scrollbar{display:none!important}
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories .chip{
+    display:inline-flex!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-height:42px!important;
+    padding:6px 13px!important;
+    border:1px solid #e5dcc5!important;
+    border-radius:999px!important;
+    background:#f8f2e3!important;
+    color:#4b4b40!important;
+    font-size:14px!important;
+    font-weight:500!important;
+    white-space:nowrap!important;
+  }
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories .chip.active{
+    background:#1b5a3a!important;
+    border-color:#1b5a3a!important;
+    color:#fff!important;
+    font-weight:700!important;
+  }
+  #menu .menu-search-sticky #categories.mobile-pinned-real-categories .category-chip-thumb{
+    display:block!important;
+    width:30px!important;
+    height:30px!important;
+    flex:0 0 30px!important;
+    object-fit:cover!important;
+    border-radius:50%!important;
+    margin:0!important;
+  }
+  /* Keep the floating Items popup available while browsing the menu. */
+}
+</style>
+
+
+<style id="mobile-category-chip-shape-fix">
+@media(max-width:700px){
+  #menu #categories.mobile-pinned-real-categories .chip,
+  #menu #categories.mobile-pinned-real-categories .chip.active{
+    position:relative!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:42px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    aspect-ratio:auto!important;
+    flex:0 0 auto!important;
+    display:inline-flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:999px!important;
+    padding:5px 14px!important;
+    margin:0!important;
+    box-shadow:none!important;
+    outline:none!important;
+    transform:none!important;
+    overflow:visible!important;
+    line-height:1.15!important;
+  }
+  #menu #categories.mobile-pinned-real-categories .chip::before,
+  #menu #categories.mobile-pinned-real-categories .chip::after{
+    content:none!important;
+    display:none!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned .menu-search-input-wrap{
+    gap:0!important;
+  }
+  #menu .menu-search-sticky.menu-search-pinned .pinned-menu-categories-button{display:none!important}
+}
+</style>
+
+</head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
 <aside class="sidebar" aria-label="Main navigation">
@@ -1565,7 +1770,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <section class="wrap page-view active-view home-section" id="homeHow"><div class="section-head"><div><h2>How Ordering Works</h2></div><p>Simple, and ready on time.</p></div><div class="steps"><article class="card" style="padding:24px"><span class="step-number">01</span><h3>Pick your meal</h3><p>Choose from our menu and add your favourites to your basket.</p></article><article class="card" style="padding:24px"><span class="step-number">02</span><h3>We cook it fresh</h3><p>Every meal is prepared with care in small batches, after your order.</p></article><article class="card" style="padding:24px"><span class="step-number">03</span><h3>Delivered to your door</h3><p>Your food is packed carefully and sent your way, ready to enjoy.</p></article></div></section>
 <section class="wrap page-view active-view home-section" id="homeStory"><div class="story-panel"><video class="story-photo" controls playsinline preload="metadata" poster="/images/Ghar%20Ka%20Khana_%20Homemade%20Thali%20Story.webp" aria-label="Ghar ka Khana story video"><source src="/images/story.mp4" type="video/mp4">Your browser does not support HTML video.</video><div><div class="eyebrow">Our Story</div><h2>A Home Kitchen with a Big Dream</h2><p>Ghar ka Khana began in 2025 in my home kitchen in Bengaluru with a simple thought: to bring the warmth and comfort of homemade food to more people. I started by cooking for family and friends, who kept asking for more. Today, we serve families across the city with the same recipes, love and care that inspired us from the beginning.</p><p>From litti chokha and paneer gravies to light, healthy everyday meals, we prepare everything fresh with thoughtful ingredients, less oil and no preservatives—just the way we like to eat at home.</p><p>For me, cooking has always been about more than putting a meal on the table. It is the familiar aroma of spices, the joy of sharing food and the little comforts that make an ordinary day feel special. I bring the flavours I grew up loving into every dish, with care and attention so each meal feels personal, wholesome and welcoming.</p><p><em>Every order is a little taste of home. Thank you for being part of the Ghar ka Khana family.</em></p><p><strong>Shipra Santosh</strong><br>Founder</p><div class="story-more" id="storyMore" hidden><p>What began as a small home kitchen has grown into a cloud kitchen serving wholesome, delicious meals to many happy customers. Whether you are looking for a comforting everyday meal, a traditional favourite or a lighter, healthier choice, our hope is to make you feel at home with every bite.</p><p>Every recipe carries the same intention we started with: honest food, familiar flavours and the warmth of a meal made with love.</p></div><button class="story-toggle" id="storyToggle" type="button" aria-expanded="false" aria-controls="storyMore" onclick="toggleStoryMore()">Read More <span aria-hidden="true">⌄</span></button></div></div></section>
 <section class="wrap page-view active-view home-section" id="homeReviewPreview"><div class="section-head"><div><div class="eyebrow">Kind words from our customers</div><h2>What Our Customers Say</h2></div><p>Real experiences from our Ghar ka Khana family.</p></div><div id="homeReviewCards" class="grid"><p class="empty">Loading customer reviews…</p></div><div style="text-align:center;margin-top:24px"><button class="btn ghost" type="button" onclick="showPage('reviews')">Read All Reviews</button></div></section>
-<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="categories" id="categories"></div><div class="field menu-search-sticky" style="max-width:620px;margin:14px 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><div class="menu-search-input-wrap"><button id="pinnedMenuCategoriesButton" class="pinned-menu-categories-button" type="button" onclick="openMenuCategories(this)" aria-label="Browse menu categories" title="Browse menu categories">☷ <span>Categories</span></button><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#fffdf7;border:1px solid #d9cfb6;border-radius:10px;color:#203b2e;font:inherit"><button id="clearCustomerMenuSearch" class="menu-search-clear" type="button" aria-label="Clear menu search" title="Clear search" hidden>×</button></div></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
+<section class="wrap page-view" id="menu"><div class="section-head"><div><div class="eyebrow">Made fresh for you</div><h2>Today’s Specials</h2></div></div><div class="grid" id="specialsGrid"></div><div class="section-head" style="margin-top:48px;border-top:1px solid #332b1d;padding-top:30px"><div><div class="eyebrow">Explore every dish</div><h2>Full Menu</h2></div><p>Browse by category or search any dish.</p></div><div class="categories" id="categories"></div><div class="field menu-search-sticky" style="max-width:620px;margin:14px 0 18px"><label for="customerMenuSearch" style="display:block;color:var(--muted);margin-bottom:8px">Search the full menu</label><div class="menu-search-input-wrap"><input id="customerMenuSearch" type="search" placeholder="Search any dish, e.g. paneer, paratha, salad…" style="width:100%;padding:14px 16px;background:#fffdf7;border:1px solid #d9cfb6;border-radius:10px;color:#203b2e;font:inherit"><button id="clearCustomerMenuSearch" class="menu-search-clear" type="button" aria-label="Clear menu search" title="Clear search" hidden>×</button></div></div><div id="menuSearchCount" style="color:var(--muted);font-size:13px;margin:0 0 18px"></div><div id="menuGrid"></div></section>
 
 <section class="wrap page-view" id="account" style="border-top:1px solid #332b1d;padding-top:35px">
 <div class="section-head"><div><div class="eyebrow">Customer account</div><h2 id="accountTitle">Sign in or create an account</h2></div><p>Secure access to your orders</p></div>
@@ -1681,9 +1886,9 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="bulk-form-actions"><button class="btn ghost" type="button" onclick="closeBulkEnquiry()">Cancel</button><button class="btn" type="submit">✈ Send Enquiry</button></div>
 <div id="bulkFormMessage" class="bulk-form-message" role="status"></div>
 </form></div></div><button class="btn cart-fab" type="button" onclick="openCart()" aria-label="Open basket" title="Open basket"><span class="cart-fab-icon" aria-hidden="true"><svg viewBox="0 0 64 64" focusable="false"><path d="M5 8h7l7 8 9 30h24l9-26H17M22 25h34M25 35h27M30 16l4 30M44 16l-1 30M24 46l-4 10h32M27 56a4 4 0 1 0 0 .1M48 56a4 4 0 1 0 0 .1" /></svg></span><span id="fabCount" class="cart-fab-count" hidden>0</span></button>
-<div class="overlay" id="overlay" onclick="if(event.target===this)closeCart()"><aside class="drawer"><div class="drawer-head"><h2>Your Basket</h2><button type="button" class="close" onclick="confirmBasketRemoval()" aria-label="Close basket" title="Close basket">×</button></div><div id="cartItems"></div><div id="checkout" style="display:none"><div class="total"><span>Subtotal</span><strong id="total">₹0</strong></div><div class="total" id="promoDiscountRow" style="display:none;color:#18734b"><span id="promoDiscountLabel">Promo discount</span><strong id="promoDiscountAmount">−₹0</strong></div><div class="total"><span>Handling &amp; processing fee</span><strong id="handlingFee">₹0</strong></div><div class="total"><span>Delivery Charge</span><strong id="deliveryFee">₹0</strong></div><div class="total"><span><strong>Amount payable</strong></span><strong id="payableTotal">₹0</strong></div><p id="minimumOrderNotice" class="notice" role="status" aria-live="polite">Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).</p><div id="promoBreakdown" class="notice" aria-live="polite"></div><h3 style="font:22px Georgia,serif;color:var(--gold2)">Delivery details</h3><form id="orderForm"><div class="field"><label>Full name</label><input name="name" required placeholder="Your name"></div><div class="field"><label>Phone number</label><input name="phone" required type="tel" pattern="[0-9 +()\\-]{10,}" placeholder="Mobile number"></div><div class="field"><label>Deliver to saved address</label><select id="checkoutAddressSelect" required><option value="">Choose a saved address</option></select><p id="checkoutAddressDetails" class="notice" role="status">Select an address to check delivery availability.</p><button type="button" class="btn secondary" id="addCheckoutAddress">+ Add new address</button><span id="deliveryLocationStatus" class="notice" role="status"></span><input type="hidden" name="address" id="checkoutAddressText" required><input type="hidden" name="latitude" id="deliveryLatitude"><input type="hidden" name="longitude" id="deliveryLongitude"><input type="hidden" name="addressId" id="checkoutAddressId"></div><div class="field"><label>When would you like your food?</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label><input type="radio" name="orderMode" value="now" checked onchange="toggleScheduledCheckout()"> Order Now</label><label><input type="radio" name="orderMode" value="scheduled" onchange="toggleScheduledCheckout()"> Prior Order (Schedule for Later)</label></div></div><div id="scheduledCheckout" hidden><div class="field"><label>Delivery date</label><input id="scheduledDate" type="date" min=""></div><div class="field"><label>Preferred delivery time</label><input id="deliveryTime" type="time" step="60"></div></div><div class="field" id="paymentMethodField"><label>Payment method</label><div style="display:flex;flex-direction:column;gap:10px"><label style="position:relative;display:flex;align-items:center;gap:12px;padding:14px 52px 14px 16px;border:1.5px solid #104D37;border-radius:10px;background:#F4F8EE;cursor:pointer;box-sizing:border-box;min-height:68px"><span style="width:34px;height:34px;min-width:34px;border-radius:8px;background:#E3EAD3;display:flex;align-items:center;justify-content:center;color:#104D37;font-size:17px">▣</span><span style="min-width:0"><strong style="display:block;color:#104D37;font-size:15px;line-height:1.2">Online Payment</strong><small style="display:block;color:#667267;font-size:12px;line-height:1.3;margin-top:3px">UPI, Cards, Netbanking, Wallets &amp; more</small></span><span style="margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px;font-weight:700;color:#667267">VISA&nbsp;&nbsp;●●&nbsp;&nbsp;UPI</span><input type="radio" name="paymentMethod" value="online" checked onchange="updatePlaceOrderButton()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;margin:0"></label><label id="codPaymentOption" style="position:relative;display:none;align-items:center;gap:12px;padding:14px 52px 14px 16px;border:1px solid #D8DEC9;border-radius:10px;background:#FBFCF7;cursor:pointer;box-sizing:border-box;min-height:68px"><span style="width:34px;height:34px;min-width:34px;border-radius:8px;background:#E3EAD3;display:flex;align-items:center;justify-content:center;color:#104D37;font-size:17px">▣</span><span style="min-width:0"><strong style="display:block;color:#104D37;font-size:15px;line-height:1.2">Cash on Delivery</strong><small style="display:block;color:#667267;font-size:12px;line-height:1.3;margin-top:3px">Pay with cash at your doorstep</small></span><input type="radio" name="paymentMethod" value="cod" onchange="updatePlaceOrderButton()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;margin:0"></label></div><p id="codPaymentHint" class="notice" hidden></p></div><div class="field"><label>Promo code (optional)</label><div style="display:flex;gap:8px"><input id="promoCode" placeholder="Enter promo code" style="flex:1;min-width:0"><button class="btn" type="button" id="applyPromoButton" onclick="applyPromoCode()">Apply</button></div><p id="promoMessage" class="notice" role="status"></p></div><div class="field"><label>Delivery instructions (optional)</label><input name="notes" placeholder="Any special instructions"></div><button class="btn" type="submit" style="width:100%">Place order</button></form><p class="notice">Your order will be saved securely and sent to the kitchen.</p><div class="success" id="success"></div></div></aside></div>
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeCart()"><aside class="drawer"><div class="drawer-head"><h2>Your Basket</h2><button type="button" class="close" onclick="closeCart()" aria-label="Close basket" title="Close basket">×</button></div><div id="cartItems"></div><div id="basketPendingPayment" class="notice" style="display:none;margin:12px 0" role="status"></div><div id="checkout" style="display:none"><div class="total"><span>Subtotal</span><strong id="total">₹0</strong></div><div class="total" id="promoDiscountRow" style="display:none;color:#18734b"><span id="promoDiscountLabel">Promo discount</span><strong id="promoDiscountAmount">−₹0</strong></div><div class="total"><span>Handling &amp; processing fee</span><strong id="handlingFee">₹0</strong></div><div class="total"><span>Delivery Charge</span><strong id="deliveryFee">₹0</strong></div><div class="total"><span><strong>Amount payable</strong></span><strong id="payableTotal">₹0</strong></div><p id="minimumOrderNotice" class="notice" role="status" aria-live="polite">Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).</p><div id="promoBreakdown" class="notice" aria-live="polite"></div><h3 style="font:22px Georgia,serif;color:var(--gold2)">Delivery details</h3><form id="orderForm"><div class="field"><label>Full name</label><input name="name" required placeholder="Your name"></div><div class="field"><label>Phone number</label><input name="phone" required type="tel" pattern="[0-9 +()\\-]{10,}" placeholder="Mobile number"></div><div class="field"><label>Deliver to saved address</label><select id="checkoutAddressSelect" required><option value="">Choose a saved address</option></select><p id="checkoutAddressDetails" class="notice" role="status">Select an address to check delivery availability.</p><button type="button" class="btn secondary" id="addCheckoutAddress">+ Add new address</button><span id="deliveryLocationStatus" class="notice" role="status"></span><input type="hidden" name="address" id="checkoutAddressText" required><input type="hidden" name="latitude" id="deliveryLatitude"><input type="hidden" name="longitude" id="deliveryLongitude"><input type="hidden" name="addressId" id="checkoutAddressId"></div><div class="field"><label>When would you like your food?</label><div style="display:flex;gap:10px;flex-wrap:wrap"><label><input type="radio" name="orderMode" value="now" checked onchange="toggleScheduledCheckout()"> Order Now</label><label><input type="radio" name="orderMode" value="scheduled" onchange="toggleScheduledCheckout()"> Prior Order (Schedule for Later)</label></div></div><div id="scheduledCheckout" hidden><div class="field"><label>Delivery date</label><input id="scheduledDate" type="date" min=""></div><div class="field"><label>Preferred delivery time</label><input id="deliveryTime" type="time" step="60"></div></div><div class="field" id="paymentMethodField"><label>Payment method</label><div style="display:flex;flex-direction:column;gap:10px"><label style="position:relative;display:flex;align-items:center;gap:12px;padding:14px 52px 14px 16px;border:1.5px solid #104D37;border-radius:10px;background:#F4F8EE;cursor:pointer;box-sizing:border-box;min-height:68px"><span style="width:34px;height:34px;min-width:34px;border-radius:8px;background:#E3EAD3;display:flex;align-items:center;justify-content:center;color:#104D37;font-size:17px">▣</span><span style="min-width:0"><strong style="display:block;color:#104D37;font-size:15px;line-height:1.2">Online Payment</strong><small style="display:block;color:#667267;font-size:12px;line-height:1.3;margin-top:3px">UPI, Cards, Netbanking, Wallets &amp; more</small></span><span style="margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px;font-weight:700;color:#667267">VISA&nbsp;&nbsp;●●&nbsp;&nbsp;UPI</span><input type="radio" name="paymentMethod" value="online" checked onchange="updatePlaceOrderButton()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;margin:0"></label><label id="codPaymentOption" style="position:relative;display:none;align-items:center;gap:12px;padding:14px 52px 14px 16px;border:1px solid #D8DEC9;border-radius:10px;background:#FBFCF7;cursor:pointer;box-sizing:border-box;min-height:68px"><span style="width:34px;height:34px;min-width:34px;border-radius:8px;background:#E3EAD3;display:flex;align-items:center;justify-content:center;color:#104D37;font-size:17px">▣</span><span style="min-width:0"><strong style="display:block;color:#104D37;font-size:15px;line-height:1.2">Cash on Delivery</strong><small style="display:block;color:#667267;font-size:12px;line-height:1.3;margin-top:3px">Pay with cash at your doorstep</small></span><input type="radio" name="paymentMethod" value="cod" onchange="updatePlaceOrderButton()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;margin:0"></label></div><p id="codPaymentHint" class="notice" hidden></p></div><div class="field"><label>Promo code (optional)</label><div style="display:flex;gap:8px"><input id="promoCode" placeholder="Enter promo code" style="flex:1;min-width:0"><button class="btn" type="button" id="applyPromoButton" onclick="applyPromoCode()">Apply</button></div><p id="promoMessage" class="notice" role="status"></p></div><div class="field"><label>Delivery instructions (optional)</label><input name="notes" placeholder="Any special instructions"></div><button class="btn" type="submit" style="width:100%">Place order</button></form><p class="notice">Your order will be saved securely and sent to the kitchen.</p><div class="success" id="success"></div></div></aside></div>
 <script>
-let dishes=[],todaySpecials=[],popularDishes=[],cart=loadSavedCart("guest"),category="All",currentUser=null,authMode="login",menuSearchQuery="",appliedPromo=null,referralInfo=null,cartOwnerKey="guest",deliveryFee=0,deliveryVerifiedAddress="",deliveryAreaAvailable=false,deliveryCheckPending=false,savedAddresses=[],selectedSavedAddress=null,paymentAddressSelectionId=null;let categoryAvailability={Breakfast:{enabled:true,windows:[{start:"08:00",end:"11:00"}]},Snacks:{enabled:true,windows:[{start:"16:00",end:"19:00"}]},"Main Course":{enabled:true,windows:[{start:"11:00",end:"15:00"},{start:"19:00",end:"21:30"}]}},categoryAvailabilityMinute=0,categoryAvailabilityTimer=null;
+let dishes=[],todaySpecials=[],popularDishes=[],cart=loadSavedCart("guest"),category="All",currentUser=null,authMode="login",menuSearchQuery="",appliedPromo=null,referralInfo=null,cartOwnerKey="guest",deliveryFee=0,deliveryVerifiedAddress="",deliveryAreaAvailable=false,deliveryCheckPending=false,savedAddresses=[],selectedSavedAddress=null,paymentAddressSelectionId=null,deliveryCheckSequence=0;let categoryAvailability={Breakfast:{enabled:true,windows:[{start:"08:00",end:"11:00"}]},Snacks:{enabled:true,windows:[{start:"16:00",end:"19:00"}]},"Main Course":{enabled:true,windows:[{start:"11:00",end:"15:00"},{start:"19:00",end:"21:30"}]}},categoryAvailabilityMinute=0,categoryAvailabilityTimer=null;
 function cartStorageKey(owner){return owner==="guest"?"gkk_cart_guest":"gkk_cart_user_"+String(owner).replace(/\D/g,"")}
 function loadSavedCart(owner){try{return JSON.parse(localStorage.getItem(cartStorageKey(owner))|| (owner==="guest"?localStorage.getItem("gkk_cart")||"{}":"{}"))}catch(e){return {}}}
 function persistCart(){try{localStorage.setItem(cartStorageKey(cartOwnerKey),JSON.stringify(cart))}catch(e){}}
@@ -1819,14 +2024,20 @@ function openMenuCategories(trigger){
   menuCategoryAnchorRect=null;
   showPage("menu");
   setMenuCategory(cat);
-  setTimeout(()=>{
-    // Re-measure only after the hidden menu becomes visible; otherwise the sticky
-    // search threshold can be incorrectly calculated as zero.
-    document.dispatchEvent(new Event("gkk:menu-layout-ready"));
-    const heading=[...document.querySelectorAll("#menu .section-head h2")]
-      .find(el=>el.textContent.trim()==="Full Menu");
-    if(heading)heading.closest(".section-head").scrollIntoView({behavior:"smooth",block:"start"});
-  },180);
+  // Let the category filter render first, then pin the sticky bar and center the
+  // selected chip. Do not launch a second page scroll to "Full Menu" afterward.
+  document.dispatchEvent(new Event("gkk:menu-layout-ready"));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const host=document.getElementById("categories");
+    const selected=host?.querySelector('.chip.active');
+    if(host&&selected&&window.matchMedia("(max-width:700px)").matches){
+      const hostRect=host.getBoundingClientRect();
+      const chipRect=selected.getBoundingClientRect();
+      const nextLeft=host.scrollLeft+(chipRect.left-hostRect.left)-(hostRect.width-chipRect.width)/2;
+      host.scrollTo({left:Math.max(0,nextLeft),behavior:"smooth"});
+      host.querySelectorAll(".chip").forEach(chip=>chip.classList.toggle("active",chip.dataset.category===cat));
+    }
+  }));
  });
  overlay.classList.add("show");
  requestAnimationFrame(()=>positionMenuCategoryPopup(menuCategoryAnchorRect));
@@ -1865,6 +2076,8 @@ const money=n=>"₹"+n;
 function titleCase(value){return String(value??"").toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g,(_,sep,letter)=>sep+letter.toUpperCase()).replace(/(\d+)(pcs|ml|kg)\b/gi,(_,n,u)=>n+u.toUpperCase());}
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
+function setPendingPaymentMessage(container,message){if(!container)return;let node=container.querySelector("#checkoutPendingMessage");if(!node){node=document.createElement("p");node.id="checkoutPendingMessage";node.className="notice";node.setAttribute("role","status");node.style.cssText="display:block;margin:12px 0;line-height:1.5";container.appendChild(node)}node.textContent=message}
+function apiWithTimeout(url,options={},timeoutMs=20000){let timeoutId;const timeout=new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(Object.assign(new Error("Payment status is taking longer than expected. Please refresh Order Status before taking another action."),{code:"PAYMENT_CHECK_TIMEOUT"})),timeoutMs)});return Promise.race([api(url,options),timeout]).finally(()=>clearTimeout(timeoutId))}
 async function loadCustomerMenu(){
  await refreshKitchenBanner();
  const [rows,specialRows,breakfastCatalogue,popularRows,imageCatalog,availabilityData]=await Promise.all([
@@ -1944,9 +2157,18 @@ async function loadCustomerMenu(){
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
  renderPopularDishes();
  todaySpecials=specialRows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
+ // Reconcile persisted carts against the latest server menu before checkout.
+ const currentCartDishes=new Map([...dishes,...popularDishes,...todaySpecials].map(d=>[Number(d.id),d]));
+ let removedStaleCartItem=false;
+ Object.keys(cart).forEach(key=>{
+  const parsed=parseCartLineKey(key),dish=currentCartDishes.get(parsed.menuId);
+  if(!dish || !Number.isInteger(Number(cart[key])) || Number(cart[key])<1 || Number(cart[key])>50){delete cart[key];removedStaleCartItem=true;return;}
+  if(parsed.variantId && !(dish.variants||[]).some(v=>Number(v.id)===parsed.variantId)){delete cart[key];removedStaleCartItem=true;}
+ });
  renderCats();
  renderMenu();
  updateCart();
+ if(removedStaleCartItem){const notice=document.getElementById("success");if(notice){notice.textContent="Some saved cart items or options were no longer available and have been removed. Please review your cart before placing the order.";notice.classList.add("show");}}
 }
 function navratriDishCardHTML(d){
   const name=titleCase(d.name),image=d.img||d.fallbackImg||fallbackFoodImage;
@@ -2008,7 +2230,7 @@ async function handlePaymentReturn(){
 }
 async function checkSession(){try{const result=await api("/api/auth/me");currentUser=result.user;switchCartOwner(currentUser.phone)}catch(e){currentUser=null;switchCartOwner("guest")}await renderAccount();activatePasswordResetView();await handlePaymentReturn()}
 async function signOut(){try{await api("/api/auth/logout",{method:"POST",body:"{}"})}catch(e){}currentUser=null;switchCartOwner("guest");await renderAccount()}
-async function renderAccount(){const view=document.getElementById("accountView"),form=document.getElementById("authForm"),toggle=document.getElementById("toggleAuth");if(currentUser){form.style.display="none";toggle.style.display="none";view.innerHTML=`<p style="color:var(--gold2)">You are signed in</p><strong>${escapeHTML(currentUser.name)}</strong><p style="color:var(--muted)">${escapeHTML(currentUser.phone)}<br>${escapeHTML(currentUser.email||"No email saved")}<br>${escapeHTML(currentUser.address||"No saved address")}</p><div id="referralPanel" class="notice" style="margin:16px 0">Loading your referral details…</div><div id="savedAddressManager" style="margin:16px 0"><h3>My Saved Addresses</h3><div id="savedAddressList" class="notice">Loading addresses…</div><button class="btn secondary" type="button" onclick="showAddressEditor()">+ Add New Address</button><form id="savedAddressForm" class="saved-address-form" hidden onsubmit="saveCustomerAddress(event)" style="margin-top:14px"><section class="address-search-section"><div class="address-section-heading"><span class="address-step">1</span><div><strong>Find your location</strong><small>Search for your apartment, building, street or landmark.</small></div></div><div class="field"><label for="addressSearch">Address or landmark</label><div class="address-search-input-wrap"><input id="addressSearch" autocomplete="off" placeholder="e.g. Your apartment or locality..." required><button id="clearAddressSearch" class="address-search-clear" type="button" aria-label="Clear address search" title="Clear search" hidden>×</button></div><div id="addressSuggestions" class="notice address-suggestions" role="listbox"></div><button id="openAddressMap" class="btn secondary" type="button" hidden onclick="openAddressMapPicker()">Can’t find it? Pin your location on the map</button><div id="addressMapPicker" hidden style="margin-top:12px;border:1px solid var(--border,#ddd);border-radius:12px;padding:12px"><label for="addressMapSearch">Search on map</label><input id="addressMapSearch" autocomplete="off" placeholder="Search apartment, business, street or landmark"><div id="addressMapResults" class="notice" role="listbox"></div><p class="notice">Select a result to move the pin, or tap the map to fine-tune its position.</p><div id="addressMapCanvas" style="height:320px;width:100%;border-radius:10px;overflow:hidden"></div><p id="addressMapStatus" class="notice" role="status">Search for a place or tap the map to place a pin.</p><button class="btn" type="button" onclick="confirmAddressMapPin()">Use this location</button><button class="btn ghost" type="button" onclick="closeAddressMapPicker()">Cancel</button></div></div></section><section class="address-details-section"><div class="address-section-heading"><span class="address-step">2</span><div><strong>Delivery details</strong><small>Add your door number and confirm the address details.</small></div></div><div class="address-fields-grid"><div class="field address-field-house"><label>House / Flat / Building <span>(optional)</span></label><input name="house" placeholder="e.g. C-102, 4th Floor"></div><div class="field address-field-label"><label>Save this address as</label><select name="label" required><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field address-field-street"><label>Street / Area</label><input name="street" required placeholder="Street, locality or area"></div><div class="field"><label>City</label><input name="city" required placeholder="City"></div><div class="field"><label>State</label><input name="state" required placeholder="State"></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="6-digit PIN code"></div></div></section><p id="addressFormMessage" class="notice address-form-message" role="status"></p><div class="address-form-actions"><button class="btn" type="submit">Save address</button><button class="btn ghost" type="button" onclick="hideAddressEditor()">Cancel</button></div></form></div><button class="btn ghost" type="button" onclick="document.getElementById('profileEditor').style.display='block'">Edit profile</button> <button class="btn ghost" type="button" onclick="signOut()">Sign out</button> <button class="btn ghost" type="button" onclick="document.getElementById('customerPasswordForm').style.display='block'">Change password</button><form id="customerPasswordForm" style="display:none;margin-top:18px" onsubmit="changeCustomerPassword(event)"><div class="field"><label>Current password</label><input name="currentPassword" type="password" required autocomplete="current-password"></div><div class="field"><label>New password (at least 8 characters)</label><input name="newPassword" type="password" minlength="8" required autocomplete="new-password"></div><div class="field"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password"></div><button class="btn" type="submit">Update password</button><p id="customerPasswordMessage" class="notice" role="status"></p></form><form id="profileEditor" style="display:none;margin-top:18px" onsubmit="saveProfile(event)"><div class="field"><label>Full name</label><input name="name" required maxlength="100" value="${escapeHTML(currentUser.name)}"></div><div class="field" style="margin-top:10px"><label>Phone number (used for sign in)</label><input value="${escapeHTML(currentUser.phone)}" disabled></div><div class="field" style="margin-top:10px"><label>Email</label><input name="email" type="email" value="${escapeHTML(currentUser.email||"")}"></div><div class="actions" style="margin-top:12px"><button class="btn" type="submit">Save changes</button><button class="btn ghost" type="button" onclick="document.getElementById('profileEditor').style.display='none'">Cancel</button></div><p id="profileMessage" class="notice" role="status"></p></form>`;document.getElementById("accountTitle").textContent="Welcome, "+currentUser.name;try{referralInfo=await api("/api/referrals/me");const rp=document.getElementById("referralPanel");if(rp)rp.innerHTML="<strong>Your referral code: "+escapeHTML(referralInfo.referralCode||"")+"</strong><br>Share this code with friends. When a friend signs up with it and completes their first order, you earn a 10% reward up to Rs. 75.<br>Available rewards: "+Number(referralInfo.availableRewards||0)+" · Successful referrals: "+Number(referralInfo.successfulReferrals||0);updateCart()}catch(err){referralInfo=null;const rp=document.getElementById("referralPanel");if(rp)rp.textContent="Referral details are temporarily unavailable."}await loadMyOrders();await loadSavedAddresses()}else{referralInfo=null;form.style.display="block";toggle.style.display="inline-block";view.innerHTML='<p class="notice">Sign in to place an order and view your order history. New here? Choose Create account.</p>';document.getElementById("accountTitle").textContent="Sign in or create an account";document.getElementById("historyResults").innerHTML='<p class="empty">Sign in to see your orders.</p>';setAuthMode(authMode)}}
+async function renderAccount(){const view=document.getElementById("accountView"),form=document.getElementById("authForm"),toggle=document.getElementById("toggleAuth");if(currentUser){form.style.display="none";toggle.style.display="none";view.innerHTML=`<p style="color:var(--gold2)">You are signed in</p><strong>${escapeHTML(currentUser.name)}</strong><p style="color:var(--muted)">${escapeHTML(currentUser.phone)}<br>${escapeHTML(currentUser.email||"No email saved")}<br><span id="profileAddressText">${escapeHTML(currentUser.address||"No saved address")}</span></p><div id="referralPanel" class="notice" style="margin:16px 0">Loading your referral details…</div><div id="savedAddressManager" style="margin:16px 0"><h3>My Saved Addresses</h3><div id="savedAddressList" class="notice">Loading addresses…</div><button class="btn secondary" type="button" onclick="showAddressEditor()">+ Add New Address</button><form id="savedAddressForm" class="saved-address-form" hidden onsubmit="saveCustomerAddress(event)" style="margin-top:14px"><section class="address-search-section"><div class="address-section-heading"><span class="address-step">1</span><div><strong>Find your location</strong><small>Search for your apartment, building, street or landmark.</small></div></div><div class="field"><label for="addressSearch">Address or landmark</label><div class="address-search-input-wrap"><input id="addressSearch" autocomplete="off" placeholder="e.g. Your apartment or locality..." required><button id="clearAddressSearch" class="address-search-clear" type="button" aria-label="Clear address search" title="Clear search" hidden>×</button></div><div id="addressSuggestions" class="notice address-suggestions" role="listbox"></div><button id="openAddressMap" class="btn secondary" type="button" hidden onclick="openAddressMapPicker()">Can’t find it? Pin your location on the map</button><div id="addressMapPicker" hidden style="margin-top:12px;border:1px solid var(--border,#ddd);border-radius:12px;padding:12px"><label for="addressMapSearch">Search on map</label><input id="addressMapSearch" autocomplete="off" placeholder="Search apartment, business, street or landmark"><div id="addressMapResults" class="notice" role="listbox"></div><p class="notice">Select a result to move the pin, or tap the map to fine-tune its position.</p><div id="addressMapCanvas" style="height:320px;width:100%;border-radius:10px;overflow:hidden"></div><p id="addressMapStatus" class="notice" role="status">Search for a place or tap the map to place a pin.</p><button class="btn" type="button" onclick="confirmAddressMapPin()">Use this location</button><button class="btn ghost" type="button" onclick="closeAddressMapPicker()">Cancel</button></div></div></section><section class="address-details-section"><div class="address-section-heading"><span class="address-step">2</span><div><strong>Delivery details</strong><small>Add your door number and confirm the address details.</small></div></div><div class="address-fields-grid"><div class="field address-field-house"><label>House / Flat / Building <span>(optional)</span></label><input name="house" placeholder="e.g. C-102, 4th Floor"></div><div class="field address-field-label"><label>Save this address as</label><select name="label" required><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field address-field-street"><label>Street / Area</label><input name="street" required placeholder="Street, locality or area"></div><div class="field"><label>City</label><input name="city" required placeholder="City"></div><div class="field"><label>State</label><input name="state" required placeholder="State"></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="6-digit PIN code"></div></div></section><p id="addressFormMessage" class="notice address-form-message" role="status"></p><div class="address-form-actions"><button class="btn" type="submit">Save address</button><button class="btn ghost" type="button" onclick="hideAddressEditor()">Cancel</button></div></form></div><button class="btn ghost" type="button" onclick="document.getElementById('profileEditor').style.display='block'">Edit profile</button> <button class="btn ghost" type="button" onclick="signOut()">Sign out</button> <button class="btn ghost" type="button" onclick="document.getElementById('customerPasswordForm').style.display='block'">Change password</button><form id="customerPasswordForm" style="display:none;margin-top:18px" onsubmit="changeCustomerPassword(event)"><div class="field"><label>Current password</label><input name="currentPassword" type="password" required autocomplete="current-password"></div><div class="field"><label>New password (at least 8 characters)</label><input name="newPassword" type="password" minlength="8" required autocomplete="new-password"></div><div class="field"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password"></div><button class="btn" type="submit">Update password</button><p id="customerPasswordMessage" class="notice" role="status"></p></form><form id="profileEditor" style="display:none;margin-top:18px" onsubmit="saveProfile(event)"><div class="field"><label>Full name</label><input name="name" required maxlength="100" value="${escapeHTML(currentUser.name)}"></div><div class="field" style="margin-top:10px"><label>Phone number (used for sign in)</label><input value="${escapeHTML(currentUser.phone)}" disabled></div><div class="field" style="margin-top:10px"><label>Email</label><input name="email" type="email" value="${escapeHTML(currentUser.email||"")}"></div><div class="actions" style="margin-top:12px"><button class="btn" type="submit">Save changes</button><button class="btn ghost" type="button" onclick="document.getElementById('profileEditor').style.display='none'">Cancel</button></div><p id="profileMessage" class="notice" role="status"></p></form>`;document.getElementById("accountTitle").textContent="Welcome, "+currentUser.name;try{referralInfo=await api("/api/referrals/me");const rp=document.getElementById("referralPanel");if(rp)rp.innerHTML="<strong>Your referral code: "+escapeHTML(referralInfo.referralCode||"")+"</strong><br>Share this code with friends. When a friend signs up with it and completes their first order, you earn a 10% reward up to Rs. 75.<br>Available rewards: "+Number(referralInfo.availableRewards||0)+" · Successful referrals: "+Number(referralInfo.successfulReferrals||0);updateCart()}catch(err){referralInfo=null;const rp=document.getElementById("referralPanel");if(rp)rp.textContent="Referral details are temporarily unavailable."}await loadMyOrders();await loadSavedAddresses()}else{referralInfo=null;form.style.display="block";toggle.style.display="inline-block";view.innerHTML='<p class="notice">Sign in to place an order and view your order history. New here? Choose Create account.</p>';document.getElementById("accountTitle").textContent="Sign in or create an account";document.getElementById("historyResults").innerHTML='<p class="empty">Sign in to see your orders.</p>';setAuthMode(authMode)}}
 async function changeCustomerPassword(event){event.preventDefault();const form=event.target,data=Object.fromEntries(new FormData(form)),msg=document.getElementById("customerPasswordMessage");if(data.newPassword!==data.confirmPassword){msg.textContent="New passwords do not match.";return}msg.textContent="Updating password…";try{const result=await api("/api/auth/password/change",{method:"POST",body:JSON.stringify({currentPassword:data.currentPassword,newPassword:data.newPassword})});msg.textContent=result.message||"Password changed successfully.";form.reset()}catch(err){msg.textContent=err.message}}
 async function saveProfile(event){event.preventDefault();const form=event.target,msg=document.getElementById("profileMessage"),data=Object.fromEntries(new FormData(form));msg.textContent="Saving changes…";try{const result=await api("/api/auth/profile",{method:"PATCH",body:JSON.stringify(data)});currentUser=result.user;await renderAccount();const updated=document.getElementById("profileMessage");if(updated)updated.textContent="Profile updated successfully."}catch(err){msg.textContent=err.message}}
 function getPaymentDisplay(order){
@@ -2156,7 +2378,37 @@ function menuItemOrder(items,group){
  });
 }
 function menuGroupOrder(groups){const p=['Breakfast','Main Course','Chinese','Sandwich','Dinner','Snacks','Parathas','Healthy Salads','Sweets & Desserts','Beverages','Extras','Single Plate Meal'];return [...groups].sort((a,b)=>{const x=p.indexOf(a),y=p.indexOf(b);return(x<0?999:x)-(y<0?999:y)||a.localeCompare(b)})}
-function setMenuCategory(value){category=value;renderCats();renderMenu();const active=document.querySelector('#categories .chip.active');if(active&&window.matchMedia('(max-width:700px)').matches)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
+function setMenuCategory(value){
+ category=value;
+ renderCats();
+ renderMenu();
+ const mobile=window.matchMedia('(max-width:700px)').matches;
+ const host=document.getElementById('categories');
+ if(mobile){
+   // Wait for filtering, sticky-bar relocation, and layout to settle before
+   // calculating the target; target the selected category's actual results.
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+     const active=host?.querySelector('.chip.active');
+     if(host&&active){
+       // The category strip can be moved into the sticky search container on mobile.
+       // Use its live geometry instead of offsetLeft, which is unreliable after reparenting.
+       const hostRect=host.getBoundingClientRect();
+       const activeRect=active.getBoundingClientRect();
+       const currentLeft=host.scrollLeft;
+       const desiredLeft=currentLeft+(activeRect.left-hostRect.left)-(hostRect.width-activeRect.width)/2;
+       host.scrollTo({left:Math.max(0,desiredLeft),behavior:'smooth'});
+       host.querySelectorAll('.chip').forEach(chip=>chip.classList.toggle('active',chip.dataset.category===value));
+     }
+     const sections=[...document.querySelectorAll('#menuGrid .menu-category[data-menu-category]')];
+     const targetSection=value==='All'?sections[0]:sections.find(section=>section.dataset.menuCategory===value);
+     if(!targetSection)return;
+     const sticky=document.querySelector('#menu .menu-search-sticky.menu-search-pinned');
+     const offset=sticky?sticky.getBoundingClientRect().height:0;
+     const target=targetSection.getBoundingClientRect().top+window.scrollY-offset-8;
+     window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+   }));
+ }
+}
 function renderCats(){
  const host=document.getElementById("categories");if(!host)return;
  const cats=["All","Breakfast","Main Course","Chinese","Sandwich","Snacks","Parathas","Healthy Salads","Sweets & Desserts","Beverages","Extras","Single Plate Meal"];
@@ -2267,6 +2519,7 @@ function change(id,n,variantId=0,ignoreAvailability=false){
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
 function minimumOrderForAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens")?60:100;}
+function currentCheckoutAddressForMinimum(){const field=document.getElementById("checkoutAddressText");return String(field?.value||"").trim()||String(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");}
 function cartItemSubtotal(){return Object.entries(cart).reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);}
 function updateCart(){
     persistCart();
@@ -2289,17 +2542,17 @@ function updateCart(){
     const promoRow=document.getElementById("promoDiscountRow");promoRow.style.display=discount>0?"flex":"none";
     if(discount>0){document.getElementById("promoDiscountLabel").textContent=appliedPromo?"Promo discount ("+appliedPromo.code+")":(referralInfo?.firstOrderEligible?"First order offer (10% off)":"Referral reward (10% off)");document.getElementById("promoDiscountAmount").textContent="−"+money(discount)}
     document.getElementById("payableTotal").textContent=money(Math.max(0,subtotal-discount)+handlingFee+deliveryFee);
-    const minimumOrder=minimumOrderForAddress(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");const minimumNotice=document.getElementById("minimumOrderNotice");if(minimumNotice)minimumNotice.textContent=selectedSavedAddress?"Minimum order value for this address: Rs. "+minimumOrder+".":"Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).";
+    const minimumOrder=minimumOrderForAddress(currentCheckoutAddressForMinimum());const minimumNotice=document.getElementById("minimumOrderNotice");if(minimumNotice)minimumNotice.textContent=selectedSavedAddress?"Minimum order value for this address: Rs. "+minimumOrder+".":"Minimum order value: Rs. 100 (Rs. 60 for Brigade 7 Gardens).";
     if(appliedPromo){const line=document.getElementById("promoBreakdown");line.innerHTML="<strong>"+escapeHTML(appliedPromo.code)+" applied</strong>"+(appliedPromo.excludedItems.length?"<br>Excluded from discount: "+appliedPromo.excludedItems.map(x=>escapeHTML(x.name)).join(", "):"")}else if(discount>0){const line=document.getElementById("promoBreakdown");if(line)line.textContent=referralInfo?.firstOrderEligible?"Your first-order offer is automatically applied.": "One available referral reward is automatically applied."}
     // Revalidate checkout whenever the basket changes, including quantity decreases.
     updatePlaceOrderButton();
 }
 function openCart(){const checkoutNotice=document.getElementById("success");if(checkoutNotice){checkoutNotice.classList.remove("show");checkoutNotice.replaceChildren();}if(window.matchMedia("(max-width:900px)").matches&&document.body.classList.contains("sidebar-expanded"))toggleSidebar();paymentAddressSelectionId=null;const onlinePayment=document.querySelector('input[name="paymentMethod"][value="online"]');if(onlinePayment)onlinePayment.checked=true;document.getElementById("overlay").classList.add("show");updateCart();if(currentUser){let f=document.getElementById("orderForm");f.elements.name.value=currentUser.name||"";f.elements.phone.value=currentUser.phone||"";loadSavedAddresses();showCheckoutPendingOrder()}}
 function closeCart(){document.getElementById("overlay").classList.remove("show")}
-function confirmBasketRemoval(){if(!Object.values(cart||{}).some(quantity=>Number(quantity)>0)){closeCart();return}if(!confirm("Do you want to remove all items from your basket? Select OK to remove them, or Cancel to keep your items."))return;cart={};appliedPromo=null;persistCart();updateCart();closeCart()}
+function confirmBasketRemoval(){if(!Object.values(cart||{}).some(quantity=>Number(quantity)>0)){closeCart();return}if(!confirm("Remove all items from your basket?"))return;cart={};appliedPromo=null;persistCart();updateCart();closeCart()}
 async function loadSavedAddresses(){
  if(!currentUser){savedAddresses=[];return}
- try{savedAddresses=await api("/api/addresses");renderSavedAddresses();populateCheckoutAddresses();if(!savedAddresses.length&&document.getElementById("savedAddressForm"))showAddressEditor()}catch(e){console.error("Could not load saved addresses",e)}
+ try{savedAddresses=await api("/api/addresses");renderSavedAddresses();populateCheckoutAddresses();const profileAddress=document.getElementById("profileAddressText"),defaultAddress=savedAddresses.find(a=>a.is_default)||savedAddresses[0];if(profileAddress)profileAddress.textContent=defaultAddress?[defaultAddress.house,addressWithoutHousePrefix(defaultAddress.formatted_address,defaultAddress.house)].filter(Boolean).join(", "):(currentUser?.address||"No saved address");if(!savedAddresses.length&&document.getElementById("savedAddressForm"))showAddressEditor()}catch(e){console.error("Could not load saved addresses",e)}
 }
 function addressWithoutHousePrefix(address,house){let value=String(address||"").trim();const h=String(house||"").trim();if(!value||!h)return value;const norm=x=>x.toLowerCase().replace(/[^a-z0-9]/g,"");const target=norm(h);let parts=value.split(",").map(x=>x.trim()).filter(Boolean);while(parts.length){const first=norm(parts[0]);if(first===target||first===norm("flat no "+h)||first===norm("flat "+h)||first===norm("house no "+h)||first===norm("house "+h)||first===norm("plot no "+h)||first===norm("unit "+h)){parts.shift();continue}break}return parts.join(", ")||value}
 function renderSavedAddresses(){
@@ -2330,7 +2583,7 @@ function updatePlaceOrderButton(){
  const button=document.querySelector('#orderForm button[type="submit"]');
  if(!button)return;
  const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||"online";
- const minimumOrder=minimumOrderForAddress(selectedSavedAddress?[selectedSavedAddress.house,selectedSavedAddress.formatted_address].filter(Boolean).join(", "):"");
+ const minimumOrder=minimumOrderForAddress(currentCheckoutAddressForMinimum());
  const disabled=!kitchenIsOpen||!selectedSavedAddress||deliveryCheckPending||!deliveryAreaAvailable||cartItemSubtotal()<minimumOrder;
  button.disabled=disabled;
  button.style.opacity=disabled?".55":"1";
@@ -2338,13 +2591,14 @@ function updatePlaceOrderButton(){
  button.textContent=method==="cod"?"Place order (Cash on Delivery)":"Place order";
 }
 function selectSavedAddress(id){
- const a=savedAddresses.find(x=>x.id===Number(id));selectedSavedAddress=a||null;
+ const a=savedAddresses.find(x=>x.id===Number(id));selectedSavedAddress=a||null;const checkSequence=++deliveryCheckSequence;
  const detail=document.getElementById("checkoutAddressDetails"),address=document.getElementById("checkoutAddressText"),addressId=document.getElementById("checkoutAddressId"),lat=document.getElementById("deliveryLatitude"),lng=document.getElementById("deliveryLongitude"),status=document.getElementById("deliveryLocationStatus");
  deliveryAreaAvailable=false;deliveryCheckPending=Boolean(a);deliveryVerifiedAddress="";deliveryFee=0;updatePlaceOrderButton();
  if(!a){address.value="";addressId.value="";lat.value="";lng.value="";if(detail)detail.textContent="Select a saved address to check delivery availability.";if(status)status.textContent="";updatePaymentMethodOptions();updateCart();return}
- address.value=[a.house,a.formatted_address].filter(Boolean).join(", ");addressId.value=a.id;lat.value=a.latitude;lng.value=a.longitude;updatePaymentMethodOptions();
+ address.value=[a.house,addressWithoutHousePrefix(a.formatted_address,a.house)].filter(Boolean).join(", ");addressId.value=a.id;lat.value=a.latitude;lng.value=a.longitude;updatePaymentMethodOptions();updateCart();
  const check=async()=>{try{
    const result=await api("/api/check-delivery-area",{method:"POST",body:JSON.stringify({address:address.value,latitude:Number(a.latitude),longitude:Number(a.longitude)})});
+   if(checkSequence!==deliveryCheckSequence)return;
    deliveryAreaAvailable=Boolean(result.available);
    deliveryCheckPending=false;
    deliveryFee=deliveryAreaAvailable?(Number(result.deliveryFee)||0):0;
@@ -2354,10 +2608,11 @@ function selectSavedAddress(id){
     if(status)status.textContent="";
     updatePaymentMethodOptions();updatePlaceOrderButton();updateCart();
   }catch(e){
+    if(checkSequence!==deliveryCheckSequence)return;
     deliveryAreaAvailable=false;deliveryCheckPending=false;deliveryVerifiedAddress="";
-    detail.textContent="This address is outside our delivery area.";detail.style.color="#b42318";
+    detail.textContent=e.message||"We could not verify delivery for this address. Please try again.";detail.style.color="#b42318";
    if(status)status.textContent="";
-   updatePlaceOrderButton();
+   updatePlaceOrderButton();updateCart();
  }};
  check();
 }
@@ -2523,17 +2778,26 @@ async function saveCustomerAddress(event){event.preventDefault();const form=even
 async function deleteSavedAddress(id){if(!confirm("Delete this saved address?"))return;try{await api("/api/addresses/"+id,{method:"DELETE",body:"{}"});await loadSavedAddresses()}catch(e){alert(e.message)}}
 async function setDefaultAddress(id){try{await api("/api/addresses/"+id+"/default",{method:"POST",body:"{}"});await loadSavedAddresses()}catch(e){alert(e.message)}}
 let pendingCheckoutRetry=null;
+let pendingPaymentCountdownInterval=null;
 function isSameGkkIstDay(value){const date=new Date(value);if(!Number.isFinite(date.getTime()))return false;const day=d=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);return day(date)===day(new Date());}
 async function showCheckoutPendingOrder(){
+ const host=document.getElementById("basketPendingPayment");if(!host)return;
+ if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}
+ host.style.display="none";host.replaceChildren();
+ pendingCheckoutRetry=null;
  if(!currentUser)return;
- const host=document.getElementById("success");if(!host)return;
  try{
   const orders=await api("/api/orders/mine");
   const order=(orders||[]).find(o=>o.status==="Payment Pending"&&["created","failed","unpaid"].includes(String(o.payment_status||"").toLowerCase())&&isSameGkkIstDay(o.created_at));
-  if(!order)return;
+  if(!order){const remembered=localStorage.getItem("gkk_pending_payment_order_id");if(remembered&&(orders||[]).some(o=>String(o.id)===String(remembered)&&o.status!=="Payment Pending"))localStorage.removeItem("gkk_pending_payment_order_id");return;}
   pendingCheckoutRetry={order,checkoutData:{name:currentUser.name||"",phone:currentUser.phone||"",email:currentUser.email||""},form:document.getElementById("orderForm")};
-  host.innerHTML='<strong> You have an order awaiting payment.</strong><p style="margin:8px 0">Order #GKK-'+String(order.id).padStart(4,"0")+' — '+money(order.total)+'. Continue with this order instead of placing another one.</p><button id="checkoutRetryPendingPayment" class="btn" type="button" style="display:block;width:100%;margin:8px 0">Retry Payment</button><button id="checkoutCancelPendingPayment" class="btn ghost" type="button" style="display:block;width:100%;margin:8px 0">Cancel Pending Order</button><p id="checkoutPendingMessage" class="notice" role="status"></p>';
-  host.classList.add("show");
+  host.innerHTML='<strong>Payment pending for order #GKK-'+String(order.id).padStart(4,"0")+'</strong><p style="margin:8px 0">Retry payment within <strong id="pendingPaymentCountdown">02:00</strong>. If no retry is started, this unpaid order will be cancelled automatically. Your basket items will remain.</p><button id="checkoutRetryPendingPayment" class="btn" type="button" style="display:block;width:100%;margin:8px 0">Retry Payment</button><button id="checkoutCancelPendingPayment" class="btn ghost" type="button" style="display:block;width:100%;margin:8px 0">Cancel Pending Order</button><p id="checkoutPendingMessage" role="status"></p>';
+  host.style.display="block";host.classList.add("show");
+  const timerNode=document.getElementById("pendingPaymentCountdown");
+  let pendingSince=Date.parse(order.payment_pending_since||order.created_at)||Date.now();
+  let checkingExpiry=false,lastExpiryCheck=0;
+  const drawPendingTimer=async()=>{const remaining=Math.max(0,120000-(Date.now()-pendingSince));if(timerNode)timerNode.textContent=String(Math.floor(remaining/60000)).padStart(2,"0")+":"+String(Math.floor((remaining%60000)/1000)).padStart(2,"0");if(remaining===0){const msg=document.getElementById("checkoutPendingMessage");if(msg&&!msg.textContent)msg.textContent="Time expired. We're confirming the payment status; please don't pay again unless the status is confirmed.";if(!checkingExpiry&&Date.now()-lastExpiryCheck>=5000){checkingExpiry=true;lastExpiryCheck=Date.now();try{const latest=await api("/api/orders/mine");const current=(latest||[]).find(o=>Number(o.id)===Number(order.id));if(current?.status==="Cancelled"||(current&&current.status!=="Payment Pending"&&current.payment_status!=="paid")){if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}pendingCheckoutRetry=null;if(localStorage.getItem("gkk_pending_payment_order_id")===String(order.id))localStorage.removeItem("gkk_pending_payment_order_id");host.style.display="none";host.replaceChildren();}else if(current?.payment_status==="paid"){if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}pendingCheckoutRetry=null;host.style.display="none";host.replaceChildren();await loadMyOrders();}else{const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent="Payment status is not confirmed yet. Please don't pay again; check My Orders shortly.";}}catch(e){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent="Payment status is not confirmed yet. Please don't pay again; check My Orders shortly.";}finally{checkingExpiry=false;}}}};
+  drawPendingTimer();pendingPaymentCountdownInterval=setInterval(drawPendingTimer,1000);
   document.getElementById("checkoutRetryPendingPayment").onclick=async function(){
    const b=this,msg=document.getElementById("checkoutPendingMessage");b.disabled=true;b.textContent="Checking payment…";msg.textContent="Checking Razorpay before retrying. Please do not pay again until the status is confirmed.";
    try{
@@ -2542,6 +2806,8 @@ async function showCheckoutPendingOrder(){
     if(status.state==="pending"){msg.textContent="Payment is still processing or cannot be verified. Please wait and check again shortly.";return}
     const retryOrder=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/retry-payment",{method:"POST",body:"{}"});
     if(retryOrder.payment?.method==="already-paid"){msg.textContent="Payment confirmed. This order is already paid.";return}
+    // The server restarts the two-minute window when the retry session is created.
+    pendingSince=Date.now();lastExpiryCheck=0;msg.textContent="You have 2 minutes to complete the retry. The same order is being reused.";
     localStorage.setItem("gkk_pending_payment_order_id",String(order.id));
     const opened=await startRazorpayPayment(retryOrder,pendingCheckoutRetry.checkoutData,pendingCheckoutRetry.form,b);
     if(opened){msg.textContent="Payment flow opened for your existing order."; }
@@ -2550,14 +2816,15 @@ async function showCheckoutPendingOrder(){
   };
   document.getElementById("checkoutCancelPendingPayment").onclick=async function(){
    if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;
-   const b=this,msg=document.getElementById("checkoutPendingMessage");b.disabled=true;b.textContent="Checking payment…";
+   const b=this;b.disabled=true;b.textContent="Checking payment…";setPendingPaymentMessage(host,"Checking Razorpay to confirm this order is unpaid. Please do not place another order while this check is running.");
    try{
-    const result=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
+    await apiWithTimeout("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
     localStorage.removeItem("gkk_pending_payment_order_id");
-    host.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';host.classList.add("show");
     pendingCheckoutRetry=null;
-    await loadMyOrders();
-   }catch(err){msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";b.disabled=false;b.textContent="Cancel Pending Order"}
+    if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}
+    host.style.display="none";host.replaceChildren();
+    await loadMyOrders();closeCart();
+   }catch(err){setPendingPaymentMessage(host,err.message||"The order could not be cancelled safely. Please refresh Order Status.");if(err.code==="PAYMENT_CHECK_TIMEOUT"){b.textContent="Check status in My Orders";b.disabled=true;}else{b.disabled=false;b.textContent="Cancel Pending Order"}}
   };
  }catch(err){console.warn("Could not check pending orders for checkout",err)}
 }
@@ -2581,7 +2848,7 @@ function showPaymentPending(order,checkoutData,form){
   finally{if(check.isConnected){check.disabled=false;check.textContent="Check Payment Status"}}
  };
 }
-function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const status=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/payment-status");if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", p.order.id);return;}if(status.state==="pending"){showPaymentPending(p.order,p.checkoutData,p.form);return;}const retryOrder=await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"});if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);showPaymentPending(p.order,p.checkoutData,p.form)}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";try{await api("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";else alert(err.message||"The order could not be cancelled safely. Please check its status.");cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}
+function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const retryOrder=await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"},15000);if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);showPaymentPending(p.order,p.checkoutData,p.form)}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";setPendingPaymentMessage(success,"Checking Razorpay to confirm this order is unpaid. Please do not place another order while this check is running.");try{await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){setPendingPaymentMessage(success,err.message||"The order could not be cancelled safely. Please refresh Order Status.");if(err.code==="PAYMENT_CHECK_TIMEOUT"){cancel.textContent="Check status in My Orders";cancel.disabled=true;}else{cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}}
 async function startRazorpayPayment(order,checkoutData,form,button){
  const success=document.getElementById("success");
  return new Promise(resolve=>{
@@ -2634,7 +2901,25 @@ async function startRazorpayPayment(order,checkoutData,form,button){
 }
 document.getElementById("orderForm").addEventListener("submit",async e=>{
  e.preventDefault();
- if(pendingCheckoutRetry?.order&&pendingCheckoutRetry.order.status==="Payment Pending"&&isSameGkkIstDay(pendingCheckoutRetry.order.created_at)){const msg=document.getElementById("success");if(msg){msg.textContent="You have a pending order. Use Retry Payment or Cancel Pending Order above before placing another order.";msg.classList.add("show")}return;}
+ if(pendingCheckoutRetry?.order&&pendingCheckoutRetry.order.status==="Payment Pending"&&isSameGkkIstDay(pendingCheckoutRetry.order.created_at)){
+  const pendingId=String(pendingCheckoutRetry.order.id);
+  try{
+   const latestOrders=await api("/api/orders/mine");
+   const latest=(latestOrders||[]).find(o=>String(o.id)===pendingId);
+   if(!latest||latest.status==="Cancelled"||(latest.status!=="Payment Pending"&&latest.payment_status!=="paid")){
+    pendingCheckoutRetry=null;
+    if(localStorage.getItem("gkk_pending_payment_order_id")===pendingId)localStorage.removeItem("gkk_pending_payment_order_id");
+    const pendingHost=document.getElementById("basketPendingPayment");if(pendingHost){pendingHost.style.display="none";pendingHost.replaceChildren();}
+   }else if(latest.payment_status==="paid"){
+    pendingCheckoutRetry=null;localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success",pendingId);return;
+   }else{
+    pendingCheckoutRetry.order=latest;
+    const msg=document.getElementById("success");if(msg){msg.textContent="Your earlier order is still awaiting payment. Please use Retry Payment or Cancel Pending Order before placing another online order.";msg.classList.add("show")}return;
+   }
+  }catch(_){
+   const msg=document.getElementById("success");if(msg){msg.textContent="We’re checking your earlier payment before accepting a new order. Please try again in a few seconds.";msg.classList.add("show")}return;
+  }
+ }
  if(!document.getElementById("checkoutAddressId").value||!document.getElementById("deliveryLatitude").value||!document.getElementById("deliveryLongitude").value||!deliveryAreaAvailable||!deliveryVerifiedAddress){document.getElementById("deliveryLocationStatus").textContent="This address is outside our delivery area.";updatePlaceOrderButton();return}
  if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing an order.";return}
  const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}}),mode=data.orderMode||"now",paymentMethod=data.paymentMethod||"online",button=e.target.querySelector('button[type="submit"]');
@@ -3616,7 +3901,13 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
  const menu=document.getElementById('menu');
  const input=document.getElementById('customerMenuSearch');
  const clear=document.getElementById('clearCustomerMenuSearch');
+ const categories=document.getElementById('categories');
  if(!search||!menu||!input||!clear)return;
+ const categoriesHome=categories?categories.parentNode:null;
+ const categoriesAnchor=categories?categories.nextSibling:null;
+ const categoriesSpacer=document.createElement('div');
+ categoriesSpacer.className='mobile-categories-spacer';
+ if(categories&&categoriesHome)categoriesHome.insertBefore(categoriesSpacer,categories);
  const spacer=document.createElement('div');
  spacer.className='menu-search-spacer';
  spacer.setAttribute('aria-hidden','true');
@@ -3630,6 +3921,12 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    search.classList.remove('menu-search-pinned');
    search.style.left='';search.style.width='';search.style.maxWidth='';
    spacer.style.display='none';spacer.style.height='0px';
+   if(categories&&categoriesHome&&categories.parentNode===search){
+     categories.classList.remove('mobile-pinned-real-categories');
+     if(categoriesAnchor&&categoriesAnchor.parentNode===categoriesHome)categoriesHome.insertBefore(categories,categoriesAnchor);
+     else categoriesHome.appendChild(categories);
+   }
+   categoriesSpacer.style.display='none';
  }
  function update(){
    const active=document.body.dataset.currentPage==='menu'&&menu.classList.contains('active-view');
@@ -3639,9 +3936,17 @@ body.sidebar-expanded .sidebar .logo .pure-veg-badge{display:inline-flex!importa
    if(!shouldPin){unpin();return;}
    if(!pinned){
      spacer.style.display='block';
-     spacer.style.height=(search.offsetHeight+12)+'px';
      pinned=true;
      search.classList.add('menu-search-pinned');
+     if(categories&&window.matchMedia('(max-width:700px)').matches){
+       categoriesSpacer.style.display='block';
+       // Preserve the category row's original document space when moving it
+       // into the fixed search bar; otherwise the page jumps to the wrong section.
+       categoriesSpacer.style.height=categories.offsetHeight+'px';
+       categories.classList.add('mobile-pinned-real-categories');
+       search.insertBefore(categories,search.firstChild);
+     }
+     spacer.style.height=(search.offsetHeight+12)+'px';
    }
    const rect=spacer.getBoundingClientRect();
    search.style.left=Math.max(0,rect.left)+'px';
@@ -4013,6 +4318,10 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     const response = await fetch("/api/firebase-config", {credentials:"same-origin",cache:"no-store"});
     const config = await response.json().catch(()=>({}));
     if (!response.ok) throw new Error(config.error || "Google sign-in is not configured yet.");
+    // Use this app's own origin for Firebase Auth helpers so /__/auth is served
+    // through the first-party reverse proxy on the same host. A separate authDomain
+    // host can trigger cross-site storage restrictions in Safari and other browsers.
+    config.authDomain = window.location.hostname;
     firebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
     return firebaseApp;
   }
@@ -4073,8 +4382,17 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       message.textContent = (error && error.message) || ("Google sign-in could not be completed (" + (code || "unknown error") + "). Please try again.");
     }
   }
-  // Always return to the customer account section after the Google redirect.
+  // Restore the account view before revealing the page after a Google redirect.
+  // Some mobile browsers can resolve getRedirectResult() without a user on the
+  // first pass; never reveal the homepage while a redirect return is pending.
   (async function handleGoogleRedirectResult() {
+    // Reuse the early-page guard as a source of truth. It also detects the
+    // same-origin Firebase helper referrer when the browser drops stored markers.
+    let redirectPending = document.documentElement.classList.contains("google-auth-return-pending");
+    try { if (new URLSearchParams(window.location.search).get("googleAuthReturn") === "1") redirectPending = true; } catch (_) {}
+    try { if (localStorage.getItem("gkkGoogleAuthReturnPending") === "1") redirectPending = true; } catch (_) {}
+    try { if (/(?:^|;\s*)gkkGoogleAuthReturnPending=1(?:;|$)/.test(document.cookie||"")) redirectPending = true; } catch (_) {}
+    try { const ref = new URL(document.referrer); if (ref.origin === window.location.origin && ref.pathname.startsWith("/__/auth/")) redirectPending = true; } catch (_) {}
     try {
       const app = await getFirebaseApp();
       const result = await app.auth().getRedirectResult();
@@ -4083,10 +4401,24 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
         showPage("account");
         const token = await result.user.getIdToken(true);
         await finishGoogleSignIn(token, "");
+      } else if (redirectPending) {
+        showPage("account");
+        message.textContent = "If Google sign-in did not complete, please try again.";
       }
     } catch (error) {
       showPage("account");
       showFirebaseError(error);
+    } finally {
+      document.documentElement.classList.remove("google-auth-return-pending");
+      try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
+      try { document.cookie = "gkkGoogleAuthReturnPending=; Path=/; Max-Age=0; SameSite=Lax; Secure"; } catch (_) {}
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("googleAuthReturn")) {
+          url.searchParams.delete("googleAuthReturn");
+          history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+        }
+      } catch (_) {}
     }
   })();
   button.addEventListener("click", async function(){
@@ -4097,8 +4429,22 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       const app = await getFirebaseApp();
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
+      // Put the pending state in the return URL itself. The browser must restore this
+      // marker before the app's normal homepage markup can be shown after Google returns.
+      try {
+        const returnUrl = new URL(window.location.href);
+        returnUrl.searchParams.set("googleAuthReturn", "1");
+        history.replaceState(history.state, "", returnUrl.pathname + returnUrl.search + returnUrl.hash);
+      } catch (_) {}
+      document.documentElement.classList.add("google-auth-return-pending");
+      try { localStorage.setItem("gkkGoogleAuthReturnPending","1"); } catch (_) {}
+      // A first-party Lax cookie survives the top-level Google redirect more reliably
+      // than Web Storage in some iOS Safari/private-browsing configurations.
+      try { document.cookie = "gkkGoogleAuthReturnPending=1; Path=/; Max-Age=300; SameSite=Lax; Secure"; } catch (_) {}
       await app.auth().signInWithRedirect(provider);
     } catch(error) {
+      document.documentElement.classList.remove("google-auth-return-pending");
+      try { localStorage.removeItem("gkkGoogleAuthReturnPending"); } catch (_) {}
       showFirebaseError(error);
       button.disabled = false;
     }
