@@ -1702,7 +1702,7 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
   for(const attempt of attempts.rows){
     try{
-      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment check timed out")),10000))]);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment check timed out")),8000))]);
       for(const payment of (Array.isArray(response?.items)?response.items:[])){
         if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
         if(payment.status==="captured"||payment.captured===true){
@@ -1714,7 +1714,7 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
       }
     }catch(error){
       console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
-      return res.status(409).json({error:"We could not confirm the payment status. Your order remains pending; please try again shortly."});
+      return res.status(409).json({error:"Razorpay is taking too long to confirm payment status. Your order remains pending and was not cancelled; please try again shortly."});
     }
   }
   if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This pending payment is from a previous IST calendar day and can no longer be cancelled from checkout. Please place a new order; check Order Status for updates."});
