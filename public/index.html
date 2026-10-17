@@ -2784,18 +2784,19 @@ async function showCheckoutPendingOrder(){
  const host=document.getElementById("basketPendingPayment");if(!host)return;
  if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}
  host.style.display="none";host.replaceChildren();
+ pendingCheckoutRetry=null;
  if(!currentUser)return;
  try{
   const orders=await api("/api/orders/mine");
   const order=(orders||[]).find(o=>o.status==="Payment Pending"&&["created","failed","unpaid"].includes(String(o.payment_status||"").toLowerCase())&&isSameGkkIstDay(o.created_at));
-  if(!order)return;
+  if(!order){const remembered=localStorage.getItem("gkk_pending_payment_order_id");if(remembered&&(orders||[]).some(o=>String(o.id)===String(remembered)&&o.status!=="Payment Pending"))localStorage.removeItem("gkk_pending_payment_order_id");return;}
   pendingCheckoutRetry={order,checkoutData:{name:currentUser.name||"",phone:currentUser.phone||"",email:currentUser.email||""},form:document.getElementById("orderForm")};
   host.innerHTML='<strong>Payment pending for order #GKK-'+String(order.id).padStart(4,"0")+'</strong><p style="margin:8px 0">Retry payment within <strong id="pendingPaymentCountdown">02:00</strong>. If no retry is started, this unpaid order will be cancelled automatically. Your basket items will remain.</p><button id="checkoutRetryPendingPayment" class="btn" type="button" style="display:block;width:100%;margin:8px 0">Retry Payment</button><button id="checkoutCancelPendingPayment" class="btn ghost" type="button" style="display:block;width:100%;margin:8px 0">Cancel Pending Order</button><p id="checkoutPendingMessage" role="status"></p>';
   host.style.display="block";host.classList.add("show");
   const timerNode=document.getElementById("pendingPaymentCountdown");
   let pendingSince=Date.parse(order.payment_pending_since||order.created_at)||Date.now();
   let checkingExpiry=false,lastExpiryCheck=0;
-  const drawPendingTimer=async()=>{const remaining=Math.max(0,120000-(Date.now()-pendingSince));if(timerNode)timerNode.textContent=String(Math.floor(remaining/60000)).padStart(2,"0")+":"+String(Math.floor((remaining%60000)/1000)).padStart(2,"0");if(remaining===0){const msg=document.getElementById("checkoutPendingMessage");if(msg&&!msg.textContent)msg.textContent="Time expired. We're confirming the payment status; please don't pay again unless the status is confirmed.";if(!checkingExpiry&&Date.now()-lastExpiryCheck>=5000){checkingExpiry=true;lastExpiryCheck=Date.now();try{const latest=await api("/api/orders/mine");const current=(latest||[]).find(o=>Number(o.id)===Number(order.id));if(current?.status==="Cancelled"){if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}host.style.display="none";host.replaceChildren();closeCart();}else if(current?.payment_status==="paid"){if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}host.style.display="none";host.replaceChildren();await loadMyOrders();}else{const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent="Payment status is not confirmed yet. Please don't pay again; check My Orders shortly.";}}catch(e){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent="Payment status is not confirmed yet. Please don't pay again; check My Orders shortly.";}finally{checkingExpiry=false;}}}};
+  const drawPendingTimer=async()=>{const remaining=Math.max(0,120000-(Date.now()-pendingSince));if(timerNode)timerNode.textContent=String(Math.floor(remaining/60000)).padStart(2,"0")+":"+String(Math.floor((remaining%60000)/1000)).padStart(2,"0");if(remaining===0){const msg=document.getElementById("checkoutPendingMessage");if(msg&&!msg.textContent)msg.textContent="Time expired. We're confirming the payment status; please don't pay again unless the status is confirmed.";if(!checkingExpiry&&Date.now()-lastExpiryCheck>=5000){checkingExpiry=true;lastExpiryCheck=Date.now();try{const latest=await api("/api/orders/mine");const current=(latest||[]).find(o=>Number(o.id)===Number(order.id));if(current?.status==="Cancelled"||(current&&current.status!=="Payment Pending"&&current.payment_status!=="paid")){if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}pendingCheckoutRetry=null;if(localStorage.getItem("gkk_pending_payment_order_id")===String(order.id))localStorage.removeItem("gkk_pending_payment_order_id");host.style.display="none";host.replaceChildren();}else if(current?.payment_status==="paid"){if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}pendingCheckoutRetry=null;host.style.display="none";host.replaceChildren();await loadMyOrders();}else{const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent="Payment status is not confirmed yet. Please don't pay again; check My Orders shortly.";}}catch(e){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent="Payment status is not confirmed yet. Please don't pay again; check My Orders shortly.";}finally{checkingExpiry=false;}}}};
   drawPendingTimer();pendingPaymentCountdownInterval=setInterval(drawPendingTimer,1000);
   document.getElementById("checkoutRetryPendingPayment").onclick=async function(){
    const b=this,msg=document.getElementById("checkoutPendingMessage");b.disabled=true;b.textContent="Checking payment…";msg.textContent="Checking Razorpay before retrying. Please do not pay again until the status is confirmed.";
@@ -2900,7 +2901,25 @@ async function startRazorpayPayment(order,checkoutData,form,button){
 }
 document.getElementById("orderForm").addEventListener("submit",async e=>{
  e.preventDefault();
- if(pendingCheckoutRetry?.order&&pendingCheckoutRetry.order.status==="Payment Pending"&&isSameGkkIstDay(pendingCheckoutRetry.order.created_at)){const msg=document.getElementById("success");if(msg){msg.textContent="You have a pending order. Use Retry Payment or Cancel Pending Order above before placing another order.";msg.classList.add("show")}return;}
+ if(pendingCheckoutRetry?.order&&pendingCheckoutRetry.order.status==="Payment Pending"&&isSameGkkIstDay(pendingCheckoutRetry.order.created_at)){
+  const pendingId=String(pendingCheckoutRetry.order.id);
+  try{
+   const latestOrders=await api("/api/orders/mine");
+   const latest=(latestOrders||[]).find(o=>String(o.id)===pendingId);
+   if(!latest||latest.status==="Cancelled"||(latest.status!=="Payment Pending"&&latest.payment_status!=="paid")){
+    pendingCheckoutRetry=null;
+    if(localStorage.getItem("gkk_pending_payment_order_id")===pendingId)localStorage.removeItem("gkk_pending_payment_order_id");
+    const pendingHost=document.getElementById("basketPendingPayment");if(pendingHost){pendingHost.style.display="none";pendingHost.replaceChildren();}
+   }else if(latest.payment_status==="paid"){
+    pendingCheckoutRetry=null;localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success",pendingId);return;
+   }else{
+    pendingCheckoutRetry.order=latest;
+    const msg=document.getElementById("success");if(msg){msg.textContent="Your earlier order is still awaiting payment. Please use Retry Payment or Cancel Pending Order before placing another online order.";msg.classList.add("show")}return;
+   }
+  }catch(_){
+   const msg=document.getElementById("success");if(msg){msg.textContent="We’re checking your earlier payment before accepting a new order. Please try again in a few seconds.";msg.classList.add("show")}return;
+  }
+ }
  if(!document.getElementById("checkoutAddressId").value||!document.getElementById("deliveryLatitude").value||!document.getElementById("deliveryLongitude").value||!deliveryAreaAvailable||!deliveryVerifiedAddress){document.getElementById("deliveryLocationStatus").textContent="This address is outside our delivery area.";updatePlaceOrderButton();return}
  if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing an order.";return}
  const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}}),mode=data.orderMode||"now",paymentMethod=data.paymentMethod||"online",button=e.target.querySelector('button[type="submit"]');
