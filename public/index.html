@@ -1959,6 +1959,10 @@ async function loadCustomerMenu(){
  renderCats();
  renderMenu();
  updateCart();
+ if(removedStaleCartItem){
+  const notice=document.getElementById("success");
+  if(notice){notice.textContent="Some saved cart items or options were no longer available and have been removed. Please review your cart before placing the order.";notice.classList.add("show");}
+ }
 }
 function navratriDishCardHTML(d){
   const name=titleCase(d.name),image=d.img||d.fallbackImg||fallbackFoodImage;
