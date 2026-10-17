@@ -1412,7 +1412,7 @@ async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinati
  const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
 }
 function isKitchenSocietyAddress(address){const s=String(address||"").toLowerCase();return s.includes("brigade 7 gardens")&&(/560061/.test(s)||s.includes("bharath housing society"));}
-function isCodEligibleAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens");}
+function isCodEligibleAddress(address){const value=String(address||"").toLowerCase();return value.includes("brigade 7 gardens")||/\bsy\s*37\s*\/\s*1\b/i.test(value);}
 function calculateDeliveryFee(distanceKm,address){if(isKitchenSocietyAddress(address))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=12?100:0;}
 function deliveryDistanceForAddress(address){return isKitchenSocietyAddress(address)?{distanceKm:0,distanceType:"same-society"}:null;}
 
@@ -1498,7 +1498,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const normalizedPaymentMethod=String(paymentMethod||"online").trim().toLowerCase();
   if(!["online","cod"].includes(normalizedPaymentMethod))return res.status(400).json({error:"Please choose a valid payment method."});
   const isCod=normalizedPaymentMethod==="cod";
-  if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for addresses containing Brigade 7 Gardens."});
+  if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for eligible Brigade 7 Gardens addresses (including Sy 37/1)."});
   if(!isCod&&!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
   const handlingFee=(subtotal < 250 ? 5 : Math.round(subtotal*0.02));
    const total=Number(subtotal-discount+handlingFee+deliveryFee);
