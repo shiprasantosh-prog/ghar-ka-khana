@@ -413,6 +413,8 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee INTEGER NOT NULL DEFAULT 0");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS handling_fee INTEGER NOT NULL DEFAULT 5");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'");
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_pending_since TIMESTAMPTZ");
+  await pool.query("UPDATE orders SET payment_pending_since = CURRENT_TIMESTAMP WHERE status = 'Payment Pending' AND payment_pending_since IS NULL");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT");
   await pool.query("CREATE TABLE IF NOT EXISTS razorpay_payment_attempts (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_order_id TEXT NOT NULL UNIQUE, razorpay_payment_id TEXT, status TEXT NOT NULL DEFAULT 'created', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
@@ -547,6 +549,21 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE customer_addresses ALTER COLUMN latitude DROP NOT NULL");
   await pool.query("ALTER TABLE customer_addresses ALTER COLUMN longitude DROP NOT NULL");
   await pool.query("CREATE INDEX IF NOT EXISTS customer_addresses_user_idx ON customer_addresses(user_id)");
+  // Repair previously geocoded society addresses only when the saved coordinates
+  // fall within the configured 300 m society grace area. Keep the original street
+  // details, but restore the canonical society name used by COD/minimum-order rules.
+  await pool.query(`UPDATE customer_addresses
+    SET formatted_address = CASE
+      WHEN LOWER(formatted_address) LIKE '%brigade 7 gardens%' THEN formatted_address
+      ELSE 'Brigade 7 Gardens, ' || formatted_address
+    END
+    WHERE LOWER(CONCAT_WS(' ', house, street, formatted_address)) LIKE '%sy 37/1%'
+      AND latitude IS NOT NULL AND longitude IS NOT NULL
+      AND 6371000 * 2 * ASIN(SQRT(
+        POWER(SIN(RADIANS(latitude - 12.89627) / 2), 2) +
+        COS(RADIANS(12.89627)) * COS(RADIANS(latitude)) *
+        POWER(SIN(RADIANS(longitude - 77.528264) / 2), 2)
+      )) <= 300`);
 
   // Create owner account if it does not exist
   if (process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD) {
@@ -1496,14 +1513,14 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const normalizedPaymentMethod=String(paymentMethod||"online").trim().toLowerCase();
   if(!["online","cod"].includes(normalizedPaymentMethod))return res.status(400).json({error:"Please choose a valid payment method."});
   const isCod=normalizedPaymentMethod==="cod";
-  if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for addresses containing Brigade 7 Gardens."});
+  if(isCod&&!isCodEligibleAddress(address))return res.status(400).json({error:"Cash on Delivery is available only for eligible Brigade 7 Gardens addresses (including Sy 37/1)."});
   if(!isCod&&!razorpay)return res.status(503).json({error:"Online payment is not configured yet. Please try again shortly."});
   const handlingFee=(subtotal < 250 ? 5 : Math.round(subtotal*0.02));
    const total=Number(subtotal-discount+handlingFee+deliveryFee);
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
-    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,handling_fee,payment_status,discount_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,handlingFee,isCod?"cod":"created",discountSource]);
+    const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,handling_fee,payment_status,discount_source,payment_pending_since) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CASE WHEN $5 = 'Payment Pending' THEN CURRENT_TIMESTAMP ELSE NULL END) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,handlingFee,isCod?"cod":"created",discountSource]);
     orderId=result.rows[0].id;
     if(discountSource==="referral_reward"){const reserved=await client.query("UPDATE referral_rewards SET status='reserved',reserved_order_id=$1 WHERE id=(SELECT id FROM referral_rewards WHERE referrer_user_id=$2 AND status='available' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id",[orderId,req.user.id]);if(!reserved.rowCount)throw new Error("Your referral reward was just used elsewhere. Please refresh checkout and try again.");}
     for(const item of validated)await client.query("INSERT INTO order_items(order_id,menu_id,item_name,unit_price,quantity,variant_label) VALUES($1,$2,$3,$4,$5,$6)",[orderId,item.id,item.name,item.price,item.quantity,item.variantLabel||""]);
@@ -1647,7 +1664,7 @@ app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
   let hasInFlight=false, hasFailed=false, hadLookupError=false, reconciledOrder=null;
   for(const attempt of attempts.rows){
     try{
-      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment status check timed out")),10000))]);
       const payments=Array.isArray(response?.items)?response.items:[];
       if(!payments.length)hasFailed=true;
       for(const payment of payments){
@@ -1685,7 +1702,7 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
   for(const attempt of attempts.rows){
     try{
-      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment check timed out")),8000))]);
       for(const payment of (Array.isArray(response?.items)?response.items:[])){
         if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
         if(payment.status==="captured"||payment.captured===true){
@@ -1697,7 +1714,7 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
       }
     }catch(error){
       console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
-      return res.status(409).json({error:"We could not confirm the payment status. Your order remains pending; please try again shortly."});
+      return res.status(409).json({error:"Razorpay is taking too long to confirm payment status. Your order remains pending and was not cancelled; please try again shortly."});
     }
   }
   if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This pending payment is from a previous IST calendar day and can no longer be cancelled from checkout. Please place a new order; check Order Status for updates."});
@@ -1722,7 +1739,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
   for(const attempt of attempts.rows){
     try{
-      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay retry verification timed out")),10000))]);
       const payments=Array.isArray(response?.items)?response.items:[];
       for(const payment of payments){
         if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
@@ -1745,7 +1762,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   let rpOrderId=String(row.razorpay_order_id||attempts.rows[0]?.razorpay_order_id||"");
   let rpOrder;
   if(rpOrderId){
-    try{rpOrder=await razorpay.orders.fetch(rpOrderId);}
+    try{rpOrder=await Promise.race([razorpay.orders.fetch(rpOrderId),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay order lookup timed out")),10000))]);}
     catch(error){return res.status(409).json({error:"The existing payment session could not be checked. Please check payment status before retrying."});}
   }else{
     rpOrder=await razorpay.orders.create({amount:Number(row.total)*100,currency:"INR",receipt:"GKK-"+String(orderId),notes:{ghar_ka_khana_order_id:String(orderId)}});
@@ -1753,6 +1770,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
     await pool.query("INSERT INTO razorpay_payment_attempts(order_id,razorpay_order_id,status) VALUES($1,$2,'created') ON CONFLICT(razorpay_order_id) DO NOTHING",[orderId,rpOrderId]);
     await pool.query("UPDATE orders SET razorpay_order_id=$1,payment_status='created',status='Payment Pending' WHERE id=$2 AND payment_status<>'paid'",[rpOrderId,orderId]);
   }
+  await pool.query("UPDATE orders SET payment_pending_since=CURRENT_TIMESTAMP WHERE id=$1 AND status='Payment Pending' AND payment_status<>'paid'",[orderId]);
   const order=await readOrder(orderId);
   return res.status(200).json({...order,payment:{keyId:process.env.RAZORPAY_KEY_ID,orderId:rpOrderId,amount:Number(row.total)*100,currency:"INR"}});
 }));app.post("/api/payments/verify", auth, asyncRoute(async (req,res)=>{
@@ -3089,11 +3107,57 @@ app.use((err, req, res, next) => {
   res.status(status>=400&&status<600?status:500).json({ error: status>=400&&status<500||status===502||status===503 ? err.message : "Something went wrong. Please try again." });
 });
 
+
+let pendingPaymentSweepRunning = false;
+async function sweepExpiredPendingPayments() {
+  if (pendingPaymentSweepRunning || !razorpay) return;
+  pendingPaymentSweepRunning = true;
+  try {
+    const pending = await pool.query(`SELECT id,
+        (payment_pending_since <= NOW() - INTERVAL '2 minutes') AS expired
+      FROM orders WHERE status='Payment Pending'
+        AND payment_status IN ('created','failed','unpaid')
+        AND payment_pending_since IS NOT NULL
+      ORDER BY payment_pending_since ASC LIMIT 25`);
+    for (const candidate of pending.rows) {
+      const orderId = Number(candidate.id);
+      try {
+        const attempts = await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
+        let captured=false, unsafe=false;
+        for (const attempt of attempts.rows) {
+          const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+          for (const payment of (Array.isArray(response?.items)?response.items:[])) {
+            if(String(payment.order_id||"")!==String(attempt.razorpay_order_id)) continue;
+            const state=String(payment.status||"").toLowerCase();
+            if(state==="captured"||payment.captured===true) {
+              await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+              captured=true;break;
+            }
+            if(["authorized","created","pending"].includes(state)) unsafe=true;
+          }
+          if(captured) break;
+        }
+        if(captured||unsafe||!candidate.expired) continue;
+        const cancelled=await pool.query(`UPDATE orders SET status='Cancelled',payment_status='failed',
+          cancellation_reason='Automatically cancelled after two minutes without payment retry'
+          WHERE id=$1 AND status='Payment Pending' AND payment_status IN ('created','failed','unpaid')
+          AND payment_pending_since <= NOW() - INTERVAL '2 minutes' RETURNING id`,[orderId]);
+        if(cancelled.rowCount) await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status<>'paid'",[orderId]);
+      } catch(error) {
+        console.warn("[Pending payment expiry] Order remains pending because payment could not be verified:",{orderId,message:error.message});
+      }
+    }
+  } catch(error) { console.error("[Pending payment expiry] Sweep failed:",error.message); }
+  finally { pendingPaymentSweepRunning=false; }
+}
+
 // Start server only after database is ready
 initializeDatabase()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Ghar ka Khana running on port ${PORT}`);
+      setInterval(sweepExpiredPendingPayments, 15000);
+      sweepExpiredPendingPayments().catch(error => console.error("[Pending payment expiry] Initial sweep failed:", error.message));
     });
   })
   .catch((err) => {
