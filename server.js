@@ -3246,10 +3246,15 @@ async function sweepExpiredPendingPayments() {
   if (pendingPaymentSweepRunning || !razorpay) return;
   pendingPaymentSweepRunning = true;
   try {
-    const stale = await pool.query(`SELECT id FROM orders WHERE status='Payment Pending'
-      AND payment_status IN ('created','failed','unpaid') AND payment_pending_since IS NOT NULL
-      AND payment_pending_since <= NOW() - INTERVAL '2 minutes' ORDER BY payment_pending_since ASC LIMIT 25`);
-    for (const candidate of stale.rows) {
+    // Verify every pending online order during the visible two-minute window,
+    // then expire only orders whose deadline has passed and whose payment is safe to cancel.
+    const pending = await pool.query(`SELECT id,
+        (payment_pending_since <= NOW() - INTERVAL '2 minutes') AS expired
+      FROM orders WHERE status='Payment Pending'
+        AND payment_status IN ('created','failed','unpaid')
+        AND payment_pending_since IS NOT NULL
+      ORDER BY payment_pending_since ASC LIMIT 25`);
+    for (const candidate of pending.rows) {
       const orderId = Number(candidate.id);
       try {
         const attempts = await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
@@ -3264,12 +3269,12 @@ async function sweepExpiredPendingPayments() {
           }
           if(captured)break;
         }
-        if(captured||unsafe)continue;
-        await pool.query(`UPDATE orders SET status='Cancelled',payment_status='failed',
+        if(captured||unsafe||!candidate.expired)continue;
+        const cancelled = await pool.query(`UPDATE orders SET status='Cancelled',payment_status='failed',
           cancellation_reason='Automatically cancelled after two minutes without payment retry'
           WHERE id=$1 AND status='Payment Pending' AND payment_status IN ('created','failed','unpaid')
-          AND payment_pending_since <= NOW() - INTERVAL '2 minutes'`,[orderId]);
-        await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status<>'paid'",[orderId]);
+          AND payment_pending_since <= NOW() - INTERVAL '2 minutes' RETURNING id`,[orderId]);
+        if(cancelled.rowCount)await pool.query("UPDATE razorpay_payment_attempts SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status<>'paid'",[orderId]);
       } catch(error) {
         console.warn("[Pending payment expiry] Order remains pending because payment could not be verified:",{orderId,message:error.message});
       }
