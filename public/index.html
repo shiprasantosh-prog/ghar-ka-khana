@@ -1943,6 +1943,19 @@ async function loadCustomerMenu(){
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
  renderPopularDishes();
  todaySpecials=specialRows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
+ // Reconcile persisted carts against the latest server menu before checkout.
+ // This prevents stale menu/variant IDs from being submitted from a regular mobile browser.
+ const currentCartDishes=new Map([...dishes,...popularDishes,...todaySpecials].map(d=>[Number(d.id),d]));
+ let removedStaleCartItem=false;
+ Object.keys(cart).forEach(key=>{
+  const parsed=parseCartLineKey(key),dish=currentCartDishes.get(parsed.menuId);
+  if(!dish || !Number.isInteger(Number(cart[key])) || Number(cart[key])<1 || Number(cart[key])>50){
+   delete cart[key];removedStaleCartItem=true;return;
+  }
+  if(parsed.variantId && !(dish.variants||[]).some(v=>Number(v.id)===parsed.variantId)){
+   delete cart[key];removedStaleCartItem=true;
+  }
+ });
  renderCats();
  renderMenu();
  updateCart();
