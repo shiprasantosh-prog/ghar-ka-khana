@@ -549,6 +549,21 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE customer_addresses ALTER COLUMN latitude DROP NOT NULL");
   await pool.query("ALTER TABLE customer_addresses ALTER COLUMN longitude DROP NOT NULL");
   await pool.query("CREATE INDEX IF NOT EXISTS customer_addresses_user_idx ON customer_addresses(user_id)");
+  // Repair previously geocoded society addresses only when the saved coordinates
+  // fall within the configured 300 m society grace area. Keep the original street
+  // details, but restore the canonical society name used by COD/minimum-order rules.
+  await pool.query(`UPDATE customer_addresses
+    SET formatted_address = CASE
+      WHEN LOWER(formatted_address) LIKE '%brigade 7 gardens%' THEN formatted_address
+      ELSE 'Brigade 7 Gardens, ' || formatted_address
+    END
+    WHERE LOWER(CONCAT_WS(' ', house, street, formatted_address)) LIKE '%sy 37/1%'
+      AND latitude IS NOT NULL AND longitude IS NOT NULL
+      AND 6371000 * 2 * ASIN(SQRT(
+        POWER(SIN(RADIANS(latitude - 12.89627) / 2), 2) +
+        COS(RADIANS(12.89627)) * COS(RADIANS(latitude)) *
+        POWER(SIN(RADIANS(longitude - 77.528264) / 2), 2)
+      )) <= 300`);
 
   // Create owner account if it does not exist
   if (process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD) {
@@ -1412,7 +1427,7 @@ async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinati
  const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
 }
 function isKitchenSocietyAddress(address){const s=String(address||"").toLowerCase();return s.includes("brigade 7 gardens")&&(/560061/.test(s)||s.includes("bharath housing society"));}
-function isCodEligibleAddress(address){const value=String(address||"").toLowerCase();return value.includes("brigade 7 gardens")||/\bsy\s*37\s*\/\s*1\b/i.test(value);}
+function isCodEligibleAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens");}
 function calculateDeliveryFee(distanceKm,address){if(isKitchenSocietyAddress(address))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=12?100:0;}
 function deliveryDistanceForAddress(address){return isKitchenSocietyAddress(address)?{distanceKm:0,distanceType:"same-society"}:null;}
 
@@ -1724,7 +1739,7 @@ app.post("/api/orders/:id/retry-payment", auth, asyncRoute(async (req,res)=>{
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
   for(const attempt of attempts.rows){
     try{
-      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay retry verification timed out")),10000))]);
       const payments=Array.isArray(response?.items)?response.items:[];
       for(const payment of payments){
         if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
