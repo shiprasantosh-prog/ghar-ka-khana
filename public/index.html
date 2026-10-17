@@ -2266,7 +2266,7 @@ function change(id,n,variantId=0,ignoreAvailability=false){
     const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&n>0&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
-function minimumOrderForAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens")?60:100;}
+function minimumOrderForAddress(address){const value=String(address||"").toLowerCase();return value.includes("brigade 7 gardens")||/\bsy\s*37\s*\/\s*1\b/i.test(value)?60:100;}
 function cartItemSubtotal(){return Object.entries(cart).reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);}
 function updateCart(){
     persistCart();
@@ -2316,7 +2316,7 @@ function updatePaymentMethodOptions(){
  const addressText=String(selectedSavedAddress?.formatted_address||"").trim().toLowerCase();
  const houseText=String(selectedSavedAddress?.house||"").trim().toLowerCase();
  const fullAddress=(houseText+" "+addressText).replace(/\s+/g," ");
- const eligible=/\bbrigade\s+7\s+gardens\b/i.test(fullAddress);
+ const eligible=/\bbrigade\s+7\s+gardens\b/i.test(fullAddress)||/\bsy\s*37\s*\/\s*1\b/i.test(fullAddress);
  const option=document.getElementById("codPaymentOption"),hint=document.getElementById("codPaymentHint"),cod=document.querySelector('input[name="paymentMethod"][value="cod"]'),online=document.querySelector('input[name="paymentMethod"][value="online"]'),onlineLabel=online?.closest("label");
  if(option)option.style.display=eligible?"flex":"none";
  if(onlineLabel)onlineLabel.style.display="flex";
