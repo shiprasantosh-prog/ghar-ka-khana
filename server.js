@@ -370,6 +370,31 @@ async function initializeDatabase() {
       END IF;
     END $gkk_variants$;
   `);
+  // Offer Maida/Wheat dough choices for the two Single Plate Meal items.
+  // Both choices inherit the current menu price; this adds no price change.
+  await pool.query(`
+    DO $gkk_flour_choices$
+    DECLARE item_row RECORD;
+    BEGIN
+      FOR item_row IN
+        SELECT id, price
+        FROM menu
+        WHERE (LOWER(TRIM(name)) LIKE 'chole bhature%'
+            OR (LOWER(TRIM(name)) LIKE 'chole kulche%' AND LOWER(TRIM(name)) LIKE '%plain%'))
+          AND (variant_parent_id IS NULL OR variant_parent_id = id)
+      LOOP
+        INSERT INTO menu_variants(menu_id, variant_label, price, available)
+          VALUES(item_row.id, 'Maida', item_row.price, TRUE)
+          ON CONFLICT(menu_id, variant_label) DO UPDATE
+            SET price=EXCLUDED.price, available=TRUE;
+        INSERT INTO menu_variants(menu_id, variant_label, price, available)
+          VALUES(item_row.id, 'Wheat', item_row.price, TRUE)
+          ON CONFLICT(menu_id, variant_label) DO UPDATE
+            SET price=EXCLUDED.price, available=TRUE;
+        UPDATE menu SET available=TRUE WHERE id=item_row.id;
+      END LOOP;
+    END $gkk_flour_choices$;
+  `);
   // Add cancellation reason to existing orders without affecting order history.
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT ''");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_delivery_minutes INTEGER");
