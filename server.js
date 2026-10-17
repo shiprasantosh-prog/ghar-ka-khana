@@ -443,7 +443,7 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS handling_fee INTEGER NOT NULL DEFAULT 5");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_pending_since TIMESTAMPTZ");
-  await pool.query("UPDATE orders SET payment_pending_since = created_at WHERE status = 'Payment Pending' AND payment_pending_since IS NULL");
+  await pool.query("UPDATE orders SET payment_pending_since = CURRENT_TIMESTAMP WHERE status = 'Payment Pending' AND payment_pending_since IS NULL");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT");
   await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT");
   await pool.query("CREATE TABLE IF NOT EXISTS razorpay_payment_attempts (id SERIAL PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, razorpay_order_id TEXT NOT NULL UNIQUE, razorpay_payment_id TEXT, status TEXT NOT NULL DEFAULT 'created', created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)");
