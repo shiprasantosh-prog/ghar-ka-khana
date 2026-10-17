@@ -1649,7 +1649,7 @@ app.get("/api/orders/:id/payment-status", auth, asyncRoute(async (req,res)=>{
   let hasInFlight=false, hasFailed=false, hadLookupError=false, reconciledOrder=null;
   for(const attempt of attempts.rows){
     try{
-      const response=await razorpay.orders.fetchPayments(attempt.razorpay_order_id);
+      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment status check timed out")),10000))]);
       const payments=Array.isArray(response?.items)?response.items:[];
       if(!payments.length)hasFailed=true;
       for(const payment of payments){
