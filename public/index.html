@@ -2064,15 +2064,15 @@ function getPaymentDisplay(order){
 }
 function formatOrderDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?"Date unavailable":date.toLocaleString();}
 async function retryOrderPayment(orderId,button){
- const original=button.textContent;button.disabled=true;button.textContent="Opening payment…";
+ const original=button.textContent;let paymentCheckTimedOut=false;button.disabled=true;button.textContent="Opening payment…";
  const message=document.getElementById("success");
  try{
   const order=await apiWithTimeout("/api/orders/"+Number(orderId)+"/retry-payment",{method:"POST",body:"{}"},20000);
   const checkoutData={name:currentUser?.name||"",email:currentUser?.email||"",phone:currentUser?.phone||""};
   const ok=await startRazorpayPayment(order,checkoutData,document.getElementById("orderForm"),button);
   if(!ok){await loadMyOrders();}
- }catch(err){if(message){message.textContent=err.message;message.classList.add("show")}await loadMyOrders();}
- finally{button.disabled=false;button.textContent=original}
+ }catch(err){if(err.code==="PAYMENT_CHECK_TIMEOUT"){paymentCheckTimedOut=true;if(message){message.textContent="Payment status took too long to confirm. Please refresh My Orders and check the existing order before retrying. Do not pay again yet.";message.classList.add("show")}}else if(message){message.textContent=err.message;message.classList.add("show")}await loadMyOrders();}
+ finally{if(paymentCheckTimedOut){button.disabled=true;button.textContent="Check status in My Orders"}else{button.disabled=false;button.textContent=original}}
 }
 async function refreshMyOrders(){const button=document.getElementById("refreshMyOrdersButton");if(!button)return;const original=button.textContent;button.disabled=true;button.textContent="Refreshing…";try{await loadMyOrders()}finally{button.disabled=false;button.textContent=original}}
 async function loadMyOrders(){const host=document.getElementById("historyResults");try{const orders=await api("/api/orders/mine");host.innerHTML=orders.length?orders.map(o=>`<div class="order-history-card"><div class="order-history-main"><div><strong>Order #GKK-${String(o.id).padStart(4,"0")}</strong><p class="order-history-meta">${escapeHTML(o.address)}<br>${formatOrderDate(o.created_at)}</p><div class="order-payment-summary"><div><span>Order Status</span><strong>${escapeHTML(o.status||"Unknown")}</strong></div><div><span>Payment Method</span><strong>${getPaymentDisplay(o).methodLabel}</strong></div><div><span>Payment Status</span><strong class="payment-state ${getPaymentDisplay(o).tone}">${getPaymentDisplay(o).statusLabel}</strong></div>${getPaymentDisplay(o).amountLabel?`<div><span>${getPaymentDisplay(o).amountCaption}</span><strong>${getPaymentDisplay(o).amountLabel}</strong></div>`:""}${getPaymentDisplay(o).amountDueLabel?`<div><span>${getPaymentDisplay(o).amountDueCaption}</span><strong>${getPaymentDisplay(o).amountDueLabel}</strong></div>`:""}</div>${o.estimated_delivery_minutes?`<p class="notice"><strong>Estimated delivery:</strong> ${Number(o.estimated_delivery_minutes)} minutes</p>`:""}</div><div class="order-history-total"><strong>${money(o.total)}</strong><div class="order-history-actions"><button class="btn ghost" type="button" onclick="viewOrder(${Number(o.id)})">View Order</button><button class="btn" type="button" onclick="downloadOrderReceipt(${Number(o.id)})">Download Receipt</button>${o.status==="Payment Pending"&&["created","failed","unpaid"].includes(String(o.payment_status||"").toLowerCase())?`<button class="btn" type="button" onclick="retryOrderPayment(${Number(o.id)},this)">Retry Payment</button>`:""}</div></div></div>${o.status==="Delivered"&&!o.reviewed? `<form onsubmit="submitOrderReview(event,${o.id})" style="margin-top:12px"><label style="display:block;color:var(--muted);margin-bottom:6px">Rate your order</label><select name="rating" required style="background:#211e18;color:var(--cream);padding:10px;border:1px solid #665334;border-radius:6px"><option value="">Choose stars</option><option value="5">★★★★★ Excellent</option><option value="4">★★★★ Very good</option><option value="3">★★★ Good</option><option value="2">★★ Could be better</option><option value="1">★ Poor</option></select><textarea name="comment" maxlength="1000" placeholder="Tell us about your experience (optional)" style="display:block;width:100%;margin:8px 0;background:#211e18;color:var(--cream);padding:10px;border:1px solid #665334;border-radius:6px"></textarea><button class="btn" type="submit">Submit review</button><span class="notice" data-review-message></span></form>`:(o.reviewed?'<p class="notice">Review submitted. Thank you!</p>':'')}</div>`).join(""):'<p class="empty">You have not placed any orders yet.</p>'}catch(err){host.innerHTML=`<p class="empty">${escapeHTML(err.message)}`}}
@@ -2571,7 +2571,7 @@ async function showCheckoutPendingOrder(){
   host.innerHTML='<strong> You have an order awaiting payment.</strong><p style="margin:8px 0">Order #GKK-'+String(order.id).padStart(4,"0")+' — '+money(order.total)+'. Continue with this order instead of placing another one.</p><button id="checkoutRetryPendingPayment" class="btn" type="button" style="display:block;width:100%;margin:8px 0">Retry Payment</button><button id="checkoutCancelPendingPayment" class="btn ghost" type="button" style="display:block;width:100%;margin:8px 0">Cancel Pending Order</button><p id="checkoutPendingMessage" class="notice" role="status"></p>';
   host.classList.add("show");
   document.getElementById("checkoutRetryPendingPayment").onclick=async function(){
-   const b=this,msg=document.getElementById("checkoutPendingMessage");b.disabled=true;b.textContent="Checking payment…";msg.textContent="Checking Razorpay before retrying. Please do not pay again until the status is confirmed.";
+   const b=this,msg=document.getElementById("checkoutPendingMessage");let paymentCheckTimedOut=false;b.disabled=true;b.textContent="Checking payment…";msg.textContent="Checking Razorpay before retrying. Please do not pay again until the status is confirmed.";
    try{
     const status=await apiWithTimeout("/api/orders/"+encodeURIComponent(String(order.id))+"/payment-status",{},20000);
     if(status.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");msg.textContent="Payment confirmed. This order is already paid.";await loadMyOrders();return}
@@ -2581,8 +2581,8 @@ async function showCheckoutPendingOrder(){
     localStorage.setItem("gkk_pending_payment_order_id",String(order.id));
     const opened=await startRazorpayPayment(retryOrder,pendingCheckoutRetry.checkoutData,pendingCheckoutRetry.form,b);
     if(opened){msg.textContent="Payment flow opened for your existing order."; }
-   }catch(err){msg.textContent=err.message||"Could not safely retry payment. Please check Order Status."}
-   finally{b.disabled=false;b.textContent="Retry Payment"}
+   }catch(err){if(err.code==="PAYMENT_CHECK_TIMEOUT"){paymentCheckTimedOut=true;msg.textContent="Payment status took too long to confirm. Please check My Orders before taking another action. Do not pay again yet."}else{msg.textContent=err.message||"Could not safely retry payment. Please check Order Status."}}
+   finally{if(paymentCheckTimedOut){b.disabled=true;b.textContent="Check status in My Orders"}else{b.disabled=false;b.textContent="Retry Payment"}}
   };
   document.getElementById("checkoutCancelPendingPayment").onclick=async function(){
    if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;
