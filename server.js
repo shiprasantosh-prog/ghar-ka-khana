@@ -981,8 +981,8 @@ function removeDuplicateHouseComponents(formattedAddress, house) {
   const houseValue = String(house || "").trim();
   if (!value || !houseValue) return value;
   const normalize = text => String(text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const houseKey = normalize(houseValue);
   const componentKey = text => normalize(text).replace(/^(flatno|flat|houseno|house|plotno|plot|unitno|unit)/, "");
+  const houseKey = componentKey(houseValue);
   const parts = value.split(",").map(part => part.trim()).filter(Boolean);
   const kept = parts.filter(part => {
     const key = componentKey(part);
