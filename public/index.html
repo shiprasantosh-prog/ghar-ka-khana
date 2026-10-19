@@ -1875,7 +1875,7 @@ async function loadCustomerMenu(){
  await refreshKitchenBanner();
  const [rows,specialRows,breakfastCatalogue,popularRows,imageCatalog,availabilityData]=await Promise.all([
   api('/api/menu'),
-  api('/api/specials'),
+  api('/api/specials').catch(error=>{console.warn('Daily specials could not load independently:',error);return []}),
   fetch('/menu-descriptions/breakfast.json').then(r=>r.ok?r.json():null).catch(()=>null),
   api('/api/popular-menu').catch(()=>[]),
   api('/api/menu-images',{cache:'no-store'}).catch(()=>({})),
@@ -1944,7 +1944,12 @@ async function loadCustomerMenu(){
   const category=menuGroup(d);
   const categoryImage=findCategoryImage(d.name,category);
   const fallback=d.image_url||fallbackFoodImage;
-  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:categoryImage||fallback,fallbackImg:fallback,tag:'Kitchen special'};
+  // Prefer owner-uploaded database images; static catalogue matching is only a fallback.
+  const resolvedImage=d.image_url||categoryImage||fallbackFoodImage;
+  // If a database-uploaded image is truncated or otherwise invalid in staging,
+  // fall back to the category catalogue instead of repeating the broken URL.
+  const fallbackImage=categoryImage||fallbackFoodImage;
+  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:resolvedImage,fallbackImg:fallbackImage,tag:'Kitchen special'};
  };
  dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
@@ -1965,13 +1970,15 @@ function renderPopularDishes(){
   const host=document.getElementById('popularGrid');if(!host)return;
   const desired=['sabudana khichdi','sabudana tikki','kuttu ki puri and sabji','puri sabji','rice kheer'];
   const norm=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  // Match production behavior: only dishes explicitly selected and saved in
+  // the owner dashboard (popular_menu) appear in Navratri Vrat Specials.
   const available=popularDishes.slice();
   const ordered=desired.map(target=>{
     const key=norm(target);
     return available.find(d=>{const n=norm(d.name);return n===key||(key==='kuttukipuriandsabji'&&n.includes('kuttukipuri')&&n.includes('sabji'))||(key==='purisabji'&&n.includes('purisabji')&&!n.includes('kuttu'))||(key==='ricekheer'&&n.includes('ricekheer'));});
   }).filter(Boolean);
-  const chosen=ordered.length===5?[...ordered,...popularDishes.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):popularDishes.slice(0,6);
-  host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please check back for the festive menu.</p>';
+  const chosen=ordered.length===5?[...ordered,...available.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):available.slice(0,6);
+  host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please select dishes in the owner dashboard and save them to publish the festive menu.</p>';
 }
 
 function setAuthMode(mode){authMode=mode;const f=document.getElementById("authForm"),reg=mode==="register";f.elements.name.parentElement.style.display=reg?"block":"none";f.elements.email.parentElement.style.display=reg?"block":"none";const signupAddressFields=document.getElementById("signupAddressFields");signupAddressFields.hidden=!reg;signupAddressFields.style.display=reg?"block":"none";signupAddressFields.querySelectorAll("input,select,textarea").forEach(field=>{field.disabled=!reg;if(field.name==="house"||field.name==="street"||field.name==="city"||field.name==="state"||field.name==="pincode")field.required=reg});document.getElementById("referralSignupField").hidden=!reg;document.getElementById("referralSignupField").style.display=reg?"block":"none";document.getElementById("authSubmit").textContent=reg?"Create account":"Sign in";document.getElementById("toggleAuth").textContent=reg?"I already have an account":"Create account";document.getElementById("showForgotPassword").style.display=reg?"none":"inline-block";document.getElementById("accountTitle").textContent=reg?"Create your account":"Sign in to your account";f.elements.password.autocomplete=reg?"new-password":"current-password";f.elements.password.minLength=reg?8:0;f.elements.password.removeAttribute("minlength");if(reg)f.elements.password.setAttribute("minlength","8")}
@@ -2190,7 +2197,12 @@ function updateCategoryAvailabilityUI(){
 }
 let categoryAvailabilityRefreshInFlight=false;
 async function refreshCategoryAvailability(){if(categoryAvailabilityRefreshInFlight)return;categoryAvailabilityRefreshInFlight=true;try{const data=await api("/api/category-availability",{cache:"no-store"});if(data?.schedules){categoryAvailability=data.schedules;categoryAvailabilityMinute=Number(data.minuteOfDay)||0;updateCategoryAvailabilityUI()}}catch(e){}finally{categoryAvailabilityRefreshInFlight=false}}
-function startCategoryAvailabilityRefresh(){if(categoryAvailabilityTimer)return;categoryAvailabilityTimer=setInterval(refreshCategoryAvailability,30000)}
+function startCategoryAvailabilityRefresh(){
+ if(categoryAvailabilityTimer)return;
+ // Avoid polling while the customer has this tab in the background.
+ categoryAvailabilityTimer=setInterval(()=>{if(!document.hidden)refreshCategoryAvailability()},60000);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshCategoryAvailability()});
+}
 function quantityControlHTML(d,ignoreAvailability=false){
     const group=timedCategoryForDish(d),available=ignoreAvailability||!group||isTimedCategoryAvailable(group),windowText=group?categoryWindowText(group):"";
     const disabledLabel=group?(categoryAvailability[group]?.enabled===false?"Unavailable":"Available "+windowText):"Unavailable";

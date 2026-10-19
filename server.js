@@ -140,16 +140,29 @@ function menuImagePath(name, category) {
   return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory])+"/"+encodeURIComponent(best.file) : "";
 }
 function publicMenuImageUrl(row) {
-  const staticImage = menuImagePath(row.name, row.category);
-  if (staticImage) return staticImage;
   const storedImage = typeof row.image === "string" ? row.image : "";
-  if (storedImage.startsWith("data:image/")) return "/api/menu/" + encodeURIComponent(row.id) + "/image";
+  // An owner-uploaded image is authoritative: don't let a fuzzy static catalogue
+  // match silently replace it with a different dish photo.
+  if (row.has_database_image === true || storedImage.startsWith("data:image/")) {
+    return "/api/menu/" + encodeURIComponent(row.id) + "/image";
+  }
   if (/^(https?:\/\/|\/)/i.test(storedImage)) return storedImage;
-  return "";
+  return menuImagePath(row.name, row.category);
 }
 function publicMenuRow(row) {
-  const { image, ...safeRow } = row;
-  return { ...safeRow, image_url: publicMenuImageUrl(row) };
+  const { image, has_database_image, ...safeRow } = row;
+  return { ...safeRow, image_url: publicMenuImageUrl({ ...row, image, has_database_image }) };
+}
+
+// Log only public menu response size and row count to compare transfer before/after optimisation.
+function sendMeasuredMenuJson(req, res, rows) {
+  const body = JSON.stringify(rows);
+  console.info("[menu-api]", JSON.stringify({
+    path: req.path,
+    rows: Array.isArray(rows) ? rows.length : null,
+    responseBytes: Buffer.byteLength(body)
+  }));
+  res.type("application/json").send(body);
 }
 
 app.get("/api/menu-images", (req, res) => {
@@ -929,11 +942,13 @@ async function attachMenuVariants(rows) {
 // Customer favourites: top five dishes by quantity ordered, excluding cancelled orders.
 app.get("/api/popular-menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available
+    `SELECT m.id, m.name, m.description, m.category, m.price,
+            CASE WHEN substring(m.image from 1 for 11) = 'data:image/' THEN NULL ELSE m.image END AS image,
+            (substring(m.image from 1 for 11) = 'data:image/') AS has_database_image, m.available
      FROM popular_menu p JOIN menu m ON m.id = p.menu_id
      WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
-  res.json(await attachMenuVariants(result.rows.map(publicMenuRow)));
+  sendMeasuredMenuJson(req, res, await attachMenuVariants(result.rows.map(publicMenuRow)));
 }));
 
 app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
@@ -1019,10 +1034,11 @@ app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
   if (typeof image !== "string" || !image.startsWith("data:image/")) {
     return res.status(404).end();
   }
-  const match = image.match(/^data:(image\/(?:webp|jpeg|png|gif));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  const match = image.match(/^data:(image\/(?:webp|jpe?g|png|gif|avif|bmp|x-icon|vnd\.microsoft\.icon|svg\+xml));base64,([A-Za-z0-9+/=\r\n]+)$/i);
   if (!match) return res.status(404).end();
   const body = Buffer.from(match[2], "base64");
-  res.set("Content-Type", match[1].toLowerCase());
+  const contentType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
+  res.set("Content-Type", contentType);
   res.set("Content-Length", String(body.length));
   res.set("Cache-Control", "public, max-age=300");
   res.send(body);
@@ -1030,13 +1046,15 @@ app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
 
 app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT id, name, description, category, price, image, available
+    `SELECT id, name, description, category, price,
+            CASE WHEN substring(image from 1 for 11) = 'data:image/' THEN NULL ELSE image END AS image,
+            (substring(image from 1 for 11) = 'data:image/') AS has_database_image, available
      FROM menu
      WHERE available = TRUE AND variant_parent_id IS NULL
      ORDER BY category, name`
   );
   const rows = result.rows.map(publicMenuRow);
-  res.json(await attachMenuVariants(rows));
+  sendMeasuredMenuJson(req, res, await attachMenuVariants(rows));
 }));
 
 // Owner menu
@@ -1059,7 +1077,9 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
   }
 
   const result = await pool.query(
-    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available
+    `SELECT m.id, m.name, m.description, m.category, m.price,
+            CASE WHEN substring(m.image from 1 for 11) = 'data:image/' THEN NULL ELSE m.image END AS image,
+            (substring(m.image from 1 for 11) = 'data:image/') AS has_database_image, m.available
      FROM daily_specials ds
      JOIN menu m ON m.id = ds.menu_id
      WHERE ds.special_date = COALESCE(
@@ -1071,7 +1091,7 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
     [requestedDate || null]
   );
 
-  res.json(result.rows.map(publicMenuRow));
+  sendMeasuredMenuJson(req, res, result.rows.map(publicMenuRow));
 }));
 
 // Get saved specials for the owner
@@ -1700,21 +1720,33 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
   if(row.status!=="Payment Pending")return res.status(409).json({error:"Only payment-pending orders can be cancelled here."});
   if(!razorpay)return res.status(503).json({error:"Payment status cannot be verified right now. Please try again shortly."});
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
-  for(const attempt of attempts.rows){
-    try{
-      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment check timed out")),8000))]);
-      for(const payment of (Array.isArray(response?.items)?response.items:[])){
-        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
-        if(payment.status==="captured"||payment.captured===true){
-          await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
-          return res.status(409).json({error:"Payment was captured. We updated your order; please refresh Order Status."});
-        }
-        if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
-          return res.status(409).json({error:"A payment is still processing. We cannot cancel safely yet. Please check again shortly."});
+  // Check all retry attempts concurrently so cancellation latency is bounded by one
+  // Razorpay round-trip, not the sum of every historical retry attempt.
+  let checkedAttempts=[];
+  try{
+    checkedAttempts=await Promise.all(attempts.rows.map(async attempt=>{
+      let timeout;
+      try{
+        const response=await Promise.race([
+          razorpay.orders.fetchPayments(attempt.razorpay_order_id),
+          new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("Razorpay payment check timed out")),8000);})
+        ]);
+        return {attempt,payments:Array.isArray(response?.items)?response.items:[]};
+      }finally{if(timeout)clearTimeout(timeout);}
+    }));
+  }catch(error){
+    console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
+    return res.status(409).json({error:"Razorpay is taking too long to confirm payment status. Your order remains pending and was not cancelled; please try again shortly."});
+  }
+  for(const {attempt,payments} of checkedAttempts){
+    for(const payment of payments){
+      if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+      if(payment.status==="captured"||payment.captured===true){
+        await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+        return res.status(409).json({error:"Payment was captured. We updated your order; please refresh Order Status."});
       }
-    }catch(error){
-      console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
-      return res.status(409).json({error:"Razorpay is taking too long to confirm payment status. Your order remains pending and was not cancelled; please try again shortly."});
+      if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
+        return res.status(409).json({error:"A payment is still processing. We cannot cancel safely yet. Please check again shortly."});
     }
   }
   if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This pending payment is from a previous IST calendar day and can no longer be cancelled from checkout. Please place a new order; check Order Status for updates."});
@@ -3156,6 +3188,8 @@ initializeDatabase()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Ghar ka Khana running on port ${PORT}`);
+      // Preserve the previously tested 15-second cleanup cadence; cancellation
+      // itself is handled by the explicit customer endpoint above.
       setInterval(sweepExpiredPendingPayments, 15000);
       sweepExpiredPendingPayments().catch(error => console.error("[Pending payment expiry] Initial sweep failed:", error.message));
     });
