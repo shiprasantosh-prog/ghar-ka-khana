@@ -4123,7 +4123,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   // Always return to the customer account section after the Google redirect.
   (async function handleGoogleRedirectResult() {
     const redirectPending = (()=>{try{return sessionStorage.getItem("gkk_google_redirect_pending")==="1"}catch(_){return false}})();
-    if(redirectPending)showPage("account");
+    if(redirectPending){showPage("account");message.textContent="Finishing Google sign-in…";}
     try {
       const app = await getFirebaseApp();
       const result = await app.auth().getRedirectResult();
