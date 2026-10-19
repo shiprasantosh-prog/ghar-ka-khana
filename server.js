@@ -1644,10 +1644,28 @@ app.delete("/api/menu/:id", auth, admin, asyncRoute(async (req, res) => {
 }));
 
 async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinationLng){
- const apiKey=process.env.GOOGLE_MAPS_SERVER_API_KEY;if(!apiKey){const e=new Error("Driving-distance service is not configured. Please contact the kitchen.");e.status=503;throw e;}
- const response=await fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",headers:{"Content-Type":"application/json","X-Goog-Api-Key":apiKey,"X-Goog-FieldMask":"routes.distanceMeters"},body:JSON.stringify({origin:{location:{latLng:{latitude:Number(originLat),longitude:Number(originLng)}}},destination:{location:{latLng:{latitude:Number(destinationLat),longitude:Number(destinationLng)}}},travelMode:"DRIVE",routingPreference:"TRAFFIC_UNAWARE",units:"METRIC"}),signal:AbortSignal.timeout(12000)});
- if(!response.ok){console.error("[routes] Google Routes API HTTP",response.status,(await response.text().catch(()=>"")).slice(0,500));const e=new Error("We could not calculate the driving distance right now. Please try again.");e.status=502;throw e;}
- const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
+ const apiKey=process.env.GOOGLE_MAPS_SERVER_API_KEY;
+ if(!apiKey){const e=new Error("Driving-distance service is not configured. Please contact the kitchen.");e.status=503;throw e;}
+ const requestBody=JSON.stringify({origin:{location:{latLng:{latitude:Number(originLat),longitude:Number(originLng)}}},destination:{location:{latLng:{latitude:Number(destinationLat),longitude:Number(destinationLng)}}},travelMode:"DRIVE",routingPreference:"TRAFFIC_UNAWARE",units:"METRIC"});
+ let response,lastErrorText="";
+ for(let attempt=1;attempt<=2;attempt++){
+  try{
+   response=await fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",headers:{"Content-Type":"application/json","X-Goog-Api-Key":apiKey,"X-Goog-FieldMask":"routes.distanceMeters"},body:requestBody,signal:AbortSignal.timeout(20000)});
+   if(response.ok)break;
+   lastErrorText=(await response.text().catch(()=>"")).slice(0,500);
+   const retryable=response.status===429||response.status===500||response.status===502||response.status===503||response.status===504;
+   console.error("[routes] Google Routes API HTTP",response.status,{attempt,detail:lastErrorText});
+   if(!retryable||attempt===2){const e=new Error("We could not calculate the driving distance right now. Please try again.");e.status=502;throw e;}
+  }catch(error){
+   if(error.status)throw error;
+   console.error("[routes] Google Routes API request failed",{attempt,name:error?.name||"Error",message:String(error?.message||"")});
+   if(attempt===2){const e=new Error("Google Maps could not calculate the driving route in time. Please try again.");e.status=502;throw e;}
+  }
+  await new Promise(resolve=>setTimeout(resolve,350));
+ }
+ const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);
+ if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}
+ return meters/1000;
 }
 function isKitchenSocietyAddress(address){const s=String(address||"").toLowerCase();return s.includes("brigade 7 gardens")&&(/560061/.test(s)||s.includes("bharath housing society"));}
 function isCodEligibleAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens");}
