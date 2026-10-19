@@ -154,6 +154,17 @@ function publicMenuRow(row) {
   return { ...safeRow, image_url: publicMenuImageUrl({ ...row, image, has_database_image }) };
 }
 
+// Log only public menu response size and row count to compare transfer before/after optimisation.
+function sendMeasuredMenuJson(req, res, rows) {
+  const body = JSON.stringify(rows);
+  console.info("[menu-api]", JSON.stringify({
+    path: req.path,
+    rows: Array.isArray(rows) ? rows.length : null,
+    responseBytes: Buffer.byteLength(body)
+  }));
+  res.type("application/json").send(body);
+}
+
 app.get("/api/menu-images", (req, res) => {
   const result={}; for(const category of Object.keys(MENU_IMAGE_FOLDERS)) result[category]=getMenuImageCandidates(category);
   res.set("Cache-Control","no-store"); res.json(result);
@@ -932,12 +943,12 @@ async function attachMenuVariants(rows) {
 app.get("/api/popular-menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT m.id, m.name, m.description, m.category, m.price,
-            CASE WHEN m.image LIKE 'data:image/%' THEN NULL ELSE m.image END AS image,
-            (m.image LIKE 'data:image/%') AS has_database_image, m.available
+            CASE WHEN substring(m.image from 1 for 11) = 'data:image/' THEN NULL ELSE m.image END AS image,
+            (substring(m.image from 1 for 11) = 'data:image/') AS has_database_image, m.available
      FROM popular_menu p JOIN menu m ON m.id = p.menu_id
      WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
-  res.json(await attachMenuVariants(result.rows.map(publicMenuRow)));
+  sendMeasuredMenuJson(req, res, await attachMenuVariants(result.rows.map(publicMenuRow)));
 }));
 
 app.get("/api/admin/popular", auth, admin, asyncRoute(async (req, res) => {
@@ -1035,14 +1046,14 @@ app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
 app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT id, name, description, category, price,
-            CASE WHEN image LIKE 'data:image/%' THEN NULL ELSE image END AS image,
-            (image LIKE 'data:image/%') AS has_database_image, available
+            CASE WHEN substring(image from 1 for 11) = 'data:image/' THEN NULL ELSE image END AS image,
+            (substring(image from 1 for 11) = 'data:image/') AS has_database_image, available
      FROM menu
      WHERE available = TRUE AND variant_parent_id IS NULL
      ORDER BY category, name`
   );
   const rows = result.rows.map(publicMenuRow);
-  res.json(await attachMenuVariants(rows));
+  sendMeasuredMenuJson(req, res, await attachMenuVariants(rows));
 }));
 
 // Owner menu
@@ -1066,8 +1077,8 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
 
   const result = await pool.query(
     `SELECT m.id, m.name, m.description, m.category, m.price,
-            CASE WHEN m.image LIKE 'data:image/%' THEN NULL ELSE m.image END AS image,
-            (m.image LIKE 'data:image/%') AS has_database_image, m.available
+            CASE WHEN substring(m.image from 1 for 11) = 'data:image/' THEN NULL ELSE m.image END AS image,
+            (substring(m.image from 1 for 11) = 'data:image/') AS has_database_image, m.available
      FROM daily_specials ds
      JOIN menu m ON m.id = ds.menu_id
      WHERE ds.special_date = COALESCE(
@@ -1079,7 +1090,7 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
     [requestedDate || null]
   );
 
-  res.json(result.rows.map(publicMenuRow));
+  sendMeasuredMenuJson(req, res, result.rows.map(publicMenuRow));
 }));
 
 // Get saved specials for the owner
