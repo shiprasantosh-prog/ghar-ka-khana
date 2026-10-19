@@ -1043,7 +1043,7 @@ function ensureBrigadeGardensAddress(formattedAddress, latitude, longitude) {
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(12.89627)) * Math.cos(toRadians(lat)) * Math.sin(dLng / 2) ** 2;
   const distanceMeters = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   if (distanceMeters > 300) return value;
-  if (/\\bbrigade\\s*7\\s*gardens\\b/i.test(value)) return value;
+  if (/\bbrigade\s*7\s*gardens\b/i.test(value)) return value;
   return "Brigade 7 Gardens, " + value;
 }
 
