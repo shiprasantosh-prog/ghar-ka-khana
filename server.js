@@ -705,6 +705,12 @@ app.get("/api/firebase-config", (req, res) => {
 
 const googleAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false });
 app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
+  const diagnosticId = /^[a-zA-Z0-9-]{1,64}$/.test(String(req.get("X-GKK-Auth-Diagnostic-Id") || "")) ? String(req.get("X-GKK-Auth-Diagnostic-Id")) : crypto.randomBytes(8).toString("hex");
+  const diagnosticStarted = Date.now();
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED === "true") {
+    res.set("X-GKK-Auth-Diagnostic-Id", diagnosticId);
+    res.on("finish", () => console.info("[GKK auth diagnostic]", JSON.stringify({ event: "google_login_request", diagnosticId, status: res.statusCode, durationMs: Date.now() - diagnosticStarted, at: new Date().toISOString() })));
+  }
   if (!firebaseAdminReady) return res.status(503).json({ error: "Google sign-in is not configured on this staging server yet." });
   const idToken = String(req.body?.idToken || "");
   const phone = String(req.body?.phone || "").trim();
