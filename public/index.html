@@ -2533,9 +2533,10 @@ document.addEventListener("click",e=>{
  const searchedText=String(searchInput?.value||"").trim();
  const brigadeQuery=/\bbrigade\s*7\s*gardens\b/i.test(searchedText);
  const hasBrigade=/\bbrigade\s*7\s*gardens\b/i.test(formattedAddress)||/\bbrigade\s*7\s*gardens\b/i.test(placeName);
+ const formattedHasPlaceName=!!placeName&&formattedAddress.toLocaleLowerCase().includes(placeName.toLocaleLowerCase());
  const selectedAddress=brigadeQuery&&!hasBrigade
   ? ["Brigade 7 Gardens",formattedAddress||placeName||button.textContent.trim()].filter(Boolean).join(", ")
-  : (hasBrigade&&!/\bbrigade\s*7\s*gardens\b/i.test(formattedAddress)
+  : ((placeName&&!formattedHasPlaceName)|| (hasBrigade&&!/\bbrigade\s*7\s*gardens\b/i.test(formattedAddress))
     ? [placeName,formattedAddress].filter(Boolean).join(", ")
     : (formattedAddress||placeName||button.textContent.trim()));
  form.dataset.selectedLat=String(lat);form.dataset.selectedLng=String(lng);form.dataset.selectedPostcode=String(p.postcode||"").replace(/\D/g,"");form.dataset.selectedCountry=String(p.country||"");form.dataset.selectedFormatted=selectedAddress;
