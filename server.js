@@ -1053,9 +1053,17 @@ function removeDuplicateHouseComponents(formattedAddress, house) {
   if (!value || !houseValue) return value;
   const normalize = text => String(text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const componentKey = text => normalize(text).replace(/^(flatno|flat|houseno|house|plotno|plot|unitno|unit)/, "");
-  const houseKey = componentKey(houseValue);
+  const houseParts = houseValue.split(",").map(part => componentKey(part)).filter(Boolean);
   const parts = value.split(",").map(part => part.trim()).filter(Boolean);
-  const kept = parts.filter(part => { const key = componentKey(part); return !(key && key === houseKey); });
+  if (!houseParts.length) return value;
+  const kept = [];
+  for (let i = 0; i < parts.length;) {
+    const matchesHouseSequence = i + houseParts.length <= parts.length && houseParts.every((key, offset) => componentKey(parts[i + offset]) === key);
+    if (matchesHouseSequence) { i += houseParts.length; continue; }
+    const key = componentKey(parts[i]);
+    if (!key || !houseParts.includes(key)) kept.push(parts[i]);
+    i++;
+  }
   return kept.join(", ") || value;
 }
 
