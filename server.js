@@ -1034,10 +1034,11 @@ app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
   if (typeof image !== "string" || !image.startsWith("data:image/")) {
     return res.status(404).end();
   }
-  const match = image.match(/^data:(image\/(?:webp|jpeg|png|gif));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  const match = image.match(/^data:(image\/(?:webp|jpe?g|png|gif|avif|bmp|x-icon|vnd\.microsoft\.icon|svg\+xml));base64,([A-Za-z0-9+/=\r\n]+)$/i);
   if (!match) return res.status(404).end();
   const body = Buffer.from(match[2], "base64");
-  res.set("Content-Type", match[1].toLowerCase());
+  const contentType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
+  res.set("Content-Type", contentType);
   res.set("Content-Length", String(body.length));
   res.set("Cache-Control", "public, max-age=300");
   res.send(body);
@@ -1719,21 +1720,33 @@ app.post("/api/orders/:id/cancel-pending-payment", auth, asyncRoute(async (req,r
   if(row.status!=="Payment Pending")return res.status(409).json({error:"Only payment-pending orders can be cancelled here."});
   if(!razorpay)return res.status(503).json({error:"Payment status cannot be verified right now. Please try again shortly."});
   const attempts=await pool.query("SELECT razorpay_order_id FROM razorpay_payment_attempts WHERE order_id=$1 ORDER BY created_at DESC",[orderId]);
-  for(const attempt of attempts.rows){
-    try{
-      const response=await Promise.race([razorpay.orders.fetchPayments(attempt.razorpay_order_id),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Razorpay payment check timed out")),8000))]);
-      for(const payment of (Array.isArray(response?.items)?response.items:[])){
-        if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
-        if(payment.status==="captured"||payment.captured===true){
-          await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
-          return res.status(409).json({error:"Payment was captured. We updated your order; please refresh Order Status."});
-        }
-        if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
-          return res.status(409).json({error:"A payment is still processing. We cannot cancel safely yet. Please check again shortly."});
+  // Check all retry attempts concurrently so cancellation latency is bounded by one
+  // Razorpay round-trip, not the sum of every historical retry attempt.
+  let checkedAttempts=[];
+  try{
+    checkedAttempts=await Promise.all(attempts.rows.map(async attempt=>{
+      let timeout;
+      try{
+        const response=await Promise.race([
+          razorpay.orders.fetchPayments(attempt.razorpay_order_id),
+          new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("Razorpay payment check timed out")),8000);})
+        ]);
+        return {attempt,payments:Array.isArray(response?.items)?response.items:[]};
+      }finally{if(timeout)clearTimeout(timeout);}
+    }));
+  }catch(error){
+    console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
+    return res.status(409).json({error:"Razorpay is taking too long to confirm payment status. Your order remains pending and was not cancelled; please try again shortly."});
+  }
+  for(const {attempt,payments} of checkedAttempts){
+    for(const payment of payments){
+      if(String(payment.order_id||"")!==String(attempt.razorpay_order_id))continue;
+      if(payment.status==="captured"||payment.captured===true){
+        await reconcileCapturedPayment(orderId,attempt.razorpay_order_id,payment);
+        return res.status(409).json({error:"Payment was captured. We updated your order; please refresh Order Status."});
       }
-    }catch(error){
-      console.warn("[Razorpay payment recovery] Cannot confirm cancellation safety:",{orderId,message:error.message});
-      return res.status(409).json({error:"Razorpay is taking too long to confirm payment status. Your order remains pending and was not cancelled; please try again shortly."});
+      if(["authorized","created"].includes(String(payment.status||"").toLowerCase()))
+        return res.status(409).json({error:"A payment is still processing. We cannot cancel safely yet. Please check again shortly."});
     }
   }
   if(!isSameGkkIstDay(row.created_at))return res.status(409).json({error:"This pending payment is from a previous IST calendar day and can no longer be cancelled from checkout. Please place a new order; check Order Status for updates."});
@@ -3175,9 +3188,9 @@ initializeDatabase()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Ghar ka Khana running on port ${PORT}`);
-      // The expiry threshold is two minutes; a 30-second sweep reduces repeated
-      // database/API work while keeping pending-payment cleanup responsive.
-      setInterval(sweepExpiredPendingPayments, 30000);
+      // Preserve the previously tested 15-second cleanup cadence; cancellation
+      // itself is handled by the explicit customer endpoint above.
+      setInterval(sweepExpiredPendingPayments, 15000);
       sweepExpiredPendingPayments().catch(error => console.error("[Pending payment expiry] Initial sweep failed:", error.message));
     });
   })
