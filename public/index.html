@@ -1864,7 +1864,7 @@ const fallbackFoodImage="https://images.unsplash.com/photo-1547592180-85f1739905
 const money=n=>"₹"+n;
 function titleCase(value){return String(value??"").toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g,(_,sep,letter)=>sep+letter.toUpperCase()).replace(/(\d+)(pcs|ml|kg)\b/gi,(_,n,u)=>n+u.toUpperCase());}
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(url,options={}){const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Something went wrong. Please try again.");return data}
+async function api(url,options={}){const authRequest=/^\/api\/auth\/(?:login|register|google|password-reset\/(?:request|confirm))$/.test(url);const controller=authRequest?new AbortController():null;const timeout=controller?setTimeout(()=>controller.abort(),15000):null;try{const response=await fetch(url,{credentials:"same-origin",headers:{"Content-Type":"application/json",...(options.headers||{})},...options,...(controller?{signal:controller.signal}:{})});const data=await response.json().catch(()=>({}));if(!response.ok){const error=new Error(data.error||"Something went wrong. Please try again.");error.status=response.status;throw error}return data}catch(error){if(error?.name==="AbortError")throw new Error("The request took too long. Please check your connection and try again.");throw error}finally{if(timeout)clearTimeout(timeout)}}
 async function loadCustomerMenu(){
  await refreshKitchenBanner();
  const [rows,specialRows,breakfastCatalogue,popularRows,imageCatalog,availabilityData]=await Promise.all([
@@ -4020,7 +4020,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     const diagnosticId = (typeof crypto!=="undefined"&&crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
     const diagnosticStarted = performance.now();
     console.info("[GKK auth diagnostic]",{event:"google_api_start",diagnosticId,at:new Date().toISOString()});
-    const response = await fetch("/api/auth/google", {method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-GKK-Auth-Diagnostic-Id":diagnosticId},body:JSON.stringify({idToken:token,...(phone?{phone}: {}),...(password?{password}: {})})});
+    const googleController=new AbortController();const googleTimeout=setTimeout(()=>googleController.abort(),15000);let response;try{response=await fetch("/api/auth/google", {method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-GKK-Auth-Diagnostic-Id":diagnosticId},body:JSON.stringify({idToken:token,...(phone?{phone}: {}),...(password?{password}: {})}),signal:googleController.signal});}catch(error){if(error?.name==="AbortError")throw new Error("Google sign-in took too long. Please check your connection and try again.");throw error}finally{clearTimeout(googleTimeout)}
     const data = await response.json().catch(()=>({}));
     console.info("[GKK auth diagnostic]",{event:"google_api_result",diagnosticId,status:response.status,durationMs:Math.round(performance.now()-diagnosticStarted)});
     if (response.status === 428 && data.code === "PHONE_REQUIRED") {
