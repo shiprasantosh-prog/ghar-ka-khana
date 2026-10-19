@@ -143,13 +143,15 @@ function publicMenuImageUrl(row) {
   const staticImage = menuImagePath(row.name, row.category);
   if (staticImage) return staticImage;
   const storedImage = typeof row.image === "string" ? row.image : "";
-  if (storedImage.startsWith("data:image/")) return "/api/menu/" + encodeURIComponent(row.id) + "/image";
+  // Public list queries omit base64 image payloads and return only this flag.
+  // Keep the per-image endpoint as a fallback for records without a static file.
+  if (row.has_database_image === true || storedImage.startsWith("data:image/")) return "/api/menu/" + encodeURIComponent(row.id) + "/image";
   if (/^(https?:\/\/|\/)/i.test(storedImage)) return storedImage;
   return "";
 }
 function publicMenuRow(row) {
-  const { image, ...safeRow } = row;
-  return { ...safeRow, image_url: publicMenuImageUrl(row) };
+  const { image, has_database_image, ...safeRow } = row;
+  return { ...safeRow, image_url: publicMenuImageUrl({ ...row, image, has_database_image }) };
 }
 
 app.get("/api/menu-images", (req, res) => {
@@ -929,7 +931,9 @@ async function attachMenuVariants(rows) {
 // Customer favourites: top five dishes by quantity ordered, excluding cancelled orders.
 app.get("/api/popular-menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available
+    `SELECT m.id, m.name, m.description, m.category, m.price,
+            CASE WHEN m.image LIKE 'data:image/%' THEN NULL ELSE m.image END AS image,
+            (m.image LIKE 'data:image/%') AS has_database_image, m.available
      FROM popular_menu p JOIN menu m ON m.id = p.menu_id
      WHERE m.available = TRUE ORDER BY p.display_order ASC`
   );
@@ -1030,7 +1034,9 @@ app.get("/api/menu/:id/image", asyncRoute(async (req, res) => {
 
 app.get("/api/menu", asyncRoute(async (req, res) => {
   const result = await pool.query(
-    `SELECT id, name, description, category, price, image, available
+    `SELECT id, name, description, category, price,
+            CASE WHEN image LIKE 'data:image/%' THEN NULL ELSE image END AS image,
+            (image LIKE 'data:image/%') AS has_database_image, available
      FROM menu
      WHERE available = TRUE AND variant_parent_id IS NULL
      ORDER BY category, name`
@@ -1059,7 +1065,9 @@ app.get("/api/specials", asyncRoute(async (req, res) => {
   }
 
   const result = await pool.query(
-    `SELECT m.id, m.name, m.description, m.category, m.price, m.image, m.available
+    `SELECT m.id, m.name, m.description, m.category, m.price,
+            CASE WHEN m.image LIKE 'data:image/%' THEN NULL ELSE m.image END AS image,
+            (m.image LIKE 'data:image/%') AS has_database_image, m.available
      FROM daily_specials ds
      JOIN menu m ON m.id = ds.menu_id
      WHERE ds.special_date = COALESCE(
@@ -3156,7 +3164,9 @@ initializeDatabase()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Ghar ka Khana running on port ${PORT}`);
-      setInterval(sweepExpiredPendingPayments, 15000);
+      // The expiry threshold is two minutes; a 30-second sweep reduces repeated
+      // database/API work while keeping pending-payment cleanup responsive.
+      setInterval(sweepExpiredPendingPayments, 30000);
       sweepExpiredPendingPayments().catch(error => console.error("[Pending payment expiry] Initial sweep failed:", error.message));
     });
   })
