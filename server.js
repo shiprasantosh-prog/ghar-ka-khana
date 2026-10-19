@@ -1700,7 +1700,8 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const areaResult=await pool.query("SELECT latitude,longitude,radius_km,grace_meters FROM delivery_area_settings WHERE id=1");
   const area=areaResult.rows[0];if(!area)return res.status(503).json({error:"Delivery area is not configured yet."});
   const sameSociety=deliveryDistanceForAddress(address);
-  const distanceKm=sameSociety?sameSociety.distanceKm:await getDrivingDistanceKm(area.latitude,area.longitude,customerLat,customerLng);
+  let distanceKm=sameSociety?sameSociety.distanceKm:null;
+  if(distanceKm===null){try{distanceKm=await getDrivingDistanceKm(area.latitude,area.longitude,customerLat,customerLng);}catch(error){console.error("[orders] route calculation failed; order blocked pending distance verification",{userId:req.user.id,message:String(error?.message||error),status:error?.status||null});return res.status(503).json({error:"We could not verify the driving distance right now, so this order has not been placed. Please try again shortly."});}}
   const maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
   if(!sameSociety&&distanceKm>maxDistanceKm)return res.status(400).json({error:"Your driving route is "+distanceKm.toFixed(1)+" km from our kitchen. We currently deliver up to "+maxDistanceKm.toFixed(1)+" km by road."});
   let subtotal=0; const validated=[];
@@ -2405,7 +2406,9 @@ app.post("/api/check-delivery-area",asyncRoute(async(req,res)=>{
   const latitude=Number(suppliedLat),longitude=Number(suppliedLng);
   if(suppliedLat===undefined||suppliedLng===undefined||!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180)return res.status(400).json({error:"Please select a valid point on the map."});
   const sameSociety=deliveryDistanceForAddress(address);
-  const distanceKm=sameSociety?sameSociety.distanceKm:await getDrivingDistanceKm(area.latitude,area.longitude,latitude,longitude),maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
+  let distanceKm=sameSociety?sameSociety.distanceKm:null;
+  if(distanceKm===null){try{distanceKm=await getDrivingDistanceKm(area.latitude,area.longitude,latitude,longitude);}catch(error){console.error("[delivery-area] route calculation failed; refusing to guess delivery eligibility",{message:String(error?.message||error),status:error?.status||null});return res.status(503).json({error:"We could not verify the driving distance right now. Please try again shortly. Your delivery eligibility and fees have not been confirmed."});}}
+  const maxDistanceKm=Number(area.radius_km)+Number(area.grace_meters)/1000;
   const deliveryFee=calculateDeliveryFee(distanceKm,address);
   return res.json({latitude,longitude,distanceKm,maxDistanceKm,available:Boolean(sameSociety)||distanceKm<=maxDistanceKm,deliveryFee,matchedAddress:sameSociety?"Brigade 7 Gardens — kitchen society":"Customer-selected map pin",distanceType:sameSociety?"same-society":"driving"});
  }
