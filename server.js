@@ -720,6 +720,12 @@ app.get("/api/firebase-config", (req, res) => {
 
 const googleAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false });
 app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
+  const diagnosticId = /^[a-zA-Z0-9-]{1,64}$/.test(String(req.get("X-GKK-Auth-Diagnostic-Id") || "")) ? String(req.get("X-GKK-Auth-Diagnostic-Id")) : crypto.randomBytes(8).toString("hex");
+  const diagnosticStarted = Date.now();
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED === "true") {
+    res.set("X-GKK-Auth-Diagnostic-Id", diagnosticId);
+    res.on("finish", () => console.info("[GKK auth diagnostic]", JSON.stringify({ event: "google_login_request", diagnosticId, status: res.statusCode, durationMs: Date.now() - diagnosticStarted, at: new Date().toISOString() })));
+  }
   if (!firebaseAdminReady) return res.status(503).json({ error: "Google sign-in is not configured on this staging server yet." });
   const idToken = String(req.body?.idToken || "");
   const phone = String(req.body?.phone || "").trim();
@@ -895,6 +901,12 @@ app.post("/api/auth/register", asyncRoute(async (req, res) => {
 
 // Customer login
 app.post("/api/auth/login", asyncRoute(async (req, res) => {
+  const diagnosticId = crypto.randomBytes(8).toString("hex");
+  const diagnosticStarted = Date.now();
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED === "true") {
+    res.set("X-GKK-Auth-Diagnostic-Id", diagnosticId);
+    res.on("finish", () => console.info("[GKK auth diagnostic]", JSON.stringify({ event: "password_login_request", diagnosticId, status: res.statusCode, durationMs: Date.now() - diagnosticStarted, at: new Date().toISOString() })));
+  }
   const { phone, password } = req.body || {};
 
   const result = await pool.query(
@@ -1020,20 +1032,33 @@ app.get("/api/referrals/me", auth, asyncRoute(async (req,res)=>{
  res.json({referralCode:user.rows[0].referral_code,firstOrderEligible:!eligible.rowCount,availableRewards:Number(rewards.rows[0].available),successfulReferrals:Number(referrals.rows[0].successful)});
 }));
 
+// Remove only exact house/flat duplicates from formatted address components; do not infer or remove other numbers.
+function removeDuplicateHouseComponents(formattedAddress, house) {
+  const value = String(formattedAddress || "").trim();
+  const houseValue = String(house || "").trim();
+  if (!value || !houseValue) return value;
+  const normalize = text => String(text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const componentKey = text => normalize(text).replace(/^(flatno|flat|houseno|house|plotno|plot|unitno|unit)/, "");
+  const houseKey = componentKey(houseValue);
+  const parts = value.split(",").map(part => part.trim()).filter(Boolean);
+  const kept = parts.filter(part => { const key = componentKey(part); return !(key && key === houseKey); });
+  return kept.join(", ") || value;
+}
+
 // Saved customer delivery addresses
 app.get("/api/addresses", auth, asyncRoute(async (req,res)=>{
  const result=await pool.query("SELECT id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default FROM customer_addresses WHERE user_id=$1 ORDER BY is_default DESC,id ASC",[req.user.id]);
  res.json(result.rows);
 }));
 app.post("/api/addresses", auth, asyncRoute(async(req,res)=>{
- const b=req.body||{};let label=String(b.label||"Other").trim().slice(0,40);const house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=String(b.formatted_address||"").trim(),latitude=b.latitude===null||b.latitude===""||b.latitude===undefined?null:Number(b.latitude),longitude=b.longitude===null||b.longitude===""||b.longitude===undefined?null:Number(b.longitude);
+ const b=req.body||{};let label=String(b.label||"Other").trim().slice(0,40);const house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=removeDuplicateHouseComponents(b.formatted_address,house),latitude=b.latitude===null||b.latitude===""||b.latitude===undefined?null:Number(b.latitude),longitude=b.longitude===null||b.longitude===""||b.longitude===undefined?null:Number(b.longitude);
  if(!street)return res.status(400).json({error:"Please enter the Street / Area."});if(!city)return res.status(400).json({error:"Please enter the City."});if(!state)return res.status(400).json({error:"Please enter the State."});if(!/^[0-9]{6}$/.test(pincode))return res.status(400).json({error:"Please enter a valid 6-digit PIN code."});if(!formatted)return res.status(400).json({error:"Please enter the business, street, or locality in the location field."});if((latitude===null)!==(longitude===null)||latitude!==null&&(!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180))return res.status(400).json({error:"The selected location coordinates are invalid. Please try again."});
  const existing=await pool.query("SELECT COUNT(*)::int AS n FROM customer_addresses WHERE user_id=$1",[req.user.id]),isDefault=Number(existing.rows[0].n)===0;if(isDefault)label="Home";
  const result=await pool.query(`INSERT INTO customer_addresses(user_id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default`,[req.user.id,label||"Other",house,street,city,state,pincode,formatted,latitude,longitude,isDefault]);
  res.status(201).json({address:result.rows[0]});
 }));
 app.patch("/api/addresses/:id", auth, asyncRoute(async(req,res)=>{
- const b=req.body||{},id=Number(req.params.id),label=String(b.label||"Other").trim().slice(0,40),house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=String(b.formatted_address||"").trim(),latitude=b.latitude===null||b.latitude===""||b.latitude===undefined?null:Number(b.latitude),longitude=b.longitude===null||b.longitude===""||b.longitude===undefined?null:Number(b.longitude);
+ const b=req.body||{},id=Number(req.params.id),label=String(b.label||"Other").trim().slice(0,40),house=String(b.house||"").trim(),street=String(b.street||"").trim(),city=String(b.city||"").trim(),state=String(b.state||"").trim(),pincode=String(b.pincode||"").trim(),formatted=removeDuplicateHouseComponents(b.formatted_address,house),latitude=b.latitude===null||b.latitude===""||b.latitude===undefined?null:Number(b.latitude),longitude=b.longitude===null||b.longitude===""||b.longitude===undefined?null:Number(b.longitude);
  if(!Number.isInteger(id)||!street||!city||!state||!/^\d{6}$/.test(pincode)||!formatted||(latitude===null)!==(longitude===null)||latitude!==null&&(!Number.isFinite(latitude)||latitude < -90||latitude>90||!Number.isFinite(longitude)||longitude < -180||longitude>180))return res.status(400).json({error:"Enter a complete address with a valid PIN code."});
  const result=await pool.query(`UPDATE customer_addresses SET label=$1,house=$2,street=$3,city=$4,state=$5,pincode=$6,formatted_address=$7,latitude=$8,longitude=$9 WHERE id=$10 AND user_id=$11 RETURNING id,label,house,street,city,state,pincode,formatted_address,latitude,longitude,is_default`,[label||"Other",house,street,city,state,pincode,formatted,latitude,longitude,id,req.user.id]);
  if(!result.rowCount)return res.status(404).json({error:"Saved address not found."});res.json({address:result.rows[0]});
