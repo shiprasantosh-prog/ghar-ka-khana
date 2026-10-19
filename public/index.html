@@ -1946,7 +1946,10 @@ async function loadCustomerMenu(){
   const fallback=d.image_url||fallbackFoodImage;
   // Prefer owner-uploaded database images; static catalogue matching is only a fallback.
   const resolvedImage=d.image_url||categoryImage||fallbackFoodImage;
-  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:resolvedImage,fallbackImg:resolvedImage,tag:'Kitchen special'};
+  // If a database-uploaded image is truncated or otherwise invalid in staging,
+  // fall back to the category catalogue instead of repeating the broken URL.
+  const fallbackImage=categoryImage||fallbackFoodImage;
+  return {id:Number(d.id),name:d.name,price:Number(d.price),variants:Array.isArray(d.variants)?d.variants.map(v=>({id:Number(v.id),label:String(v.label||''),price:Number(v.price)||0})):[],cat:d.category||'Other',desc:breakfastDescriptions.get(name)||d.description||'',img:resolvedImage,fallbackImg:fallbackImage,tag:'Kitchen special'};
  };
  dishes=rows.filter(d=>d.available!==false&&d.available!==0).map(mapDish);
  popularDishes=(Array.isArray(popularRows)?popularRows:[]).map(mapDish);
@@ -1967,12 +1970,21 @@ function renderPopularDishes(){
   const host=document.getElementById('popularGrid');if(!host)return;
   const desired=['sabudana khichdi','sabudana tikki','kuttu ki puri and sabji','puri sabji','rice kheer'];
   const norm=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const available=popularDishes.slice();
+  // Production stores the owner's Navratri selection in popular_menu. Staging
+  // can have an empty selection table, so show available vrat dishes as a safe
+  // display fallback rather than leaving the whole section blank.
+  const available=popularDishes.length?popularDishes:dishes.filter(d=>{
+    const n=norm(d.name);
+    return n.includes('sabudanakhichdi')||n.includes('sabudanatikki')||
+      (n.includes('kuttukipuri')&&n.includes('sabji'))||
+      (n.includes('purisabji')&&!n.includes('kuttu'))||n.includes('ricekheer')||
+      n.includes('rajgirapuri')||n.includes('kuttukapakoda');
+  });
   const ordered=desired.map(target=>{
     const key=norm(target);
     return available.find(d=>{const n=norm(d.name);return n===key||(key==='kuttukipuriandsabji'&&n.includes('kuttukipuri')&&n.includes('sabji'))||(key==='purisabji'&&n.includes('purisabji')&&!n.includes('kuttu'))||(key==='ricekheer'&&n.includes('ricekheer'));});
   }).filter(Boolean);
-  const chosen=ordered.length===5?[...ordered,...popularDishes.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):popularDishes.slice(0,6);
+  const chosen=ordered.length?[...ordered,...available.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):available.slice(0,6);
   host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please check back for the festive menu.</p>';
 }
 
