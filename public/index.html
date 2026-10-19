@@ -2523,6 +2523,8 @@ async function saveCustomerAddress(event){event.preventDefault();const form=even
 async function deleteSavedAddress(id){if(!confirm("Delete this saved address?"))return;try{await api("/api/addresses/"+id,{method:"DELETE",body:"{}"});await loadSavedAddresses()}catch(e){alert(e.message)}}
 async function setDefaultAddress(id){try{await api("/api/addresses/"+id+"/default",{method:"POST",body:"{}"});await loadSavedAddresses()}catch(e){alert(e.message)}}
 let pendingCheckoutRetry=null;
+function setPendingPaymentMessage(container,message){if(!container)return;let node=container.querySelector("#checkoutPendingMessage");if(!node){node=document.createElement("p");node.id="checkoutPendingMessage";node.className="notice";node.setAttribute("role","status");node.style.cssText="display:block;margin:12px 0;line-height:1.5";container.appendChild(node)}node.textContent=message}
+function apiWithTimeout(url,options={},timeoutMs=20000){let timeout;return Promise.race([api(url,options),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Object.assign(new Error("Payment status is taking longer than expected. Please refresh Order Status before taking another action."),{code:"PAYMENT_CHECK_TIMEOUT"})),timeoutMs)})]).finally(()=>clearTimeout(timeout))}
 function isSameGkkIstDay(value){const date=new Date(value);if(!Number.isFinite(date.getTime()))return false;const day=d=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);return day(date)===day(new Date());}
 async function showCheckoutPendingOrder(){
  if(!currentUser)return;
@@ -2552,12 +2554,12 @@ async function showCheckoutPendingOrder(){
    if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;
    const b=this,msg=document.getElementById("checkoutPendingMessage");b.disabled=true;b.textContent="Checking payment…";
    try{
-    const result=await api("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
+    await apiWithTimeout("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
     localStorage.removeItem("gkk_pending_payment_order_id");
     host.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';host.classList.add("show");
     pendingCheckoutRetry=null;
     await loadMyOrders();
-   }catch(err){msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";b.disabled=false;b.textContent="Cancel Pending Order"}
+   }catch(err){setPendingPaymentMessage(host,err.message||"The order could not be cancelled safely. Please refresh Order Status.");if(err.code==="PAYMENT_CHECK_TIMEOUT"){b.textContent="Check status in My Orders";b.disabled=true;}else{b.disabled=false;b.textContent="Cancel Pending Order"}}
   };
  }catch(err){console.warn("Could not check pending orders for checkout",err)}
 }
