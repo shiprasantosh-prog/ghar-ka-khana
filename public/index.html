@@ -2190,7 +2190,12 @@ function updateCategoryAvailabilityUI(){
 }
 let categoryAvailabilityRefreshInFlight=false;
 async function refreshCategoryAvailability(){if(categoryAvailabilityRefreshInFlight)return;categoryAvailabilityRefreshInFlight=true;try{const data=await api("/api/category-availability",{cache:"no-store"});if(data?.schedules){categoryAvailability=data.schedules;categoryAvailabilityMinute=Number(data.minuteOfDay)||0;updateCategoryAvailabilityUI()}}catch(e){}finally{categoryAvailabilityRefreshInFlight=false}}
-function startCategoryAvailabilityRefresh(){if(categoryAvailabilityTimer)return;categoryAvailabilityTimer=setInterval(refreshCategoryAvailability,30000)}
+function startCategoryAvailabilityRefresh(){
+ if(categoryAvailabilityTimer)return;
+ // Avoid polling while the customer has this tab in the background.
+ categoryAvailabilityTimer=setInterval(()=>{if(!document.hidden)refreshCategoryAvailability()},60000);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshCategoryAvailability()});
+}
 function quantityControlHTML(d,ignoreAvailability=false){
     const group=timedCategoryForDish(d),available=ignoreAvailability||!group||isTimedCategoryAvailable(group),windowText=group?categoryWindowText(group):"";
     const disabledLabel=group?(categoryAvailability[group]?.enabled===false?"Unavailable":"Available "+windowText):"Unavailable";
