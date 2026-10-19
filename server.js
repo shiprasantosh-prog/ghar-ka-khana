@@ -140,14 +140,14 @@ function menuImagePath(name, category) {
   return best.score>=.68 ? "/images/"+encodeURIComponent(MENU_IMAGE_FOLDERS[canonicalCategory])+"/"+encodeURIComponent(best.file) : "";
 }
 function publicMenuImageUrl(row) {
-  const staticImage = menuImagePath(row.name, row.category);
-  if (staticImage) return staticImage;
   const storedImage = typeof row.image === "string" ? row.image : "";
-  // Public list queries omit base64 image payloads and return only this flag.
-  // Keep the per-image endpoint as a fallback for records without a static file.
-  if (row.has_database_image === true || storedImage.startsWith("data:image/")) return "/api/menu/" + encodeURIComponent(row.id) + "/image";
+  // An owner-uploaded image is authoritative: don't let a fuzzy static catalogue
+  // match silently replace it with a different dish photo.
+  if (row.has_database_image === true || storedImage.startsWith("data:image/")) {
+    return "/api/menu/" + encodeURIComponent(row.id) + "/image";
+  }
   if (/^(https?:\/\/|\/)/i.test(storedImage)) return storedImage;
-  return "";
+  return menuImagePath(row.name, row.category);
 }
 function publicMenuRow(row) {
   const { image, has_database_image, ...safeRow } = row;
