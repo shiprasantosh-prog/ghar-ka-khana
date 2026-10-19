@@ -1970,22 +1970,15 @@ function renderPopularDishes(){
   const host=document.getElementById('popularGrid');if(!host)return;
   const desired=['sabudana khichdi','sabudana tikki','kuttu ki puri and sabji','puri sabji','rice kheer'];
   const norm=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  // Production stores the owner's Navratri selection in popular_menu. Staging
-  // can have an empty selection table, so show available vrat dishes as a safe
-  // display fallback rather than leaving the whole section blank.
-  const available=popularDishes.length?popularDishes:dishes.filter(d=>{
-    const n=norm(d.name);
-    return n.includes('sabudanakhichdi')||n.includes('sabudanatikki')||
-      (n.includes('kuttukipuri')&&n.includes('sabji'))||
-      (n.includes('purisabji')&&!n.includes('kuttu'))||n.includes('ricekheer')||
-      n.includes('rajgirapuri')||n.includes('kuttukapakoda');
-  });
+  // Match production behavior: only dishes explicitly selected and saved in
+  // the owner dashboard (popular_menu) appear in Navratri Vrat Specials.
+  const available=popularDishes.slice();
   const ordered=desired.map(target=>{
     const key=norm(target);
     return available.find(d=>{const n=norm(d.name);return n===key||(key==='kuttukipuriandsabji'&&n.includes('kuttukipuri')&&n.includes('sabji'))||(key==='purisabji'&&n.includes('purisabji')&&!n.includes('kuttu'))||(key==='ricekheer'&&n.includes('ricekheer'));});
   }).filter(Boolean);
-  const chosen=ordered.length?[...ordered,...available.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):available.slice(0,6);
-  host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please check back for the festive menu.</p>';
+  const chosen=ordered.length===5?[...ordered,...available.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):available.slice(0,6);
+  host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please select dishes in the owner dashboard and save them to publish the festive menu.</p>';
 }
 
 function setAuthMode(mode){authMode=mode;const f=document.getElementById("authForm"),reg=mode==="register";f.elements.name.parentElement.style.display=reg?"block":"none";f.elements.email.parentElement.style.display=reg?"block":"none";const signupAddressFields=document.getElementById("signupAddressFields");signupAddressFields.hidden=!reg;signupAddressFields.style.display=reg?"block":"none";signupAddressFields.querySelectorAll("input,select,textarea").forEach(field=>{field.disabled=!reg;if(field.name==="house"||field.name==="street"||field.name==="city"||field.name==="state"||field.name==="pincode")field.required=reg});document.getElementById("referralSignupField").hidden=!reg;document.getElementById("referralSignupField").style.display=reg?"block":"none";document.getElementById("authSubmit").textContent=reg?"Create account":"Sign in";document.getElementById("toggleAuth").textContent=reg?"I already have an account":"Create account";document.getElementById("showForgotPassword").style.display=reg?"none":"inline-block";document.getElementById("accountTitle").textContent=reg?"Create your account":"Sign in to your account";f.elements.password.autocomplete=reg?"new-password":"current-password";f.elements.password.minLength=reg?8:0;f.elements.password.removeAttribute("minlength");if(reg)f.elements.password.setAttribute("minlength","8")}
