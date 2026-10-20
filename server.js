@@ -1521,16 +1521,29 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   for(const item of items){
     const result=await pool.query("SELECT id,name,price FROM menu WHERE id=$1 AND available=TRUE AND variant_parent_id IS NULL",[Number(item.menuId)]);
     const dish=result.rows[0],quantity=Number(item.quantity),variantId=Number(item.variantId||0);
+    const customType=String(item.customType||""),customAmount=Number(item.customAmount||0);
     if(!dish||!Number.isInteger(quantity)||quantity<1||quantity>50)return res.status(400).json({error:"Invalid cart item."});
     let unitPrice=Number(dish.price),variantLabel="";
-    const variants=await pool.query("SELECT id,variant_label,price FROM menu_variants WHERE menu_id=$1 AND available=TRUE ORDER BY id",[dish.id]);
-    if(variants.rowCount){
-      if(!Number.isInteger(variantId)||variantId<1)return res.status(400).json({error:"Please choose a size or option for "+dish.name+"."});
-      const selected=variants.rows.find(v=>Number(v.id)===variantId);
-      if(!selected)return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
-      unitPrice=Number(selected.price);variantLabel=selected.variant_label;
-    }else if(variantId){
-      return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
+    const normalizedName=String(dish.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const isFafda=normalizedName==="fafda"||normalizedName==="fafda100gm"||normalizedName==="fafda100g";
+    const isJalebi=normalizedName==="jalebi"||normalizedName==="jalebi4pcs"||normalizedName==="jalebi4piece";
+    if(customType){
+      if(variantId)return res.status(400).json({error:"Invalid custom quantity for "+dish.name+"."});
+      if(customType==="weight"&&isFafda&&Number.isInteger(customAmount)&&customAmount>=100&&customAmount<=5000&&customAmount%50===0){
+        unitPrice=Math.round(Number(dish.price)*customAmount/100);variantLabel=customAmount+" g";
+      }else if(customType==="pieces"&&isJalebi&&Number.isInteger(customAmount)&&customAmount>=4&&customAmount<=100){
+        unitPrice=Math.round(Number(dish.price)*customAmount/4);variantLabel=customAmount+" pcs";
+      }else return res.status(400).json({error:"Invalid quantity selected for "+dish.name+"."});
+    }else{
+      const variants=await pool.query("SELECT id,variant_label,price FROM menu_variants WHERE menu_id=$1 AND available=TRUE ORDER BY id",[dish.id]);
+      if(variants.rowCount){
+        if(!Number.isInteger(variantId)||variantId<1)return res.status(400).json({error:"Please choose a size or option for "+dish.name+"."});
+        const selected=variants.rows.find(v=>Number(v.id)===variantId);
+        if(!selected)return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
+        unitPrice=Number(selected.price);variantLabel=selected.variant_label;
+      }else if(variantId){
+        return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
+      }
     }
     subtotal+=unitPrice*quantity;validated.push({...dish,quantity,price:unitPrice,variantId,variantLabel});
   }
