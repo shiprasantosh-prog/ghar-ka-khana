@@ -7,6 +7,29 @@
   window.gkkTrack = function(eventName, params) {
     if (typeof window.gtag === 'function') window.gtag('event', eventName, params || {});
   };
+  window.gkkTrackPurchase = function(order, paymentMethod) {
+    if (!order || typeof window.gtag !== 'function') return;
+    var items = Array.isArray(order.items) ? order.items.map(function(item) {
+      return {
+        item_name: String(item.name || 'Menu item'),
+        item_variant: String(item.variant || ''),
+        price: Number(item.price) || 0,
+        quantity: Math.max(1, Number(item.quantity) || 1)
+      };
+    }) : [];
+    var itemValue = items.reduce(function(total, item) {
+      return total + item.price * item.quantity;
+    }, 0);
+    var discount = Math.max(0, Number(order.discount) || 0);
+    var value = Math.max(0, itemValue - discount);
+    window.gtag('event', 'purchase', {
+      transaction_id: 'GKK-' + String(order.id),
+      value: Number(value.toFixed(2)),
+      currency: 'INR',
+      payment_method: String(paymentMethod || 'online'),
+      items: items
+    });
+  };
 </script>
 <!-- Google Analytics: use separate streams for production and staging. -->
 <script>
@@ -2632,6 +2655,7 @@ async function showCheckoutPendingOrder(){
    const b=this;b.disabled=true;b.textContent="Checking payment…";setPendingPaymentMessage(host,"Verifying payment with Razorpay. If verification times out, the order will remain pending for safety.");
    try{
     await apiWithTimeout("/api/orders/"+encodeURIComponent(String(order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"});
+    if(window.gkkTrack)window.gkkTrack("cancel_pending_order",{payment_method:"online"});
     localStorage.removeItem("gkk_pending_payment_order_id");
     pendingCheckoutRetry=null;
     if(pendingPaymentCountdownInterval){clearInterval(pendingPaymentCountdownInterval);pendingPaymentCountdownInterval=null;}
@@ -2661,7 +2685,7 @@ function showPaymentPending(order,checkoutData,form){
   finally{if(check.isConnected){check.disabled=false;check.textContent="Check Payment Status"}}
  };
 }
-function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const retryOrder=await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"},15000);if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);if(success.firstChild)success.firstChild.textContent=err.message||"Could not start payment retry. Please try again; do not pay again until the payment status is clear."}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";try{await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"},12000);localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";else alert(err.message||"The order could not be cancelled safely. Please check its status.");cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}
+function showPaymentRetry(order,checkoutData,form){pendingCheckoutRetry={order,checkoutData,form};const success=document.getElementById("success");if(!success)return;success.innerHTML='No captured payment was found. Your order is still pending. You can retry using the same Razorpay order.';success.classList.add("show");let retry=document.getElementById("retrySecurePaymentButton");if(!retry){retry=document.createElement("button");retry.id="retrySecurePaymentButton";retry.type="button";retry.className="btn";retry.style.cssText="display:block;width:100%;margin-top:12px";success.appendChild(retry)}retry.textContent="Retry Secure Payment";retry.onclick=async()=>{if(!pendingCheckoutRetry)return;const p=pendingCheckoutRetry;retry.disabled=true;retry.textContent="Checking payment…";try{const retryOrder=await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/retry-payment",{method:"POST",body:"{}"},15000);if(retryOrder.payment?.method==="already-paid"){await navigateToPaymentReturn("success", p.order.id);return;}const opened=await startRazorpayPayment(retryOrder,p.checkoutData,p.form,retry);if(opened){pendingCheckoutRetry=null;retry.remove()}}catch(err){console.error("Razorpay retry failed",err);if(success.firstChild)success.firstChild.textContent=err.message||"Could not start payment retry. Please try again; do not pay again until the payment status is clear."}finally{if(retry.isConnected){retry.disabled=false;retry.textContent="Retry Secure Payment"}}};let cancel=document.getElementById("cancelPendingPaymentButton");if(!cancel){cancel=document.createElement("button");cancel.id="cancelPendingPaymentButton";cancel.type="button";cancel.className="btn ghost";cancel.style.cssText="display:block;width:100%;margin-top:8px";success.appendChild(cancel)}cancel.textContent="Cancel Pending Order";cancel.onclick=async()=>{if(!pendingCheckoutRetry)return;if(!confirm("Cancel this pending order? We will check Razorpay first to make sure payment was not captured."))return;const p=pendingCheckoutRetry;cancel.disabled=true;cancel.textContent="Checking payment…";try{await apiWithTimeout("/api/orders/"+encodeURIComponent(String(p.order.id))+"/cancel-pending-payment",{method:"POST",body:"{}"},12000);if(window.gkkTrack)window.gkkTrack("cancel_pending_order",{payment_method:"online"});localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;success.innerHTML='<strong>Pending order cancelled.</strong><p>You can now place a new order.</p>';success.classList.add("show");await loadMyOrders()}catch(err){const msg=document.getElementById("checkoutPendingMessage");if(msg)msg.textContent=err.message||"The order could not be cancelled safely. Please check its status.";else alert(err.message||"The order could not be cancelled safely. Please check its status.");cancel.disabled=false;cancel.textContent="Cancel Pending Order"}}}
 async function startRazorpayPayment(order,checkoutData,form,button){
  const success=document.getElementById("success");
  return new Promise(resolve=>{
@@ -2683,7 +2707,7 @@ async function startRazorpayPayment(order,checkoutData,form,button){
     success.textContent="Payment received. Verifying securely…";success.classList.add("show");
     try{
      await api("/api/payments/verify",{method:"POST",body:JSON.stringify({orderId:order.id,razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
-     if(window.gkkTrack)window.gkkTrack("purchase",{currency:"INR"});
+     if(window.gkkTrackPurchase)window.gkkTrackPurchase(order,"online");
      localStorage.removeItem("gkk_pending_payment_order_id");
      await navigateToPaymentReturn("success", order.id);
      finish(true);
@@ -2706,7 +2730,7 @@ async function startRazorpayPayment(order,checkoutData,form,button){
    prefill:{name:checkoutData.name||currentUser?.name||"",email:checkoutData.email||currentUser?.email||"",contact:checkoutData.phone||currentUser?.phone||""},
    notes:{ghar_ka_khana_order_id:String(order.id)},
    theme:{color:"#104d37"},
-   modal:{ondismiss:async()=>{if(verifyingPayment||finished)return;try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }showPaymentRetry(order,checkoutData,form);finish(false)}}
+   modal:{ondismiss:async()=>{if(verifyingPayment||finished)return;if(window.gkkTrack)window.gkkTrack("payment_checkout_closed",{payment_provider:"razorpay"});try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }showPaymentRetry(order,checkoutData,form);finish(false)}}
   };
   const rzp=new Razorpay(options);
   rzp.on("payment.failed",response=>{if(verifyingPayment||finished)return;if(window.gkkTrack)window.gkkTrack("payment_failed",{payment_provider:"razorpay"});showPaymentRetry(order,checkoutData,form);finish(false)});
@@ -2763,7 +2787,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
   }
   const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:appliedPromo?document.getElementById("promoCode").value.trim():"",addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude),paymentMethod})});
   if(paymentMethod==="cod"){
-   if(window.gkkTrack)window.gkkTrack("purchase",{currency:"INR",payment_method:"cod"});
+   if(window.gkkTrackPurchase)window.gkkTrackPurchase(order,"cod");
    await navigateToPaymentReturn("cod", order.id);
    return;
   }
