@@ -688,6 +688,12 @@ app.use("/api", limiter);
 
 // Customer registration
 app.post("/api/auth/register", asyncRoute(async (req, res) => {
+  const diagnosticId = crypto.randomBytes(8).toString("hex");
+  const diagnosticStarted = Date.now();
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED === "true") {
+    res.set("X-GKK-Auth-Diagnostic-Id", diagnosticId);
+    res.on("finish", () => console.info("[GKK auth diagnostic]", JSON.stringify({ event: "password_register_request", diagnosticId, status: res.statusCode, durationMs: Date.now() - diagnosticStarted, at: new Date().toISOString() })));
+  }
   const { name, phone, email, password, address = "" } = req.body || {};
   const submittedReferralCode = String(req.body?.referralCode || "").trim().toUpperCase();
   let referrerId = null;
@@ -732,6 +738,12 @@ app.post("/api/auth/register", asyncRoute(async (req, res) => {
 
 // Customer login
 app.post("/api/auth/login", asyncRoute(async (req, res) => {
+  const diagnosticId = crypto.randomBytes(8).toString("hex");
+  const diagnosticStarted = Date.now();
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED === "true") {
+    res.set("X-GKK-Auth-Diagnostic-Id", diagnosticId);
+    res.on("finish", () => console.info("[GKK auth diagnostic]", JSON.stringify({ event: "password_login_request", diagnosticId, status: res.statusCode, durationMs: Date.now() - diagnosticStarted, at: new Date().toISOString() })));
+  }
   const { phone, password } = req.body || {};
 
   const result = await pool.query(
