@@ -31,17 +31,12 @@
     });
   };
 </script>
-<!-- Google Analytics: use separate streams for production and staging. -->
+<!-- Google Analytics: collect data from the live website only. Staging is intentionally excluded. -->
 <script>
   (function () {
     var hostname = location.hostname;
-    var measurementId = null;
-    if (hostname === 'gharkakhanakitchen.in' || hostname === 'www.gharkakhanakitchen.in') {
-      measurementId = 'G-C5V99CML67';
-    } else if (hostname === 'ghar-ka-khana-staging.onrender.com') {
-      measurementId = 'G-KWXH8JF4ZG';
-    }
-    if (!measurementId) return;
+    if (hostname !== 'gharkakhanakitchen.in' && hostname !== 'www.gharkakhanakitchen.in') return;
+    var measurementId = 'G-C5V99CML67';
     var gaScript = document.createElement('script');
     gaScript.async = true;
     gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
