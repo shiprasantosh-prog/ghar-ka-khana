@@ -2347,7 +2347,7 @@ function renderSavedAddresses(){
 }
 function populateCheckoutAddresses(){
  const select=document.getElementById("checkoutAddressSelect");if(!select)return;
- const prior=select.value;select.innerHTML='<option value="">Choose a saved address</option>'+savedAddresses.map(a=>`<option value="${a.id}" ${a.latitude==null||a.longitude==null?'disabled':''}>${escapeHTML(a.label)} — ${escapeHTML(a.formatted_address)}${a.latitude==null||a.longitude==null?' (location pending verification)':''}</option>`).join("");
+ const prior=select.value;select.innerHTML='<option value="">Choose a saved address</option>'+savedAddresses.map(a=>{const fullAddress=[a.house,addressWithoutHousePrefix(a.formatted_address,a.house)].filter(Boolean).join(", ");return `<option value="${a.id}" ${a.latitude==null||a.longitude==null?'disabled':''}>${escapeHTML(a.label)} — ${escapeHTML(fullAddress)}${a.latitude==null||a.longitude==null?' (location pending verification)':''}</option>`}).join("");
  const preferred=savedAddresses.find(a=>a.id===Number(prior))||savedAddresses.find(a=>a.is_default);
  if(preferred){select.value=String(preferred.id);selectSavedAddress(preferred.id)}
 }
