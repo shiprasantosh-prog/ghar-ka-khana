@@ -1492,7 +1492,28 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
    background:#b58a36;border-radius:2px;
  }
 }
-</style></head>
+</style><style id="dussehra-specials-banner">
+/* Dussehra-specific banner: warm ivory, marigold and forest green; remove Navratri-only dance artwork. */
+#homePopular.navratri-day2{background:#fff8ec!important;padding:10px clamp(8px,1.2vw,18px) 14px!important}
+#homePopular .navratri-day2-shell{border:2px solid #d6a34b!important;border-radius:18px!important;background:radial-gradient(ellipse at top,#fffdf6 0%,#fff5df 68%,#ffedcb 100%)!important;box-shadow:0 8px 24px rgba(119,70,22,.12),inset 0 0 0 4px rgba(255,255,255,.75)!important;padding:16px clamp(12px,2vw,26px) 14px!important}
+#homePopular .navratri-day2-shell:before{background:radial-gradient(circle at 10% 18%,rgba(214,163,75,.15) 0 2px,transparent 3px),radial-gradient(circle at 90% 18%,rgba(214,163,75,.15) 0 2px,transparent 3px)!important;opacity:1!important}
+#homePopular .navratri-dandiya-left,#homePopular .navratri-dancer-art{display:none!important}
+#homePopular .navratri-lights{height:24px!important;opacity:.55!important}
+#homePopular .navratri-lights span{height:14px!important;background:#b58a3b!important}
+#homePopular .navratri-lights span:after{top:11px!important;width:8px!important;height:9px!important;background:#e8a33a!important;box-shadow:0 0 8px 2px rgba(232,163,58,.2)!important}
+#homePopular .navratri-marigold{color:#d98a1d!important;opacity:.6!important}
+#homePopular .navratri-day2-heading{max-width:900px!important;margin:0 auto 12px!important}
+#homePopular .navratri-kicker{color:#a45d1b!important;letter-spacing:2px!important;font-size:clamp(10px,1vw,13px)!important;margin-bottom:7px!important}
+#homePopular .navratri-day2-plaque{width:min(620px,92%)!important;min-height:clamp(54px,6vw,78px)!important;padding:8px 18px!important;border:2px solid #d4a34d!important;border-radius:50px 18px 50px 18px!important;background:linear-gradient(100deg,#fff8e8,#ffedc6,#fff8e8)!important;color:#1b5a3a!important;box-shadow:0 4px 12px rgba(160,103,28,.12)!important;font-size:clamp(20px,2.3vw,30px)!important;letter-spacing:1px!important;gap:8px!important;white-space:nowrap!important;flex-wrap:nowrap!important}
+#homePopular .navratri-day2-plaque>span:not(.plaque-flower){font-family:Georgia,'Times New Roman',serif!important;font-weight:700!important;color:#1b5a3a!important}
+#homePopular .plaque-flower{color:#c47c22!important;font-size:clamp(15px,1.6vw,22px)!important}
+#homePopular .navratri-tagline{max-width:650px!important;margin:8px auto 0!important;color:#5b4b34!important;font-size:clamp(13px,1.4vw,18px)!important;line-height:1.45!important}
+#homePopular .navratri-purity{margin-top:6px!important;color:#1b5a3a!important;font-weight:700!important}
+#homePopular .navratri-divider-art{margin-top:5px!important;color:#c58b31!important}
+#homePopular .navratri-food-grid{position:relative!important;z-index:2!important}
+@media(max-width:650px){#homePopular.navratri-day2{padding:7px 5px 10px!important}#homePopular .navratri-day2-shell{padding:17px 7px 9px!important;border-radius:13px!important}#homePopular .navratri-day2-plaque{width:100%!important;min-height:46px!important;padding:7px 6px!important;font-size:clamp(14px,4.2vw,22px)!important;letter-spacing:.3px!important;gap:5px!important;white-space:nowrap!important;flex-wrap:nowrap!important}#homePopular .navratri-kicker{font-size:9px!important;letter-spacing:1.2px!important}#homePopular .navratri-tagline{font-size:12px!important;padding:0 6px!important}#homePopular .navratri-purity{font-size:10px!important;gap:5px!important}#homePopular .navratri-divider-art{margin-top:4px!important}}
+</style>
+</head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
 <aside class="sidebar" aria-label="Main navigation">
@@ -1539,13 +1560,13 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
     <div class="navratri-dandiya-left" aria-hidden="true"><svg viewBox="0 0 180 180"><g transform="rotate(-34 90 90)" stroke-linecap="round"><rect x="48" y="12" width="18" height="156" rx="9" fill="#a9251d" stroke="#f5c65c" stroke-width="3"/><rect x="48" y="30" width="18" height="10" fill="#f5c65c"/><rect x="48" y="56" width="18" height="10" fill="#f5c65c"/><rect x="48" y="82" width="18" height="10" fill="#f5c65c"/><rect x="48" y="108" width="18" height="10" fill="#f5c65c"/><rect x="48" y="134" width="18" height="10" fill="#f5c65c"/><rect x="105" y="12" width="18" height="156" rx="9" fill="#176448" stroke="#f5c65c" stroke-width="3"/><rect x="105" y="30" width="18" height="10" fill="#f5c65c"/><rect x="105" y="56" width="18" height="10" fill="#f5c65c"/><rect x="105" y="82" width="18" height="10" fill="#f5c65c"/><rect x="105" y="108" width="18" height="10" fill="#f5c65c"/><rect x="105" y="134" width="18" height="10" fill="#f5c65c"/></g></svg></div>
     <div class="navratri-dancer-art" aria-hidden="true"><svg viewBox="0 0 220 220"><g stroke-linecap="round" stroke-linejoin="round" stroke-width="5"><path d="M58 83 Q25 58 40 33 M58 83 Q91 49 103 26" fill="none" stroke="#a93d23"/><circle cx="72" cy="48" r="12" fill="#b97842" stroke="#f5c65c"/><path d="M66 65 Q47 81 55 109 L34 150 Q68 166 91 141 L88 105 L107 78Z" fill="#b21f2d" stroke="#d8a43e"/><path d="M55 107 L88 105 L91 141 Q67 159 34 150Z" fill="#f1bd48" stroke="#d8a43e"/><path d="M48 149 L25 190 M72 151 L90 193" fill="none" stroke="#176448" stroke-width="10"/><path d="M130 84 Q105 60 116 35 M143 79 Q172 59 183 34" fill="none" stroke="#a93d23"/><circle cx="142" cy="48" r="12" fill="#b97842" stroke="#f5c65c"/><path d="M130 65 Q111 85 125 108 L107 144 Q144 169 177 139 L159 106 L164 81Z" fill="#176448" stroke="#d8a43e"/><path d="M125 108 L159 106 L177 139 Q144 166 107 144Z" fill="#bd2530" stroke="#d8a43e"/><path d="M123 146 L111 191 M155 147 L177 188" fill="none" stroke="#a9251d" stroke-width="10"/><path d="M59 80 L96 58 M132 81 L106 58" fill="none" stroke="#b97842" stroke-width="8"/></g></svg></div>
     <div class="navratri-day2-heading">
-      <div class="navratri-kicker"><span>🪔</span><span>SHARADIYA NAVRATRI</span><span>🪔</span></div>
-      <div class="navratri-day2-plaque"><span class="plaque-flower">✿</span><span>DAY 9</span><span class="plaque-flower">✿</span></div>
-      <p class="navratri-tagline">Festive Flavours for a Divine Celebration</p>
-      <div class="navratri-purity"><span>❧</span> Pure <i>•</i> Sattvik <i>•</i> Wholesome <span>❧</span></div>
+      <div class="navratri-kicker"><span>🪔</span><span>SHUBH DUSSEHRA</span><span>🪔</span></div>
+      <div class="navratri-day2-plaque"><span class="plaque-flower">✿</span><span>DUSSEHRA SPECIALS</span><span class="plaque-flower">✿</span></div>
+      <p class="navratri-tagline">Happy Dussehra! Celebrate the victory of good over evil with homemade goodness.</p>
+      <div class="navratri-purity"><span>❧</span> Pure Veg <i>•</i> Homemade <i>•</i> Made with Love <span>❧</span></div>
       <div class="navratri-divider-art" aria-hidden="true"><span>◆</span><b>✿</b><span>◆</span></div>
     </div>
-    <div id="popularGrid" class="navratri-food-grid"><p class="empty">Preparing our Navratri vrat favourites…</p></div>
+    <div id="popularGrid" class="navratri-food-grid"><p class="empty">Preparing our Dussehra specials…</p></div>
   </div>
 </section>
 <section class="wrap page-view active-view home-section" id="homeBulkOrders">
