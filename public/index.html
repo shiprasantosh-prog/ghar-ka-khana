@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Google Analytics: Ghar Ka Khana -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-C5V99CML67"></script>
+<!-- Google Analytics: production website only; keep staging/test traffic out of reports. -->
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-C5V99CML67');
+  if (location.hostname === 'gharkakhanakitchen.in' || location.hostname === 'www.gharkakhanakitchen.in') {
+    var gaScript = document.createElement('script');
+    gaScript.async = true;
+    gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-C5V99CML67';
+    document.head.appendChild(gaScript);
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-C5V99CML67');
+  }
 </script>
 <title>Ghar ka Khana | Homemade with Love</title>
 <style>
