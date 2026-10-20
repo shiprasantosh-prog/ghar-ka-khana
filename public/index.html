@@ -2,6 +2,41 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Privacy-safe GA4 tracking; loaded on the live domain only. -->
+<script>
+  window.gkkTrack = function(eventName, params) {
+    if (typeof window.gtag === 'function') window.gtag('event', eventName, params || {});
+  };
+  window.gkkTrackPurchase = function(order, paymentMethod) {
+    if (!order || typeof window.gtag !== 'function') return;
+    var items = Array.isArray(order.items) ? order.items.map(function(item) {
+      return { item_name: String(item.name || 'Menu item'), item_variant: String(item.variant || ''),
+        price: Number(item.price) || 0, quantity: Math.max(1, Number(item.quantity) || 1) };
+    }) : [];
+    var itemValue = items.reduce(function(total, item) { return total + item.price * item.quantity; }, 0);
+    var discount = Math.max(0, Number(order.discount) || 0);
+    window.gtag('event', 'purchase', {
+      transaction_id: 'GKK-' + String(order.id),
+      value: Number(Math.max(0, itemValue - discount).toFixed(2)),
+      currency: 'INR', payment_method: String(paymentMethod || 'online'), items: items
+    });
+  };
+</script>
+<script>
+  (function () {
+    var hostname = location.hostname;
+    if (hostname !== 'gharkakhanakitchen.in' && hostname !== 'www.gharkakhanakitchen.in') return;
+    var measurementId = 'G-C5V99CML67';
+    var gaScript = document.createElement('script');
+    gaScript.async = true;
+    gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
+    document.head.appendChild(gaScript);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function(){window.dataLayer.push(arguments);};
+    window.gtag('js', new Date());
+    window.gtag('config', measurementId);
+  })();
+</script>
 <title>Ghar ka Khana | Homemade with Love</title>
 <style>
 :root{--bg:#12110f;--panel:#1d1b17;--panel2:#242119;--gold:#c9a45c;--gold2:#e3c783;--cream:#f4eddf;--muted:#b7ad9b;--line:#4a3d26;--green:#64734d}
@@ -2011,7 +2046,7 @@ document.getElementById("backToSignIn").addEventListener("click",()=>{const rese
 /* Removed obsolete SMS OTP reset handler; password reset uses secure email links. */
 
 
-document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.target,data=Object.fromEntries(new FormData(f)),msg=document.getElementById("authMessage");msg.textContent="Please wait…";const submit=document.getElementById("authSubmit");submit.disabled=true;try{const registering=authMode==="register";let verifiedLocation=null;if(registering){const pin=String(data.pincode||"").trim(),selectedLat=Number(f.dataset.selectedLat),selectedLng=Number(f.dataset.selectedLng),selectedPin=String(f.dataset.selectedPostcode||"").replace(/\D/g,""),selectedCountry=String(f.dataset.selectedCountry||"").trim().toLowerCase();if(!/^[0-9]{6}$/.test(pin))throw new Error("Please enter a valid 6-digit delivery PIN code.");if(!f.dataset.selectedLat||!f.dataset.selectedLng||!Number.isFinite(selectedLat)||!Number.isFinite(selectedLng))throw new Error("Please search for your delivery address and select a Google Maps suggestion before creating your account.");if(!selectedPin||selectedPin!==pin)throw new Error("The selected Google Maps location does not match the PIN code entered. Please select the correct address or update the PIN code.");if(!selectedCountry.includes("india"))throw new Error("Please select a delivery address in India.");verifiedLocation={latitude:selectedLat,longitude:selectedLng};}const selectedFormatted=String(f.dataset.selectedFormatted||"").trim();const addressBase=selectedFormatted||data.street;const addressText=registering?[data.house,addressBase,data.city,data.state,data.pincode].filter(Boolean).join(", "):"";const payload=registering?{name:data.name,phone:data.phone,email:data.email||null,password:data.password,address:addressText,referralCode:data.referralCode||""}:{phone:data.phone,password:data.password};const result=await api(registering?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});currentUser=result.user;switchCartOwner(currentUser.phone);if(registering){const formatted=[data.house,selectedFormatted||data.street,data.city,data.state,data.pincode].filter(Boolean).join(", ");await api("/api/addresses",{method:"POST",body:JSON.stringify({label:data.addressLabel||"Home",house:data.house,street:selectedFormatted||data.street,city:data.city,state:data.state,pincode:data.pincode,formatted_address:formatted,latitude:verifiedLocation.latitude,longitude:verifiedLocation.longitude})});}msg.textContent="";await renderAccount()}catch(err){msg.textContent=err.message||"We couldn’t complete your request. Please try again."}finally{submit.disabled=false}});
+document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.target,data=Object.fromEntries(new FormData(f)),msg=document.getElementById("authMessage");msg.textContent="Please wait…";const submit=document.getElementById("authSubmit");submit.disabled=true;try{const registering=authMode==="register";let verifiedLocation=null;if(registering){const pin=String(data.pincode||"").trim(),selectedLat=Number(f.dataset.selectedLat),selectedLng=Number(f.dataset.selectedLng),selectedPin=String(f.dataset.selectedPostcode||"").replace(/\D/g,""),selectedCountry=String(f.dataset.selectedCountry||"").trim().toLowerCase();if(!/^[0-9]{6}$/.test(pin))throw new Error("Please enter a valid 6-digit delivery PIN code.");if(!f.dataset.selectedLat||!f.dataset.selectedLng||!Number.isFinite(selectedLat)||!Number.isFinite(selectedLng))throw new Error("Please search for your delivery address and select a Google Maps suggestion before creating your account.");if(!selectedPin||selectedPin!==pin)throw new Error("The selected Google Maps location does not match the PIN code entered. Please select the correct address or update the PIN code.");if(!selectedCountry.includes("india"))throw new Error("Please select a delivery address in India.");verifiedLocation={latitude:selectedLat,longitude:selectedLng};}const selectedFormatted=String(f.dataset.selectedFormatted||"").trim();const addressBase=selectedFormatted||data.street;const addressText=registering?[data.house,addressBase,data.city,data.state,data.pincode].filter(Boolean).join(", "):"";const payload=registering?{name:data.name,phone:data.phone,email:data.email||null,password:data.password,address:addressText,referralCode:data.referralCode||""}:{phone:data.phone,password:data.password};const result=await api(registering?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});if(window.gkkTrack)window.gkkTrack(registering?"sign_up":"login",{method:"phone_password"});currentUser=result.user;switchCartOwner(currentUser.phone);if(registering){const formatted=[data.house,selectedFormatted||data.street,data.city,data.state,data.pincode].filter(Boolean).join(", ");await api("/api/addresses",{method:"POST",body:JSON.stringify({label:data.addressLabel||"Home",house:data.house,street:selectedFormatted||data.street,city:data.city,state:data.state,pincode:data.pincode,formatted_address:formatted,latitude:verifiedLocation.latitude,longitude:verifiedLocation.longitude})});}msg.textContent="";await renderAccount()}catch(err){msg.textContent=err.message||"We couldn’t complete your request. Please try again."}finally{submit.disabled=false}});
 async function navigateToPaymentReturn(payment, orderId){
  const url=new URL(window.location.href);
  url.searchParams.set("payment",payment);
@@ -2297,7 +2332,7 @@ function updateMenuItem(id){
     });
 }
 function add(id,variantId=0,ignoreAvailability=false){
-    const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
+    const dish=findCustomerDish(id);if(!dish)return;if(window.gkkTrack)window.gkkTrack("add_to_cart",{items:[{item_name:String(dish.name||"Menu item"),item_category:String(dish.cat||"Menu"),quantity:1}]});const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+1;updateCart();updateMenuItem(dish.id);
 }
 function change(id,n,variantId=0,ignoreAvailability=false){
@@ -2655,7 +2690,7 @@ async function startRazorpayPayment(order,checkoutData,form,button){
     button.disabled=true;button.textContent="Verifying payment…";
     success.textContent="Payment received. Verifying securely…";success.classList.add("show");
     try{
-     await api("/api/payments/verify",{method:"POST",body:JSON.stringify({orderId:order.id,razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
+     await api("/api/payments/verify",{method:"POST",body:JSON.stringify({orderId:order.id,razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});if(window.gkkTrackPurchase)window.gkkTrackPurchase(order,"online");
      localStorage.removeItem("gkk_pending_payment_order_id");
      await navigateToPaymentReturn("success", order.id);
      finish(true);
@@ -2678,15 +2713,15 @@ async function startRazorpayPayment(order,checkoutData,form,button){
    prefill:{name:checkoutData.name||currentUser?.name||"",email:checkoutData.email||currentUser?.email||"",contact:checkoutData.phone||currentUser?.phone||""},
    notes:{ghar_ka_khana_order_id:String(order.id)},
    theme:{color:"#104d37"},
-   modal:{ondismiss:async()=>{if(verifyingPayment||finished)return;try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }showPaymentRetry(order,checkoutData,form);finish(false)}}
+   modal:{ondismiss:async()=>{if(verifyingPayment||finished)return;if(window.gkkTrack)window.gkkTrack("payment_checkout_closed",{payment_provider:"razorpay"});try{await api("/api/payments/cancel",{method:"POST",body:JSON.stringify({orderId:order.id})})}catch(_){ }showPaymentRetry(order,checkoutData,form);finish(false)}}
   };
   const rzp=new Razorpay(options);
-  rzp.on("payment.failed",response=>{if(verifyingPayment||finished)return;showPaymentRetry(order,checkoutData,form);finish(false)});
+  rzp.on("payment.failed",response=>{if(verifyingPayment||finished)return;if(window.gkkTrack)window.gkkTrack("payment_failed",{payment_provider:"razorpay"});showPaymentRetry(order,checkoutData,form);finish(false)});
   rzp.open();
  });
 }
 document.getElementById("orderForm").addEventListener("submit",async e=>{
- e.preventDefault();
+ e.preventDefault();if(window.gkkTrack)window.gkkTrack("begin_checkout",{currency:"INR",items_count:Object.values(cart).reduce((n,q)=>n+(Number(q)||0),0)});
  if(pendingCheckoutRetry?.order&&pendingCheckoutRetry.order.status==="Payment Pending"&&isSameGkkIstDay(pendingCheckoutRetry.order.created_at)){
   const pendingId=String(pendingCheckoutRetry.order.id);
   try{
@@ -2735,12 +2770,14 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
   }
   const order=await api("/api/orders",{method:"POST",body:JSON.stringify({items,address:data.address,notes:data.notes||"",orderMode:mode,scheduledAt,deliverySlot:"",promoCode:appliedPromo?document.getElementById("promoCode").value.trim():"",addressId:Number(data.addressId),latitude:Number(data.latitude),longitude:Number(data.longitude),paymentMethod})});
   if(paymentMethod==="cod"){
+   if(window.gkkTrackPurchase)window.gkkTrackPurchase(order,"cod");
    await navigateToPaymentReturn("cod", order.id);
    return;
   }
   localStorage.setItem("gkk_pending_payment_order_id",String(order.id));
   const paymentOpened=await startRazorpayPayment(order,data,e.target,button);if(!paymentOpened)showPaymentRetry(order,data,e.target);
  }catch(err){
+  if(window.gkkTrack)window.gkkTrack("checkout_error");
   const success=document.getElementById("success");success.textContent=err.message;success.classList.add("show");
  }finally{button.disabled=false;button.textContent="Place order";}
 });
