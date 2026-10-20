@@ -1532,7 +1532,9 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
       if(customType==="weight"&&isFafda&&Number.isInteger(customAmount)&&customAmount>=100&&customAmount<=5000&&customAmount%50===0){
         unitPrice=Math.round(Number(dish.price)*customAmount/100);variantLabel=customAmount+" g";
       }else if(customType==="pieces"&&isJalebi&&Number.isInteger(customAmount)&&customAmount>=4&&customAmount<=100){
-        unitPrice=Math.round(Number(dish.price)*customAmount/4);variantLabel=customAmount+" pcs";
+        unitPrice=60+(customAmount-4)*15;variantLabel="Normal Jalebi · "+customAmount+" pcs";
+      }else if(customType==="ghee"&&isJalebi&&Number.isInteger(customAmount)&&customAmount>=4&&customAmount<=100){
+        unitPrice=80+(customAmount-4)*20;variantLabel="Ghee Jalebi · "+customAmount+" pcs";
       }else return res.status(400).json({error:"Invalid quantity selected for "+dish.name+"."});
     }else{
       const variants=await pool.query("SELECT id,variant_label,price FROM menu_variants WHERE menu_id=$1 AND available=TRUE ORDER BY id",[dish.id]);
@@ -1545,7 +1547,7 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
         return res.status(400).json({error:"Invalid option selected for "+dish.name+"."});
       }
     }
-    subtotal+=unitPrice*quantity;validated.push({...dish,quantity,price:unitPrice,variantId,variantLabel});
+    subtotal+=unitPrice*quantity;validated.push({...dish,quantity,price:unitPrice,variantId,variantLabel,customType:customType||undefined,customAmount:customType?customAmount:undefined});
   }
   const minimumOrder=isCodEligibleAddress(address)?60:100;
   if(subtotal<minimumOrder)return res.status(400).json({error:"Minimum order value for this delivery address is Rs. "+minimumOrder+" (item subtotal, before fees and discounts)."});
