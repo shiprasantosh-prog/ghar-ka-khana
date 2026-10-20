@@ -2714,7 +2714,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
   const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
   if(paymentMethod==="online"&&!pendingCheckoutRetry?.order&&localStorage.getItem("gkk_pending_payment_order_id")){
    const previousId=localStorage.getItem("gkk_pending_payment_order_id");
-   const previousStatus=await api("/api/orders/"+encodeURIComponent(String(previousId))+"/payment-status");
+   let previousStatus;try{previousStatus=await api("/api/orders/"+encodeURIComponent(String(previousId))+"/payment-status");}catch(error){if(/order not found/i.test(String(error?.message||""))){localStorage.removeItem("gkk_pending_payment_order_id");pendingCheckoutRetry=null;previousStatus={state:"missing"};}else throw error;}
    if(previousStatus.state==="paid"){localStorage.removeItem("gkk_pending_payment_order_id");await navigateToPaymentReturn("success", previousId);return;}
    if(previousStatus.order)pendingCheckoutRetry={order:previousStatus.order,checkoutData:data,form:e.target};
    if(previousStatus.state==="pending"){showPaymentPending(previousStatus.order||pendingCheckoutRetry?.order,data,e.target);return;}
