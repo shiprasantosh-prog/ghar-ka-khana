@@ -2,18 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Google Analytics: production website only; keep staging/test traffic out of reports. -->
+<!-- Google Analytics: use separate streams for production and staging. -->
 <script>
-  if (location.hostname === 'gharkakhanakitchen.in' || location.hostname === 'www.gharkakhanakitchen.in') {
+  (function () {
+    var hostname = location.hostname;
+    var measurementId = null;
+    if (hostname === 'gharkakhanakitchen.in' || hostname === 'www.gharkakhanakitchen.in') {
+      measurementId = 'G-C5V99CML67';
+    } else if (hostname === 'ghar-ka-khana-staging.onrender.com') {
+      measurementId = 'G-KWXH8JF4ZG';
+    }
+    if (!measurementId) return;
     var gaScript = document.createElement('script');
     gaScript.async = true;
-    gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-C5V99CML67';
+    gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
     document.head.appendChild(gaScript);
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-C5V99CML67');
-  }
+    window.gtag = window.gtag || function(){window.dataLayer.push(arguments);};
+    window.gtag('js', new Date());
+    window.gtag('config', measurementId);
+  })();
 </script>
 <title>Ghar ka Khana | Homemade with Love</title>
 <style>
