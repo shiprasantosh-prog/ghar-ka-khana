@@ -2236,10 +2236,13 @@ function renderCats(){
    return '<button type="button" class="chip '+(category===c?'active':'')+'" data-category="'+escapeHTML(c)+'"'+(categoryAvailability[c]?' title="'+escapeHTML(categoryAvailabilityLabel(c))+'"':'')+'>'+thumb+'<span>'+escapeHTML(c)+'</span></button>';
  }).join("");
  host.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>setMenuCategory(btn.dataset.category)));
-}function cartLineKey(menuId,variantId){return variantId?String(menuId)+":"+String(variantId):String(menuId)}
-function parseCartLineKey(key){const parts=String(key).split(":");return {menuId:Number(parts[0]),variantId:parts[1]?Number(parts[1]):0}}
+}function cartLineKey(menuId,variantId,customType="",customAmount=0){if(customType)return String(menuId)+":"+customType+String(customAmount);return variantId?String(menuId)+":"+String(variantId):String(menuId)}
+function parseCartLineKey(key){const parts=String(key).split(":");const token=parts[1]||"";const customMatch=token.match(/^(w|p)(\d+)$/);return {menuId:Number(parts[0]),variantId:customMatch?0:(token?Number(token):0),customType:customMatch?(customMatch[1]==="w"?"weight":"pieces"):"",customAmount:customMatch?Number(customMatch[2]):0}}
 function findCustomerDish(id){return dishes.find(x=>Number(x.id)===Number(id))||popularDishes.find(x=>Number(x.id)===Number(id))||todaySpecials.find(x=>Number(x.id)===Number(id))||null}
-function getDishForCartLine(key){const parsed=parseCartLineKey(key);const dish=findCustomerDish(parsed.menuId);const variant=dish?.variants?.find(v=>Number(v.id)===parsed.variantId);return {dish,variant,menuId:parsed.menuId,variantId:parsed.variantId,price:variant?Number(variant.price):Number(dish?.price||0),label:variant?.label||""}}
+function customDishType(d){const name=String(d?.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");if(name==="fafda"||name==="fafda100gm"||name==="fafda100g")return "weight";if(name==="jalebi4pcs"||name==="jalebi4piece"||name==="jalebi")return "pieces";return ""}
+function customDishPrice(d,type,amount){const base=Number(d?.price)||0;return type==="weight"?Math.round(base*Number(amount)/100):type==="pieces"?Math.round(base*Number(amount)/4):base}
+function customDishLabel(type,amount){return type==="weight"?String(amount)+" g":String(amount)+" pcs"}
+function getDishForCartLine(key){const parsed=parseCartLineKey(key);const dish=findCustomerDish(parsed.menuId);const variant=dish?.variants?.find(v=>Number(v.id)===parsed.variantId);const customType=parsed.customType,customAmount=parsed.customAmount;return {dish,variant,menuId:parsed.menuId,variantId:parsed.variantId,customType,customAmount,price:customType?customDishPrice(dish,customType,customAmount):variant?Number(variant.price):Number(dish?.price||0),label:customType?customDishLabel(customType,customAmount):variant?.label||""}}
 function timedCategoryForDish(d){const group=menuGroup(d);return Object.prototype.hasOwnProperty.call(categoryAvailability,group)?group:null}
 function minutesForTime(value){const p=String(value||"00:00").split(":").map(Number);return p[0]*60+p[1]}
 function formatAvailabilityTime(value){const [h,m]=String(value||"00:00").split(":").map(Number),suffix=h>=12?"PM":"AM",hour=h%12||12;return hour+":"+String(m).padStart(2,"0")+" "+suffix}
@@ -2262,6 +2265,7 @@ function startCategoryAvailabilityRefresh(){
 function quantityControlHTML(d,ignoreAvailability=false){
     const group=timedCategoryForDish(d),available=ignoreAvailability||!group||isTimedCategoryAvailable(group),windowText=group?categoryWindowText(group):"";
     const disabledLabel=group?(categoryAvailability[group]?.enabled===false?"Unavailable":"Available "+windowText):"Unavailable";
+    if(customDishType(d))return '<button class="add" type="button" '+(available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"')+' onclick="openCustomQuantityPicker('+JSON.stringify(d.id)+','+(ignoreAvailability?'true':'false')+')">'+(available?'Choose quantity':escapeHTML(disabledLabel))+'</button>';
     const hasVariants=Array.isArray(d.variants)&&d.variants.length;
     if(hasVariants)return '<button class="add" type="button" '+(available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"')+' onclick="openVariantPicker('+JSON.stringify(d.id)+','+(ignoreAvailability?'true':'false')+')">'+(available?'Customize':escapeHTML(disabledLabel))+'</button>';
     const qty=cart[d.id]||0,id=JSON.stringify(d.id);
@@ -2269,6 +2273,25 @@ function quantityControlHTML(d,ignoreAvailability=false){
         ? `<span style="display:flex;align-items:center;gap:10px"><button class="add" type="button" onclick='change(${id},-1,0,${ignoreAvailability})'>−</button><strong>${qty}</strong><button class="add" type="button" ${available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"'} onclick='change(${id},1,0,${ignoreAvailability})'>+</button></span>`
         : `<button class="add" type="button" ${available?'':'disabled aria-disabled="true" title="'+escapeHTML(categoryAvailabilityLabel(group))+'"'} onclick='add(${id},0,${ignoreAvailability})'>${available?'+ Add':escapeHTML(disabledLabel)}</button>`;
 }
+function openCustomQuantityPicker(id,ignoreAvailability=false){
+    const dish=findCustomerDish(id),type=customDishType(dish);if(!dish||!type)return;
+    const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&timedGroup&&!isTimedCategoryAvailable(timedGroup))return;
+    const minimum=type==="weight"?100:4,unit=type==="weight"?"g":"pcs";
+    let overlay=document.getElementById("customQuantityPickerOverlay");
+    if(!overlay){overlay=document.createElement("div");overlay.id="customQuantityPickerOverlay";overlay.style.cssText="position:fixed;inset:0;background:rgba(16,35,27,.42);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box";document.body.appendChild(overlay)}
+    overlay.dataset.dishId=String(id);overlay.dataset.ignoreAvailability=ignoreAvailability?"true":"false";overlay.dataset.type=type;overlay.dataset.amount=String(minimum);
+    const render=()=>{const amount=Number(overlay.dataset.amount)||minimum;overlay.innerHTML=`<div style="width:min(440px,100%);background:#FBF7EC;border:1px solid #D8DEC9;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:22px;box-sizing:border-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px"><h3 style="margin:0;color:#104D37;font:700 24px Georgia,serif">${escapeHTML(titleCase(dish.name))}</h3><button type="button" aria-label="Close" onclick="closeCustomQuantityPicker()" style="border:0;background:#E3EAD3;color:#104D37;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer">×</button></div>
+      <p style="margin:0 0 18px;color:#667267">Minimum ${minimum} ${unit}. You can increase the quantity ${type==="weight"?"by 50 g":"one piece"} at a time.</p>
+      <div style="display:flex;align-items:center;justify-content:center;gap:22px;margin:20px 0"><button type="button" aria-label="Decrease quantity" onclick="adjustCustomQuantity(-1)" style="width:44px;height:44px;border:1px solid #D8DEC9;border-radius:10px;background:#E3EAD3;color:#104D37;font-size:25px" ${amount<=minimum?"disabled":""}>−</button><strong style="min-width:110px;text-align:center;font-size:25px;color:#104D37">${amount} ${unit}</strong><button type="button" aria-label="Increase quantity" onclick="adjustCustomQuantity(1)" style="width:44px;height:44px;border:1px solid #D8DEC9;border-radius:10px;background:#E3EAD3;color:#104D37;font-size:25px">+</button></div>
+      <p style="text-align:center;color:#104D37;font-weight:700;font-size:20px;margin:12px 0 18px">${money(customDishPrice(dish,type,amount))}</p>
+      <button class="btn" type="button" style="width:100%" onclick="addCustomQuantityToBasket()">Add to Basket</button>
+    </div>`;};
+    overlay._render=render;render();overlay.onclick=e=>{if(e.target===overlay)closeCustomQuantityPicker()};overlay.style.display="flex";
+}
+function adjustCustomQuantity(delta){const overlay=document.getElementById("customQuantityPickerOverlay");if(!overlay)return;const type=overlay.dataset.type,minimum=type==="weight"?100:4,step=type==="weight"?50:1,current=Number(overlay.dataset.amount)||minimum;overlay.dataset.amount=String(Math.max(minimum,current+delta*step));if(overlay._render)overlay._render()}
+function closeCustomQuantityPicker(){const overlay=document.getElementById("customQuantityPickerOverlay");if(overlay)overlay.style.display="none"}
+function addCustomQuantityToBasket(){const overlay=document.getElementById("customQuantityPickerOverlay");if(!overlay)return;const id=Number(overlay.dataset.dishId),type=overlay.dataset.type,amount=Number(overlay.dataset.amount),ignore=overlay.dataset.ignoreAvailability==="true",dish=findCustomerDish(id);if(!dish||!type||!Number.isInteger(amount))return;const timedGroup=timedCategoryForDish(dish);if(!ignore&&timedGroup&&!isTimedCategoryAvailable(timedGroup))return;const key=cartLineKey(id,0,type,amount);cart[key]=(cart[key]||0)+1;updateCart();updateMenuItem(id);closeCustomQuantityPicker()}
 function openVariantPicker(id,ignoreAvailability=false){
     const dish=findCustomerDish(id);
     if(!dish||!dish.variants?.length)return;const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&timedGroup&&!isTimedCategoryAvailable(timedGroup))return;
@@ -2335,10 +2358,10 @@ function add(id,variantId=0,ignoreAvailability=false){
     const dish=findCustomerDish(id);if(!dish)return;if(window.gkkTrack)window.gkkTrack("add_to_cart",{items:[{item_name:String(dish.name||"Menu item"),item_category:String(dish.cat||"Menu"),quantity:1}]});const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
     const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+1;updateCart();updateMenuItem(dish.id);
 }
-function change(id,n,variantId=0,ignoreAvailability=false){
+function change(id,n,variantId=0,ignoreAvailability=false,customType="",customAmount=0){
     appliedPromo=null;const breakdown=document.getElementById("promoBreakdown");if(breakdown)breakdown.textContent="";const promoMessage=document.getElementById("promoMessage"),promoInput=document.getElementById("promoCode"),promoCode=promoInput?.value.trim()||"";if(promoMessage)promoMessage.textContent=promoCode?"Invalid Promo Code/ Promo Code expired":"";
     const dish=findCustomerDish(id);if(!dish)return;const timedGroup=timedCategoryForDish(dish);if(!ignoreAvailability&&n>0&&timedGroup&&!isTimedCategoryAvailable(timedGroup)){updateMenuItem(dish.id);return;}
-    const key=cartLineKey(dish.id,variantId);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
+    const key=cartLineKey(dish.id,variantId,customType,customAmount);cart[key]=(cart[key]||0)+n;if(cart[key]<=0)delete cart[key];updateCart();updateMenuItem(dish.id);
 }
 function minimumOrderForAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens")?60:100;}
 function cartItemSubtotal(){return Object.entries(cart).reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);}
@@ -2353,7 +2376,7 @@ function updateCart(){
         const line=getDishForCartLine(key);if(!line.dish)return "";
         const itemName=line.label?line.dish.name+' — '+line.label:line.dish.name;
         const price=line.price;const qty=Number(q)||0;
-        return `<div class="cart-line"><div><strong>${escapeHTML(itemName)}</strong><small>${money(price)} each</small></div><div class="qty"><button onclick='change(${line.menuId},-1,${line.variantId})'>−</button>${qty}<button onclick='change(${line.menuId},1,${line.variantId})'>+</button></div><strong>${money(price*qty)}</strong></div>`;
+        return `<div class="cart-line"><div><strong>${escapeHTML(itemName)}</strong><small>${money(price)} each</small></div><div class="qty"><button onclick='change(${line.menuId},-1,${line.variantId},false,"${line.customType}",${line.customAmount})'>−</button>${qty}<button onclick='change(${line.menuId},1,${line.variantId},false,"${line.customType}",${line.customAmount})'>+</button></div><strong>${money(price*qty)}</strong></div>`;
     }).join(""):'<div class="empty">Your basket is waiting for something delicious.</div>';
     document.getElementById("checkout").style.display=entries.length?"block":"none";
     const subtotal=entries.reduce((sum,[key,q])=>{const line=getDishForCartLine(key);return sum+line.price*(Number(q)||0)},0);
@@ -2743,7 +2766,7 @@ document.getElementById("orderForm").addEventListener("submit",async e=>{
  }
  if(!document.getElementById("checkoutAddressId").value||!document.getElementById("deliveryLatitude").value||!document.getElementById("deliveryLongitude").value||!deliveryAreaAvailable||!deliveryVerifiedAddress){document.getElementById("deliveryLocationStatus").textContent="This address is outside our delivery area.";updatePlaceOrderButton();return}
  if(!currentUser){closeCart();showPage("account");document.getElementById("authMessage").textContent="Please sign in or create an account before placing an order.";return}
- const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,quantity:Number(quantity)}}),mode=data.orderMode||"now",paymentMethod=data.paymentMethod||"online",button=e.target.querySelector('button[type="submit"]');
+ const data=Object.fromEntries(new FormData(e.target)),items=Object.entries(cart).map(([key,quantity])=>{const line=getDishForCartLine(key);return {menuId:line.menuId,variantId:line.variantId||undefined,customType:line.customType||undefined,customAmount:line.customAmount||undefined,quantity:Number(quantity)}}),mode=data.orderMode||"now",paymentMethod=data.paymentMethod||"online",button=e.target.querySelector('button[type="submit"]');
  button.disabled=true;button.textContent=paymentMethod==="cod"?"Placing COD order…":"Preparing payment…";
  try{
   const scheduledAt=mode==="scheduled"?new Date(document.getElementById("scheduledDate").value+"T"+document.getElementById("deliveryTime").value+":00+05:30").toISOString():null;
