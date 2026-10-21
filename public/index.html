@@ -1551,6 +1551,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <style id="best-selling-carousel">
 #homePopular.best-selling-section{width:100%;max-width:none;margin:0;padding:18px clamp(16px,3vw,42px) 30px!important;background:#f8f5e9}
 #homePopular.best-selling-section .section-head{max-width:1400px;margin:0 auto 18px;align-items:end}
+@media(max-width:650px){#homePopular.best-selling-section .section-head{flex-direction:column;align-items:center;text-align:center;gap:8px;margin:0 auto 16px;width:100%}#homePopular.best-selling-section .section-head>div{width:100%;text-align:center}#homePopular.best-selling-section .section-head .eyebrow,#homePopular.best-selling-section .section-head h2,#homePopular.best-selling-section .section-head p{text-align:center}#homePopular.best-selling-section .section-head p{max-width:100%;margin:0 auto}}
 #homePopular.best-selling-section .section-head h2{font:clamp(27px,3vw,38px) Georgia,serif;margin:7px 0 0;color:#104d37!important}
 #homePopular.best-selling-section .section-head p{color:#52695a!important;margin:0}
 #homePopular .best-selling-carousel{max-width:1400px;margin:0 auto;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#9ab69b transparent;padding:2px 0 14px;-webkit-overflow-scrolling:touch}
@@ -1615,7 +1616,6 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
   <div class="best-selling-carousel" id="popularCarousel" aria-label="Best Selling Items">
     <div id="popularGrid" class="best-selling-track"><p class="empty">Loading customer favourites…</p></div>
   </div>
-  <button class="home-menu-tile" type="button" onclick="showPage('menu')" aria-label="Open full menu" title="Open full menu"><span class="menu-tile-label">MENU</span><span class="menu-tile-icon" aria-hidden="true">🍴</span></button>
 </section>
 <section class="wrap page-view active-view home-section" id="homeBulkOrders">
 <div class="bulk-order-section">
