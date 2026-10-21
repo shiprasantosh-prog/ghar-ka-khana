@@ -1548,6 +1548,26 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 #homePopular .navratri-food-grid{position:relative!important;z-index:2!important}
 @media(max-width:650px){#homePopular.navratri-day2{padding:7px 5px 10px!important}#homePopular .navratri-day2-shell{padding:17px 7px 9px!important;border-radius:13px!important}#homePopular .navratri-day2-plaque{width:100%!important;min-height:46px!important;padding:7px 6px!important;font-size:clamp(14px,4.2vw,22px)!important;letter-spacing:.3px!important;gap:5px!important;white-space:nowrap!important;flex-wrap:nowrap!important}#homePopular .navratri-kicker{font-size:9px!important;letter-spacing:1.2px!important}#homePopular .navratri-tagline{font-size:12px!important;padding:0 6px!important}#homePopular .navratri-purity{font-size:10px!important;gap:5px!important}#homePopular .navratri-divider-art{margin-top:4px!important}}
 </style>
+<style id="best-selling-carousel">
+#homePopular.best-selling-section{width:100%;max-width:none;margin:0;padding:18px clamp(16px,3vw,42px) 30px!important;background:#f8f5e9}
+#homePopular.best-selling-section .section-head{max-width:1400px;margin:0 auto 18px;align-items:end}
+#homePopular.best-selling-section .section-head h2{font:clamp(27px,3vw,38px) Georgia,serif;margin:7px 0 0;color:#104d37!important}
+#homePopular.best-selling-section .section-head p{color:#52695a!important;margin:0}
+#homePopular .best-selling-carousel{max-width:1400px;margin:0 auto;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#9ab69b transparent;padding:2px 0 14px;-webkit-overflow-scrolling:touch}
+#homePopular #popularGrid.best-selling-track{display:flex!important;flex-wrap:nowrap!important;grid-template-columns:none!important;gap:14px!important;width:max-content;min-width:100%;align-items:stretch}
+#homePopular #popularGrid.best-selling-track>.card{flex:0 0 clamp(210px,22vw,250px);width:clamp(210px,22vw,250px);min-width:0;scroll-snap-align:start;margin:0}
+#homePopular #popularGrid.best-selling-track .food-img{height:150px!important}
+#homePopular #popularGrid.best-selling-track .card-body{padding:13px!important}
+#homePopular #popularGrid.best-selling-track .card-title h3{font-size:16px!important}
+@media(max-width:650px){
+ #homePopular.best-selling-section{padding:14px 14px 22px!important}
+ #homePopular.best-selling-section .section-head{gap:5px;margin-bottom:12px}
+ #homePopular.best-selling-section .section-head p{font-size:13px}
+ #homePopular #popularGrid.best-selling-track{gap:10px!important}
+ #homePopular #popularGrid.best-selling-track>.card{flex-basis:78vw;width:78vw;max-width:290px}
+ #homePopular #popularGrid.best-selling-track .food-img{height:145px!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -1587,22 +1607,15 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </section>
 
 
-<section class="wrap page-view active-view home-section navratri-day2" id="homePopular">
-  <div class="navratri-day2-shell">
-    <div class="navratri-lights" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-    <div class="navratri-marigold navratri-marigold-left" aria-hidden="true">✿ ❋ ✿ ❋ ✿</div>
-    <div class="navratri-marigold navratri-marigold-right" aria-hidden="true">✿ ❋ ✿ ❋ ✿</div>
-    <div class="navratri-dandiya-left" aria-hidden="true"><svg viewBox="0 0 180 180"><g transform="rotate(-34 90 90)" stroke-linecap="round"><rect x="48" y="12" width="18" height="156" rx="9" fill="#a9251d" stroke="#f5c65c" stroke-width="3"/><rect x="48" y="30" width="18" height="10" fill="#f5c65c"/><rect x="48" y="56" width="18" height="10" fill="#f5c65c"/><rect x="48" y="82" width="18" height="10" fill="#f5c65c"/><rect x="48" y="108" width="18" height="10" fill="#f5c65c"/><rect x="48" y="134" width="18" height="10" fill="#f5c65c"/><rect x="105" y="12" width="18" height="156" rx="9" fill="#176448" stroke="#f5c65c" stroke-width="3"/><rect x="105" y="30" width="18" height="10" fill="#f5c65c"/><rect x="105" y="56" width="18" height="10" fill="#f5c65c"/><rect x="105" y="82" width="18" height="10" fill="#f5c65c"/><rect x="105" y="108" width="18" height="10" fill="#f5c65c"/><rect x="105" y="134" width="18" height="10" fill="#f5c65c"/></g></svg></div>
-    <div class="navratri-dancer-art" aria-hidden="true"><svg viewBox="0 0 220 220"><g stroke-linecap="round" stroke-linejoin="round" stroke-width="5"><path d="M58 83 Q25 58 40 33 M58 83 Q91 49 103 26" fill="none" stroke="#a93d23"/><circle cx="72" cy="48" r="12" fill="#b97842" stroke="#f5c65c"/><path d="M66 65 Q47 81 55 109 L34 150 Q68 166 91 141 L88 105 L107 78Z" fill="#b21f2d" stroke="#d8a43e"/><path d="M55 107 L88 105 L91 141 Q67 159 34 150Z" fill="#f1bd48" stroke="#d8a43e"/><path d="M48 149 L25 190 M72 151 L90 193" fill="none" stroke="#176448" stroke-width="10"/><path d="M130 84 Q105 60 116 35 M143 79 Q172 59 183 34" fill="none" stroke="#a93d23"/><circle cx="142" cy="48" r="12" fill="#b97842" stroke="#f5c65c"/><path d="M130 65 Q111 85 125 108 L107 144 Q144 169 177 139 L159 106 L164 81Z" fill="#176448" stroke="#d8a43e"/><path d="M125 108 L159 106 L177 139 Q144 166 107 144Z" fill="#bd2530" stroke="#d8a43e"/><path d="M123 146 L111 191 M155 147 L177 188" fill="none" stroke="#a9251d" stroke-width="10"/><path d="M59 80 L96 58 M132 81 L106 58" fill="none" stroke="#b97842" stroke-width="8"/></g></svg></div>
-    <div class="navratri-day2-heading">
-      <div class="navratri-kicker"><span>🪔</span><span>SHUBH DUSSEHRA</span><span>🪔</span></div>
-      <div class="navratri-day2-plaque"><span class="plaque-flower">✿</span><span>DUSSEHRA SPECIALS</span><span class="plaque-flower">✿</span></div>
-      <p class="navratri-tagline">Happy Dussehra! Celebrate the victory of good over evil with homemade goodness.</p>
-      <div class="navratri-purity"><span>❧</span> Pure Veg <i>•</i> Homemade <i>•</i> Made with Love <span>❧</span></div>
-      <div class="navratri-divider-art" aria-hidden="true"><span>◆</span><b>✿</b><span>◆</span></div>
-    </div>
-    <div id="popularGrid" class="navratri-food-grid"><p class="empty">Preparing our Dussehra specials…</p></div>
+<section class="wrap page-view active-view home-section home-menu-section best-selling-section" id="homePopular">
+  <div class="section-head">
+    <div><div class="eyebrow">Customer favourites</div><h2>Best Selling Items</h2></div>
+    <p>Customer favourites, loved every day</p>
   </div>
+  <div class="best-selling-carousel" id="popularCarousel" aria-label="Best Selling Items">
+    <div id="popularGrid" class="best-selling-track"><p class="empty">Loading customer favourites…</p></div>
+  </div>
+  <button class="home-menu-tile" type="button" onclick="showPage('menu')" aria-label="Open full menu" title="Open full menu"><span class="menu-tile-label">MENU</span><span class="menu-tile-icon" aria-hidden="true">🍴</span></button>
 </section>
 <section class="wrap page-view active-view home-section" id="homeBulkOrders">
 <div class="bulk-order-section">
@@ -2024,17 +2037,8 @@ function navratriDishCardHTML(d){
 }
 function renderPopularDishes(){
   const host=document.getElementById('popularGrid');if(!host)return;
-  const desired=['sabudana khichdi','sabudana tikki','kuttu ki puri and sabji','puri sabji','rice kheer'];
-  const norm=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  // Match production behavior: only dishes explicitly selected and saved in
-  // the owner dashboard (popular_menu) appear in Navratri Vrat Specials.
-  const available=popularDishes.slice();
-  const ordered=desired.map(target=>{
-    const key=norm(target);
-    return available.find(d=>{const n=norm(d.name);return n===key||(key==='kuttukipuriandsabji'&&n.includes('kuttukipuri')&&n.includes('sabji'))||(key==='purisabji'&&n.includes('purisabji')&&!n.includes('kuttu'))||(key==='ricekheer'&&n.includes('ricekheer'));});
-  }).filter(Boolean);
-  const chosen=ordered.length===5?[...ordered,...available.filter(d=>!ordered.some(item=>Number(item.id)===Number(d.id)))].slice(0,6):available.slice(0,6);
-  host.innerHTML=chosen.length?chosen.map(navratriDishCardHTML).join(''):'<p class="empty">Our Navratri vrat favourites will be announced soon. Please select dishes in the owner dashboard and save them to publish the festive menu.</p>';
+  const selected=(Array.isArray(popularDishes)?popularDishes:[]).filter(d=>d&&d.available!==false&&d.available!==0).slice(0,6);
+  host.innerHTML=selected.length?selected.map(dishCardHTML).join(''):'<p class="empty">Our customer favourites will appear here soon. Select up to six available dishes in the Owner Dashboard and save your selection.</p>';
 }
 
 function setAuthMode(mode){authMode=mode;const f=document.getElementById("authForm"),reg=mode==="register";f.elements.name.parentElement.style.display=reg?"block":"none";f.elements.email.parentElement.style.display=reg?"block":"none";const signupAddressFields=document.getElementById("signupAddressFields");signupAddressFields.hidden=!reg;signupAddressFields.style.display=reg?"block":"none";signupAddressFields.querySelectorAll("input,select,textarea").forEach(field=>{field.disabled=!reg;if(field.name==="house"||field.name==="street"||field.name==="city"||field.name==="state"||field.name==="pincode")field.required=reg});document.getElementById("referralSignupField").hidden=!reg;document.getElementById("referralSignupField").style.display=reg?"block":"none";document.getElementById("authSubmit").textContent=reg?"Create account":"Sign in";document.getElementById("toggleAuth").textContent=reg?"I already have an account":"Create account";document.getElementById("showForgotPassword").style.display=reg?"none":"inline-block";document.getElementById("accountTitle").textContent=reg?"Create your account":"Sign in to your account";f.elements.password.autocomplete=reg?"new-password":"current-password";f.elements.password.minLength=reg?8:0;f.elements.password.removeAttribute("minlength");if(reg)f.elements.password.setAttribute("minlength","8")}
