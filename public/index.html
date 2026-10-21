@@ -1561,6 +1561,10 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 #homePopular #popularGrid.best-selling-track .card-title h3{font-size:16px!important}
 @media(max-width:650px){
  #homePopular.best-selling-section{padding:14px 14px 22px!important}
+ #homePopular.best-selling-section .section-head{flex-direction:column;align-items:center;text-align:center;gap:8px;margin:0 auto 16px;width:100%}
+ #homePopular.best-selling-section .section-head>div{width:100%;text-align:center}
+ #homePopular.best-selling-section .section-head .eyebrow,#homePopular.best-selling-section .section-head h2,#homePopular.best-selling-section .section-head p{text-align:center}
+ #homePopular.best-selling-section .section-head p{max-width:100%;margin:0 auto}
  #homePopular.best-selling-section .section-head{gap:5px;margin-bottom:12px}
  #homePopular.best-selling-section .section-head p{font-size:13px}
  #homePopular #popularGrid.best-selling-track{gap:10px!important}
@@ -1615,7 +1619,6 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
   <div class="best-selling-carousel" id="popularCarousel" aria-label="Best Selling Items">
     <div id="popularGrid" class="best-selling-track"><p class="empty">Loading customer favourites…</p></div>
   </div>
-  <button class="home-menu-tile" type="button" onclick="showPage('menu')" aria-label="Open full menu" title="Open full menu"><span class="menu-tile-label">MENU</span><span class="menu-tile-icon" aria-hidden="true">🍴</span></button>
 </section>
 <section class="wrap page-view active-view home-section" id="homeBulkOrders">
 <div class="bulk-order-section">
