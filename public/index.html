@@ -4140,4 +4140,68 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
 }
 </style>
 
+
+<style id="best-selling-mobile-image-fit-fix">
+/* Keep the homepage Best Selling carousel horizontal and show the complete food photo.
+   Scoped only to #popularGrid; full-menu and Today's Specials remain unchanged. */
+#homePopular #popularGrid.best-selling-track{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  grid-template-columns:none!important;
+  grid-auto-flow:column!important;
+  width:max-content!important;
+  min-width:100%!important;
+  gap:14px!important;
+  align-items:stretch!important;
+}
+#homePopular #popularGrid.best-selling-track>.card{
+  display:flex!important;
+  flex:0 0 clamp(210px,22vw,250px)!important;
+  flex-direction:column!important;
+  width:clamp(210px,22vw,250px)!important;
+  min-width:0!important;
+  max-width:none!important;
+  overflow:hidden!important;
+}
+#homePopular #popularGrid.best-selling-track>.card .food-img{
+  width:100%!important;
+  height:150px!important;
+  min-height:150px!important;
+  max-height:150px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:#f3f0e5!important;
+  overflow:hidden!important;
+}
+#homePopular #popularGrid.best-selling-track>.card .food-img img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
+@media(max-width:650px){
+  #homePopular #popularGrid.best-selling-track{gap:10px!important}
+  #homePopular #popularGrid.best-selling-track>.card{
+    flex:0 0 78vw!important;
+    width:78vw!important;
+    max-width:290px!important;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  #homePopular #popularGrid.best-selling-track>.card .food-img{
+    height:165px!important;
+    min-height:165px!important;
+    max-height:165px!important;
+  }
+  #homePopular #popularGrid.best-selling-track>.card .food-img img{
+    object-fit:contain!important;
+  }
+}
+</style>
+
 </body></html>
