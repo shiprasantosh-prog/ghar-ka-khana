@@ -365,12 +365,7 @@ $('#categoryAvailabilityForm').addEventListener('submit',async e=>{
 $('#cancelEdit').onclick=editReset;$('#refresh').onclick=()=>loadMenu().catch(e=>alert(e.message));$('#logout').onclick=async()=>{await api('/api/auth/logout',{method:'POST'});location.reload()};api('/api/auth/me').then(x=>{if(x.user.role==='admin'){showApp();loadKitchenStatus().catch(()=>{})}}).catch(()=>{});
 // Refresh kitchen availability so the dashboard reflects scheduled opening/closing without a manual reload.
 setInterval(()=>{if(!document.hidden)loadKitchenStatus().catch(()=>{})},60000);
-</script><style id="reviews-admin-contrast">
-/* Make the review action legible against the owner dashboard's light theme. */
-#ownerReviews .item .actions button[data-review-action="approve"]{background:#1b5a3a!important;border:1px solid #1b5a3a!important;color:#fff!important;text-shadow:none!important;opacity:1!important}
-#ownerReviews .item .actions button[data-review-action="approve"]:hover{background:#14472e!important;border-color:#14472e!important;color:#fff!important}
-</style>
-
+</script>
 <style id="password-visibility-controls">
 .password-input-wrap{position:relative;width:100%}
 .password-input-wrap>input{width:100%;padding-right:48px!important}
@@ -405,4 +400,11 @@ setInterval(()=>{if(!document.hidden)loadKitchenStatus().catch(()=>{})},60000);
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
 })();
 </script>
+<style id="reviews-admin-contrast">
+/* Make the review action legible against the owner dashboard's light theme. */
+#ownerReviews .item .actions button[data-review-action="approve"]{background:#1b5a3a!important;border:1px solid #1b5a3a!important;color:#fff!important;text-shadow:none!important;opacity:1!important}
+#ownerReviews .item .actions button[data-review-action="approve"]:hover{background:#14472e!important;border-color:#14472e!important;color:#fff!important}
+</style>
+
+
 </body></html>
