@@ -4204,4 +4204,87 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
 }
 </style>
 
+
+<style id="best-selling-carousel-final-layout">
+/* Final homepage-only layout: horizontal swipe carousel on every screen size. */
+#homePopular #popularCarousel{
+  display:block!important;
+  width:100%!important;
+  max-width:1400px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  scroll-snap-type:x mandatory!important;
+  padding:4px 2px 16px!important;
+}
+#homePopular #popularGrid.best-selling-track{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  grid-template-columns:none!important;
+  grid-auto-flow:column!important;
+  width:max-content!important;
+  min-width:100%!important;
+  gap:16px!important;
+  align-items:stretch!important;
+  margin:0!important;
+}
+#homePopular #popularGrid.best-selling-track>.card{
+  display:flex!important;
+  flex:0 0 270px!important;
+  flex-direction:column!important;
+  width:270px!important;
+  min-width:270px!important;
+  max-width:270px!important;
+  height:auto!important;
+  margin:0!important;
+  overflow:hidden!important;
+  scroll-snap-align:start!important;
+}
+#homePopular #popularGrid.best-selling-track>.card .food-img{
+  display:block!important;
+  width:100%!important;
+  height:190px!important;
+  min-height:190px!important;
+  max-height:190px!important;
+  flex:0 0 190px!important;
+  overflow:hidden!important;
+  background:#f3f0e5!important;
+}
+#homePopular #popularGrid.best-selling-track>.card .food-img img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+#homePopular #popularGrid.best-selling-track>.card .card-body{
+  display:flex!important;
+  flex:1 1 auto!important;
+  flex-direction:column!important;
+  padding:14px!important;
+  min-width:0!important;
+}
+@media(max-width:650px){
+  #homePopular #popularCarousel{padding:2px 0 14px!important}
+  #homePopular #popularGrid.best-selling-track{gap:12px!important}
+  #homePopular #popularGrid.best-selling-track>.card{
+    flex:0 0 82vw!important;
+    width:82vw!important;
+    min-width:0!important;
+    max-width:320px!important;
+  }
+  #homePopular #popularGrid.best-selling-track>.card .food-img{
+    height:190px!important;
+    min-height:190px!important;
+    max-height:190px!important;
+    flex-basis:190px!important;
+  }
+  #homePopular #popularGrid.best-selling-track>.card .card-body{padding:13px!important}
+  #homePopular #popularGrid.best-selling-track>.card h3{font-size:19px!important}
+}
+</style>
+
 </body></html>
