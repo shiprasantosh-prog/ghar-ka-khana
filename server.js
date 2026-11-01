@@ -2457,14 +2457,61 @@ app.get("/api/orders/mine/:id", auth, asyncRoute(async (req, res) => {
 }));
 
 // Owner: all orders
+// Fetch order, item and refund details in three bounded queries instead of
+// calling readOrder() once per order (an N+1 query pattern).
 app.get("/api/admin/orders", auth, admin, asyncRoute(async (req, res) => {
-  const result = await pool.query(
-    "SELECT id FROM orders ORDER BY id DESC"
+  const ordersResult = await pool.query(
+    `SELECT o.*, u.name AS customer_name, u.phone AS customer_phone
+     FROM orders o
+     JOIN users u ON u.id = o.user_id
+     ORDER BY o.id DESC`
   );
 
-  const orders = await Promise.all(
-    result.rows.map((row) => readOrder(row.id))
-  );
+  const orders = ordersResult.rows;
+  if (!orders.length) return res.json([]);
+
+  const orderIds = orders.map(order => order.id);
+  const [itemsResult, refundsResult] = await Promise.all([
+    pool.query(
+      `SELECT order_id, item_name AS name, variant_label AS variant,
+              unit_price AS price, quantity
+       FROM order_items
+       WHERE order_id = ANY($1::int[])
+       ORDER BY order_id, id`,
+      [orderIds]
+    ),
+    pool.query(
+      `SELECT order_id, id, razorpay_refund_id, amount_paise, status,
+              failure_reason, created_at, updated_at
+       FROM order_refunds
+       WHERE order_id = ANY($1::int[])
+       ORDER BY order_id, created_at DESC`,
+      [orderIds]
+    )
+  ]);
+
+  const itemsByOrder = new Map();
+  for (const item of itemsResult.rows) {
+    if (!itemsByOrder.has(item.order_id)) itemsByOrder.set(item.order_id, []);
+    itemsByOrder.get(item.order_id).push({
+      name: item.name,
+      variant: item.variant,
+      price: item.price,
+      quantity: item.quantity
+    });
+  }
+
+  const refundsByOrder = new Map();
+  for (const refund of refundsResult.rows) {
+    if (!refundsByOrder.has(refund.order_id)) refundsByOrder.set(refund.order_id, []);
+    const { order_id, ...refundDetails } = refund;
+    refundsByOrder.get(order_id).push(refundDetails);
+  }
+
+  for (const order of orders) {
+    order.items = itemsByOrder.get(order.id) || [];
+    order.refunds = refundsByOrder.get(order.id) || [];
+  }
 
   res.json(orders);
 }));
