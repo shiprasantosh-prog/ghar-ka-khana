@@ -863,7 +863,9 @@ app.get("/api/auth/me", auth, asyncRoute(async (req, res) => {
 app.get("/api/referrals/me", auth, asyncRoute(async (req,res)=>{
  const user=await pool.query("SELECT referral_code FROM users WHERE id=$1 AND role='customer'",[req.user.id]);
  if(!user.rowCount)return res.status(403).json({error:"Customer account required."});
- const eligible=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (discount_source='first_order' OR payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
+ const customer=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);
+ const normalizedPhone=normalizeCustomerPhone(customer.rows[0]?.phone);
+ const eligible=await pool.query("WITH digits AS (SELECT id,regexp_replace(phone,'[^0-9]','','g') AS value FROM users), normalized_users AS (SELECT id,CASE WHEN length(value)=12 AND left(value,2)='91' THEN right(value,10) ELSE ltrim(value,'0') END AS mobile FROM digits) SELECT 1 FROM orders o JOIN normalized_users u ON u.id=o.user_id WHERE u.mobile=$1 AND u.mobile<>'' AND o.status<>'Cancelled' AND (o.discount_source='first_order' OR o.payment_status IN ('paid','cod') OR o.status NOT IN ('Payment Pending')) LIMIT 1",[normalizedPhone]);
  const rewards=await pool.query("SELECT COUNT(*)::int AS available FROM referral_rewards WHERE referrer_user_id=$1 AND status='available'",[req.user.id]);
  const referrals=await pool.query("SELECT COUNT(*)::int AS successful FROM referral_rewards WHERE referrer_user_id=$1",[req.user.id]);
  res.json({referralCode:user.rows[0].referral_code,firstOrderEligible:!eligible.rowCount,availableRewards:Number(rewards.rows[0].available),successfulReferrals:Number(referrals.rows[0].successful)});
