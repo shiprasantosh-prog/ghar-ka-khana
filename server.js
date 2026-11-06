@@ -1480,6 +1480,11 @@ async function getDrivingDistanceKm(originLat,originLng,destinationLat,destinati
  if(!response.ok){console.error("[routes] Google Routes API HTTP",response.status,(await response.text().catch(()=>"")).slice(0,500));const e=new Error("We could not calculate the driving distance right now. Please try again.");e.status=502;throw e;}
  const data=await response.json(),meters=Number(data.routes?.[0]?.distanceMeters);if(!Number.isFinite(meters)||meters<0){const e=new Error("Google Maps could not find a driving route to this address. Please check the address or move the map pin.");e.status=400;throw e;}return meters/1000;
 }
+function normalizeCustomerPhone(value){
+  let digits=String(value||"").replace(/[^0-9]/g,"").replace(/^0+/,"");
+  if(digits.length===12&&digits.startsWith("91"))digits=digits.slice(2);
+  return digits;
+}
 function isKitchenSocietyAddress(address){const s=String(address||"").toLowerCase();return s.includes("brigade 7 gardens")&&(/560061/.test(s)||s.includes("bharath housing society"));}
 function isCodEligibleAddress(address){return String(address||"").toLowerCase().includes("brigade 7 gardens");}
 function calculateDeliveryFee(distanceKm,address){if(isKitchenSocietyAddress(address))return 0;return distanceKm>=1.5&&distanceKm<=2.5?25:distanceKm>2.5&&distanceKm<=5?50:distanceKm>5&&distanceKm<=7.5?75:distanceKm>7.5&&distanceKm<=12?100:0;}
@@ -1575,7 +1580,9 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     discount=code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value;
     discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;discountSource="promo";
   } else {
-    const priorSuccessful=await pool.query("SELECT 1 FROM orders WHERE user_id=$1 AND status<>'Cancelled' AND (discount_source='first_order' OR payment_status IN ('paid','cod') OR status NOT IN ('Payment Pending')) LIMIT 1",[req.user.id]);
+    const customer=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);
+    const normalizedPhone=normalizeCustomerPhone(customer.rows[0]?.phone);
+    const priorSuccessful=await pool.query("WITH digits AS (SELECT id,regexp_replace(phone,'[^0-9]','','g') AS value FROM users), normalized_users AS (SELECT id,CASE WHEN length(value)=12 AND left(value,2)='91' THEN right(value,10) ELSE ltrim(value,'0') END AS mobile FROM digits) SELECT 1 FROM orders o JOIN normalized_users u ON u.id=o.user_id WHERE u.mobile=$1 AND u.mobile<>'' AND o.status<>'Cancelled' AND (o.discount_source='first_order' OR o.payment_status IN ('paid','cod') OR o.status NOT IN ('Payment Pending')) LIMIT 1",[normalizedPhone]);
     if(!priorSuccessful.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),100);discountSource=discount>0?"first_order":"";}
     else {const reward=await pool.query("SELECT id,reward_amount FROM referral_rewards WHERE referrer_user_id=$1 AND status='available' ORDER BY id LIMIT 1",[req.user.id]);if(reward.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),Number(reward.rows[0].reward_amount),75);discountSource=discount>0?"referral_reward":"";appliedCode="REFERRAL REWARD";}}
   }
