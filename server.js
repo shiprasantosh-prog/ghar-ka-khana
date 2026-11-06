@@ -1579,12 +1579,6 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
     if(eligibleSubtotal<=0)return res.status(400).json({error:"This promo code does not apply to the items in your basket."});
     discount=code.discount_type==="percent"?Math.floor(eligibleSubtotal*code.discount_value/100):code.discount_value;
     discount=Math.min(eligibleSubtotal,discount);appliedCode=code.code;discountSource="promo";
-  } else {
-    const customer=await pool.query("SELECT phone FROM users WHERE id=$1",[req.user.id]);
-    const normalizedPhone=normalizeCustomerPhone(customer.rows[0]?.phone);
-    const priorSuccessful=await pool.query("WITH digits AS (SELECT id,regexp_replace(phone,'[^0-9]','','g') AS value FROM users), normalized_users AS (SELECT id,CASE WHEN length(value)=12 AND left(value,2)='91' THEN right(value,10) ELSE ltrim(value,'0') END AS mobile FROM digits) SELECT 1 FROM orders o JOIN normalized_users u ON u.id=o.user_id WHERE u.mobile=$1 AND u.mobile<>'' AND o.status<>'Cancelled' AND (o.discount_source='first_order' OR o.payment_status IN ('paid','cod') OR o.status NOT IN ('Payment Pending')) LIMIT 1",[normalizedPhone]);
-    if(!priorSuccessful.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),100);discountSource=discount>0?"first_order":"";}
-    else {const reward=await pool.query("SELECT id,reward_amount FROM referral_rewards WHERE referrer_user_id=$1 AND status='available' ORDER BY id LIMIT 1",[req.user.id]);if(reward.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),Number(reward.rows[0].reward_amount),75);discountSource=discount>0?"referral_reward":"";appliedCode="REFERRAL REWARD";}}
   }
   const normalizedPaymentMethod=String(paymentMethod||"online").trim().toLowerCase();
   if(!["online","cod"].includes(normalizedPaymentMethod))return res.status(400).json({error:"Please choose a valid payment method."});
@@ -1596,6 +1590,16 @@ app.post("/api/orders", auth, asyncRoute(async (req, res) => {
   const client=await pool.connect();let orderId;
   try{
     await client.query("BEGIN");
+     if(!String(promoCode).trim()){
+       const customer=await client.query("SELECT phone FROM users WHERE id=$1 FOR SHARE",[req.user.id]);
+       const normalizedPhone=normalizeCustomerPhone(customer.rows[0]?.phone);
+       if(!normalizedPhone)throw new Error("A valid mobile number is required to place an order.");
+       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[normalizedPhone]);
+       const priorSuccessful=await client.query("WITH digits AS (SELECT id,regexp_replace(phone,'[^0-9]','','g') AS value FROM users), normalized_users AS (SELECT id,CASE WHEN length(value)=12 AND left(value,2)='91' THEN right(value,10) ELSE ltrim(value,'0') END AS mobile FROM digits) SELECT 1 FROM orders o JOIN normalized_users u ON u.id=o.user_id WHERE u.mobile=$1 AND u.mobile<>'' AND o.status<>'Cancelled' AND (o.discount_source='first_order' OR o.payment_status IN ('paid','cod') OR o.status NOT IN ('Payment Pending')) LIMIT 1",[normalizedPhone]);
+       if(!priorSuccessful.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),100);discountSource=discount>0?"first_order":"";}
+       else {const reward=await client.query("SELECT id,reward_amount FROM referral_rewards WHERE referrer_user_id=$1 AND status='available' ORDER BY id LIMIT 1 FOR UPDATE",[req.user.id]);if(reward.rowCount){discount=Math.min(subtotal,Math.floor(subtotal*0.10),Number(reward.rows[0].reward_amount),75);discountSource=discount>0?"referral_reward":"";appliedCode="REFERRAL REWARD";}}
+     }
+     const total=Number(subtotal-discount+handlingFee+deliveryFee);
     const result=await client.query("INSERT INTO orders(user_id,total,address,notes,status,scheduled_at,delivery_slot,promo_code,discount,delivery_fee,handling_fee,payment_status,discount_source,payment_pending_since) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CASE WHEN $5 = 'Payment Pending' THEN CURRENT_TIMESTAMP ELSE NULL END) RETURNING id",[req.user.id,total,address,notes,isCod?"Received":"Payment Pending",scheduledDate,orderMode==="scheduled"?String(deliverySlot):"",appliedCode,discount,deliveryFee,handlingFee,isCod?"cod":"created",discountSource]);
     orderId=result.rows[0].id;
     if(discountSource==="referral_reward"){const reserved=await client.query("UPDATE referral_rewards SET status='reserved',reserved_order_id=$1 WHERE id=(SELECT id FROM referral_rewards WHERE referrer_user_id=$2 AND status='available' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id",[orderId,req.user.id]);if(!reserved.rowCount)throw new Error("Your referral reward was just used elsewhere. Please refresh checkout and try again.");}
