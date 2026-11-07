@@ -4927,6 +4927,112 @@ body.gkk-diwali-preview #story.gkk-diwali-complete-hero{
 @media(prefers-reduced-motion:reduce){.gkk-diwali-fireworks{animation:none!important}}
 </style>
 
+<style id="gkk-diwali-hero-cleanup">
+/* Clean, self-contained Diwali hero. The old production hero artwork is not used. */
+body.gkk-diwali-preview #story.gkk-diwali-complete-hero{
+  position:relative!important;
+  width:calc(100% - 24px)!important;
+  max-width:none!important;
+  margin:12px auto 0!important;
+  padding:0!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  border:3px solid #dca632!important;
+  border-radius:38px!important;
+  background:#fff6e4!important;
+  background-image:none!important;
+  box-shadow:0 10px 30px rgba(85,51,12,.16)!important;
+}
+body.gkk-diwali-preview #story.gkk-diwali-complete-hero:before{
+  display:none!important;
+}
+body.gkk-diwali-preview #story.gkk-diwali-complete-hero:after{
+  content:"";position:absolute;inset:7px;z-index:8;pointer-events:none;
+  border:1px solid rgba(255,218,130,.9);border-radius:29px;
+}
+body.gkk-diwali-preview .gkk-diwali-inner{
+  min-height:470px!important;
+  display:grid!important;
+  grid-template-columns:52% 48%!important;
+  align-items:stretch!important;
+  position:relative!important;
+  overflow:hidden!important;
+  border-radius:32px!important;
+  background:linear-gradient(105deg,#fff8e9 0%,#fff3dc 48%,#123e29 67%,#082d1d 100%)!important;
+}
+body.gkk-diwali-preview .gkk-diwali-copy{
+  grid-column:1!important;grid-row:1!important;
+  width:auto!important;height:auto!important;min-height:470px!important;
+  padding:92px 28px 64px clamp(32px,6vw,88px)!important;
+  background:linear-gradient(90deg,#fff8e9 0%,rgba(255,247,229,.98) 76%,rgba(255,240,215,.78) 100%)!important;
+  justify-content:center!important;
+}
+body.gkk-diwali-preview .gkk-diwali-brand{margin:0 0 22px!important;gap:12px!important}
+body.gkk-diwali-preview .gkk-diwali-brand svg{width:66px!important;height:56px!important}
+body.gkk-diwali-preview .gkk-diwali-copy h1{font-size:clamp(48px,5vw,72px)!important;line-height:1.02!important}
+body.gkk-diwali-preview .gkk-diwali-art{
+  grid-column:2!important;grid-row:1!important;
+  position:relative!important;inset:auto!important;
+  width:100%!important;height:100%!important;min-height:470px!important;
+  overflow:hidden!important;
+  background:radial-gradient(ellipse at 52% 72%,#80501e 0%,#3d351b 48%,#0d3825 100%)!important;
+}
+body.gkk-diwali-preview .gkk-diwali-art:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(9,47,29,.14),transparent 24%,rgba(7,35,22,.08))!important;
+}
+body.gkk-diwali-preview .gkk-diwali-god-art{
+  position:absolute!important;inset:0!important;
+  width:100%!important;height:100%!important;
+  object-fit:contain!important;object-position:center bottom!important;
+  padding:28px 10px 8px!important;
+  -webkit-mask-image:none!important;mask-image:none!important;
+  filter:drop-shadow(0 7px 12px rgba(0,0,0,.25))!important;
+}
+body.gkk-diwali-preview .gkk-diwali-fireworks,
+body.gkk-diwali-preview .gkk-diwali-lantern{display:none!important}
+body.gkk-diwali-preview .gkk-diwali-toran{
+  top:0!important;left:0!important;right:0!important;
+  height:66px!important;z-index:7!important;
+  background:
+    radial-gradient(ellipse 8px 13px at 50% 20px,#f6c65b 0 65%,transparent 70%),
+    radial-gradient(ellipse 8px 13px at 42% 27px,#e88d22 0 65%,transparent 70%),
+    radial-gradient(ellipse 8px 13px at 58% 27px,#e88d22 0 65%,transparent 70%),
+    radial-gradient(ellipse 7px 12px at 50% 35px,#f0a52e 0 65%,transparent 70%),
+    radial-gradient(ellipse 3px 7px at 25% 48px,#2f7545 0 70%,transparent 75%),
+    radial-gradient(ellipse 3px 7px at 75% 48px,#2f7545 0 70%,transparent 75%),
+    linear-gradient(180deg,transparent 0 7px,#28613a 8px 10px,transparent 11px)!important;
+  background-size:64px 66px,64px 66px,64px 66px,64px 66px,64px 66px,64px 66px,100% 66px!important;
+  background-repeat:repeat-x!important;
+}
+body.gkk-diwali-preview .gkk-diwali-diya{z-index:9!important}
+body.gkk-diwali-preview .gkk-diwali-corner{display:none!important}
+body.gkk-diwali-preview #story.gkk-diwali-complete-hero + .hero-benefits{
+  position:relative!important;z-index:2!important;
+}
+@media(max-width:760px){
+  body.gkk-diwali-preview #story.gkk-diwali-complete-hero{
+    width:calc(100% - 12px)!important;border-radius:26px!important;margin:6px auto 0!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-inner{
+    display:flex!important;flex-direction:column!important;min-height:0!important;
+    background:#fff5df!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-copy{
+    min-height:0!important;padding:82px 24px 28px!important;
+    background:linear-gradient(180deg,#fff8e9 0%,#fff4df 100%)!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-brand{margin-bottom:15px!important}
+  body.gkk-diwali-preview .gkk-diwali-copy h1{font-size:clamp(42px,10vw,58px)!important}
+  body.gkk-diwali-preview .gkk-diwali-art{
+    min-height:320px!important;height:320px!important;width:100%!important;
+    background:radial-gradient(ellipse at 50% 70%,#80501e 0%,#3d351b 55%,#0d3825 100%)!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-god-art{padding:10px 8px 5px!important}
+  body.gkk-diwali-preview .gkk-diwali-diya{bottom:8px!important;transform:scale(.8)}
+}
+</style>
+
 <script id="gkk-diwali-preview-inject">
 (function(){
   const staging = location.hostname.toLowerCase().includes("staging");
