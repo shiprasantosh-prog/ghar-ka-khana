@@ -4860,6 +4860,73 @@ body.gkk-diwali-preview #story.gkk-diwali-complete-hero:after{
 @media(prefers-reduced-motion:reduce){.gkk-diwali-fireworks{animation:none!important}}
 </style>
 
+<style id="gkk-diwali-hero-refinement">
+/* Refinement pass: remove the old hero artwork from the festive composition
+   and blend the devotional scene and sparkler into one continuous design. */
+body.gkk-diwali-preview #story.gkk-diwali-complete-hero{
+  background:
+    linear-gradient(90deg,
+      rgba(255,249,235,.99) 0%,
+      rgba(255,247,228,.96) 31%,
+      rgba(255,239,211,.70) 48%,
+      rgba(12,48,29,.76) 66%,
+      rgba(8,39,24,.99) 100%),
+    url('/images/hero.jpg?v=5') center/cover no-repeat!important;
+}
+.gkk-diwali-art{
+  width:51%!important;
+  background:linear-gradient(90deg,rgba(10,47,28,0) 0%,rgba(10,47,28,.22) 20%,rgba(8,40,24,.96) 100%)!important;
+}
+.gkk-diwali-god-art{
+  right:0!important;bottom:0!important;width:100%!important;height:100%!important;
+  object-fit:cover!important;object-position:center center!important;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.25) 12%,#000 34%);
+  mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.25) 12%,#000 34%);
+  filter:drop-shadow(0 5px 10px rgba(0,0,0,.28))!important;
+}
+.gkk-diwali-fireworks{
+  left:3%!important;top:26%!important;width:25%!important;height:34%!important;
+  object-fit:contain!important;mix-blend-mode:screen!important;
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 0%,#000 28%,transparent 72%);
+  mask-image:radial-gradient(ellipse at center,#000 0%,#000 28%,transparent 72%);
+  animation:gkk-sparkler-glow 1.6s ease-in-out infinite alternate;
+}
+@keyframes gkk-sparkler-glow{
+  from{opacity:.68;filter:brightness(1.05) drop-shadow(0 0 5px #ffc34c)}
+  to{opacity:1;filter:brightness(1.35) drop-shadow(0 0 18px #ffd56b)}
+}
+/* Replace the dotted string with a fuller floral toran: flower clusters,
+   small leaf accents and a gently curved green cord. */
+.gkk-diwali-toran{
+  height:82px!important;
+  background:
+    radial-gradient(ellipse 5px 10px at 50% 33px,#f8c04d 0 90%,transparent 100%),
+    radial-gradient(ellipse 5px 10px at 42% 25px,#e78a1c 0 90%,transparent 100%),
+    radial-gradient(ellipse 5px 10px at 58% 25px,#e78a1c 0 90%,transparent 100%),
+    radial-gradient(ellipse 5px 10px at 42% 41px,#f1a52b 0 90%,transparent 100%),
+    radial-gradient(ellipse 5px 10px at 58% 41px,#f1a52b 0 90%,transparent 100%),
+    radial-gradient(ellipse 5px 10px at 50% 17px,#f4b43a 0 90%,transparent 100%),
+    radial-gradient(ellipse 4px 8px at 24% 51px,#2e7544 0 90%,transparent 100%),
+    radial-gradient(ellipse 4px 8px at 76% 51px,#2e7544 0 90%,transparent 100%),
+    radial-gradient(ellipse 4px 8px at 15% 57px,#397e49 0 90%,transparent 100%),
+    radial-gradient(ellipse 4px 8px at 85% 57px,#397e49 0 90%,transparent 100%),
+    radial-gradient(ellipse 4px 8px at 50% 64px,#2e7544 0 90%,transparent 100%),
+    radial-gradient(ellipse 100% 36px at 50% -4px,transparent 67%,#21623b 69% 71%,transparent 73%);
+  background-size:76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,76px 82px,100% 82px;
+  background-repeat:repeat-x;
+  filter:drop-shadow(0 3px 3px rgba(90,48,7,.24));
+}
+@media(max-width:760px){
+  .gkk-diwali-art{width:100%!important}
+  .gkk-diwali-god-art{
+    -webkit-mask-image:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.2) 12%,#000 35%);
+    mask-image:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.2) 12%,#000 35%);
+  }
+  .gkk-diwali-fireworks{left:3%!important;top:16%!important;width:22%!important;height:30%!important}
+}
+@media(prefers-reduced-motion:reduce){.gkk-diwali-fireworks{animation:none!important}}
+</style>
+
 <script id="gkk-diwali-preview-inject">
 (function(){
   const staging = location.hostname.toLowerCase().includes("staging");
