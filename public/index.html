@@ -1840,7 +1840,64 @@ body.gkk-diwali-preview #story:focus{outline:none}
  body.gkk-diwali-preview #story .gkk-diwali-sparkler{animation:none!important}
 }
 </style>
-</head>
+
+<style id="gkk-diwali-final-pass">
+/* One coherent, hero-only festive treatment. Earlier experimental layers are neutralised here. */
+body.gkk-diwali-preview #story.hero{
+ position:relative!important;isolation:isolate;overflow:hidden!important;
+ border:0!important;border-bottom:3px solid #b88432!important;
+ box-shadow:inset 0 0 0 3px rgba(28,78,52,.92),inset 0 0 0 6px rgba(211,165,82,.92)!important;
+}
+body.gkk-diwali-preview #story #gkkFestiveToran{display:none!important}
+body.gkk-diwali-preview #gkkFestiveDecor{display:none!important}
+body.gkk-diwali-preview #story:after{
+ content:"";position:absolute;z-index:3;inset:8px;pointer-events:none;
+ border:1px solid rgba(201,153,73,.72);
+ box-shadow:inset 0 0 0 2px rgba(255,249,229,.55)
+}
+body.gkk-diwali-preview #story .gkk-diwali-garland-svg{
+ position:absolute;z-index:7;left:8px;right:8px;top:5px;width:calc(100% - 16px);
+ height:76px;overflow:visible;pointer-events:none
+}
+body.gkk-diwali-preview #story .hero-copy{position:relative;z-index:5}
+body.gkk-diwali-preview #story .gkk-diwali-deities{
+ position:absolute;z-index:5;right:clamp(18px,3vw,42px);bottom:76px;
+ width:clamp(116px,12vw,158px);height:clamp(116px,12vw,158px);
+ object-fit:cover;object-position:center;border:0;border-radius:0;padding:0;
+ background:transparent;box-shadow:none;pointer-events:none;
+ -webkit-mask-image:radial-gradient(ellipse 68% 68% at 50% 50%,#000 55%,rgba(0,0,0,.86) 72%,transparent 100%);
+ mask-image:radial-gradient(ellipse 68% 68% at 50% 50%,#000 55%,rgba(0,0,0,.86) 72%,transparent 100%);
+}
+body.gkk-diwali-preview #story .gkk-diwali-sparkler{
+ display:none!important
+}
+/* Fuljhadi is drawn as fine warm sparks, not the uploaded white-streak GIF. */
+body.gkk-diwali-preview #story .gkk-diwali-spark-css{
+ position:absolute;z-index:5;right:clamp(155px,18vw,235px);top:25%;
+ width:72px;height:72px;pointer-events:none;opacity:.72;
+ background:
+ radial-gradient(circle at 50% 50%,#fff8c9 0 2px,transparent 3px),
+ repeating-conic-gradient(from 0deg at 50% 50%,transparent 0deg 7deg,rgba(255,197,91,.95) 7.5deg 8.5deg,transparent 9deg 22.5deg);
+ -webkit-mask:radial-gradient(circle,transparent 0 5px,#000 7px 34px,transparent 36px);
+ mask:radial-gradient(circle,transparent 0 5px,#000 7px 34px,transparent 36px);
+ animation:gkkRealSpark 1.8s ease-in-out infinite
+}
+@keyframes gkkRealSpark{0%,100%{opacity:.22;transform:scale(.78) rotate(0)}45%{opacity:.9;transform:scale(1.08) rotate(18deg)}}
+body.gkk-diwali-preview #story .diya-art{
+ z-index:7!important;bottom:15px!important;transform:scale(.88)!important
+}
+body.gkk-diwali-preview #story .diya-left{left:20px!important}
+body.gkk-diwali-preview #story .diya-right{right:20px!important}
+@media(max-width:700px){
+ body.gkk-diwali-preview #story .gkk-diwali-garland-svg{height:48px}
+ body.gkk-diwali-preview #story .gkk-diwali-deities{width:78px;height:78px;right:10px;bottom:76px}
+ body.gkk-diwali-preview #story .gkk-diwali-spark-css{width:44px;height:44px;right:86px;top:23%}
+ body.gkk-diwali-preview #story .diya-art{transform:scale(.66)!important;bottom:9px!important}
+ body.gkk-diwali-preview #story .diya-left{left:7px!important}
+ body.gkk-diwali-preview #story .diya-right{right:7px!important}
+}
+@media(prefers-reduced-motion:reduce){body.gkk-diwali-preview #story .gkk-diwali-spark-css{animation:none}}
+</style></head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
 <aside class="sidebar" aria-label="Main navigation">
@@ -4568,11 +4625,17 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
  document.getElementById("gkkDiwaliPreview")?.remove();
  document.querySelectorAll("#gkkDiwaliLights,#gkkDiwaliLeft,#gkkDiwaliRight,#gkkFestiveToran,#gkkFestiveDecor").forEach(el=>el.remove());
  const hero=document.getElementById("story");
- if(hero){const toran=document.createElement("div");toran.id="gkkFestiveToran";toran.setAttribute("aria-hidden","true");hero.appendChild(toran);}
+ if(hero){
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 1440 88");svg.setAttribute("preserveAspectRatio","none");
+  svg.setAttribute("class","gkk-diwali-garland-svg");svg.setAttribute("aria-hidden","true");
+  svg.innerHTML='<path d="M0 8 Q180 16 360 8 T720 8 T1080 8 T1440 8" fill="none" stroke="#b47a2b" stroke-width="2"/><path d="M0 9 Q180 78 360 9 T720 9 T1080 9 T1440 9" fill="none" stroke="#39734c" stroke-width="3"/>'+Array.from({length:13},(_,i)=>{const x=45+i*112;const y=16+Math.abs(Math.sin(i*.72))*42;return '<g transform="translate('+x+' '+y+')"><circle r="4" fill="#e8ad45"/><g fill="#d98725">'+Array.from({length:6},(_,j)=>'<ellipse cx="0" cy="-8" rx="3.2" ry="6" transform="rotate('+(j*60)+' 0 0)"/>').join('')+'</g><circle r="3" fill="#f7d47e"/></g><path d="M'+x+' '+(y+8)+' v12" stroke="#bd8738" stroke-width="1.5"/><circle cx="'+x+'" cy="'+(y+23)+'" r="3.5" fill="#ffd477"/>';}).join('');
+  hero.appendChild(svg);
+ }
  if(hero){
 
   const deities=document.createElement("img");deities.className="gkk-diwali-deities";deities.src="/images/Diwali/lakshmi-ganesh.webp";deities.alt="";deities.setAttribute("aria-hidden","true");hero.appendChild(deities);
-  const sparkler=document.createElement("img");sparkler.className="gkk-diwali-sparkler";sparkler.src="/images/Diwali/fuljhadi.gif";sparkler.alt="";sparkler.setAttribute("aria-hidden","true");hero.appendChild(sparkler);
+  const sparkler=document.createElement("span");sparkler.className="gkk-diwali-spark-css";sparkler.setAttribute("aria-hidden","true");hero.appendChild(sparkler);
  }
  const decor=document.createElement("div");decor.id="gkkFestiveDecor";decor.setAttribute("aria-hidden","true");
  decor.innerHTML='<span class="rangoli rangoli-left"></span><span class="rangoli rangoli-right"></span><span class="firework"></span>';
