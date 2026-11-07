@@ -1571,21 +1571,71 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </style>
 
 <style id="gkk-diwali-preview-theme">
-/* Diwali preview layer: only enabled on a staging hostname with ?diwaliPreview=1 */
-body.gkk-diwali-preview{--diwali-gold:#c69a43;--diwali-saffron:#b96b32}
+/* Full-site Diwali atmosphere, strictly staging-preview gated. */
+body.gkk-diwali-preview{
+  --diwali-gold:#c69a43;--diwali-saffron:#b96b32;
+  background-color:#fbf5e8!important;
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,220,142,.24),transparent 48%)!important;
+}
 body.gkk-diwali-preview #story.hero.page-view.active-view{
-  background-image:linear-gradient(90deg,rgba(255,249,231,.98) 0%,rgba(255,247,224,.91) 36%,rgba(255,239,201,.28) 67%,rgba(255,239,201,.04) 100%),url('/images/hero.jpg?v=5')!important;
+  background-image:linear-gradient(90deg,rgba(255,249,231,.97) 0%,rgba(255,247,224,.87) 36%,rgba(255,239,201,.18) 70%,rgba(255,239,201,.02) 100%),url('/images/hero.jpg?v=5')!important;
   border-bottom:1px solid #e7d4a8
 }
-body.gkk-diwali-preview #story.hero.page-view.active-view:after{
-  content:"✦  शुभ दीपावली  ✦";position:absolute;right:clamp(20px,5vw,76px);top:26px;z-index:3;
-  color:#8b6425;font:italic clamp(17px,2vw,25px) Georgia,serif;letter-spacing:2px;
-  text-shadow:0 1px 0 #fff8
-}
-body.gkk-diwali-preview #story .hero-copy .eyebrow{color:#a76d24!important}
+body.gkk-diwali-preview #story .hero-copy .eyebrow,
 body.gkk-diwali-preview #story .hero-copy h1 em{color:#a76d24!important}
-body.gkk-diwali-preview #story .hero-copy .btn{background:#1b5a3a!important;border-color:#b88a36!important;box-shadow:0 5px 16px #8e6a2b26}
-body.gkk-diwali-preview #story .hero-benefits{border-top:1px solid #e7d4a8}
+body.gkk-diwali-preview #story .hero-copy .btn{background:#1b5a3a!important;border:1px solid #c69a43!important;box-shadow:0 5px 18px #d5a84c45}
+body.gkk-diwali-preview .home-section,
+body.gkk-diwali-preview .page-view.active-view:not(#story){
+  border-color:#e7d5ad!important;
+}
+body.gkk-diwali-preview .section-head .eyebrow,
+body.gkk-diwali-preview .eyebrow{color:#aa792e}
+body.gkk-diwali-preview .btn,
+body.gkk-diwali-preview button.btn{box-shadow:0 3px 12px rgba(170,122,43,.14)}
+body.gkk-diwali-preview .card,
+body.gkk-diwali-preview .menu-card,
+body.gkk-diwali-preview .story-panel,
+body.gkk-diwali-preview .bulk-order-section{
+  border-color:#e8d8b7!important;box-shadow:0 8px 22px rgba(125,89,37,.07)
+}
+/* A continuous overhead fairy-light garland and softly glowing bulbs. */
+body.gkk-diwali-preview #gkkDiwaliLights{
+  position:fixed;left:78px;right:0;top:0;height:36px;z-index:48;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(255,204,99,.32),transparent 72%),
+    repeating-radial-gradient(circle at 16px 25px,#fff3bb 0 2px,rgba(255,202,92,.9) 2.5px 4px,transparent 5px 54px);
+  filter:drop-shadow(0 2px 5px rgba(207,153,54,.65));
+  opacity:.9
+}
+body.gkk-diwali-preview #gkkDiwaliLights:before{
+  content:"";position:absolute;left:0;right:0;top:5px;height:23px;
+  border-top:2px solid #a77b35;border-radius:0 0 50% 50%/0 0 100% 100%;opacity:.72
+}
+/* Decorative diya strings sit inside the page gutters, never over content. */
+body.gkk-diwali-preview #gkkDiwaliLeft,
+body.gkk-diwali-preview #gkkDiwaliRight{
+  position:fixed;top:46px;bottom:14px;width:38px;z-index:47;pointer-events:none;
+  opacity:.88;
+  background:
+   radial-gradient(ellipse at 50% 50%,rgba(255,211,111,.38),transparent 70%),
+   repeating-linear-gradient(to bottom,transparent 0 52px,#b88a3a 53px 54px,transparent 55px 108px);
+}
+body.gkk-diwali-preview #gkkDiwaliLeft{left:80px}
+body.gkk-diwali-preview #gkkDiwaliRight{right:0}
+body.gkk-diwali-preview #gkkDiwaliLeft:after,
+body.gkk-diwali-preview #gkkDiwaliRight:after{
+  content:"🪔";position:absolute;top:0;left:4px;width:30px;
+  font-size:22px;line-height:108px;white-space:pre;
+  text-shadow:0 0 12px rgba(255,193,72,.85);
+}
+body.gkk-diwali-preview #gkkDiwaliRight:after{content:"🪔"}
+/* Warm festive edge treatment across the full scrollable page, not just the home section. */
+body.gkk-diwali-preview .page-view.active-view{position:relative}
+body.gkk-diwali-preview .page-view.active-view:before{
+  content:"";position:absolute;inset:8px 10px;border:1px solid rgba(190,147,69,.16);
+  border-radius:12px;pointer-events:none;z-index:0
+}
+body.gkk-diwali-preview #homePopular.best-selling-section{border-top:1px solid #e8d9b7}
 #gkkDiwaliPreview{
   position:relative;isolation:isolate;overflow:hidden;margin:0 auto 28px;
   padding:clamp(24px,4vw,48px) clamp(20px,5vw,64px);
@@ -1601,12 +1651,20 @@ body.gkk-diwali-preview #story .hero-benefits{border-top:1px solid #e7d4a8}
 #gkkDiwaliPreview .diwali-art{min-height:150px;display:flex;align-items:center;justify-content:center;gap:12px;color:#a8792b}
 #gkkDiwaliPreview .diya{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fff5cb 0 18%,#e9c77d 19% 21%,#f6e6bd 22% 100%);box-shadow:0 0 0 8px #d9b76b22,0 0 42px #dcae4d66;font-size:48px}
 #gkkDiwaliPreview .diwali-art .sparkle{font-size:26px;color:#b88731}
-body.gkk-diwali-preview #homePopular.best-selling-section{border-top:1px solid #e8d9b7}
 @media(max-width:650px){
+ body.gkk-diwali-preview #gkkDiwaliLights{left:0;height:27px}
+ body.gkk-diwali-preview #gkkDiwaliLeft{left:0;width:15px;opacity:.6}
+ body.gkk-diwali-preview #gkkDiwaliRight{width:15px;opacity:.6}
+ body.gkk-diwali-preview #gkkDiwaliLeft:after,
+ body.gkk-diwali-preview #gkkDiwaliRight:after{font-size:13px;left:0;line-height:108px}
  #gkkDiwaliPreview{grid-template-columns:1fr;gap:8px;margin:0 12px 22px;padding:25px 22px;text-align:left}
  #gkkDiwaliPreview .diwali-art{min-height:88px;justify-content:flex-start}
  #gkkDiwaliPreview .diya{width:66px;height:66px;font-size:36px}
- body.gkk-diwali-preview #story.hero.page-view.active-view:after{top:12px;right:14px;font-size:15px;letter-spacing:1px}
+ body.gkk-diwali-preview .page-view.active-view:before{inset:5px 4px}
+}
+@media(prefers-reduced-motion:no-preference){
+ body.gkk-diwali-preview #gkkDiwaliLights{animation:gkkDiwaliTwinkle 4s ease-in-out infinite alternate}
+ @keyframes gkkDiwaliTwinkle{from{opacity:.62;filter:drop-shadow(0 1px 3px rgba(207,153,54,.35))}to{opacity:1;filter:drop-shadow(0 2px 9px rgba(255,194,75,.85))}}
 }
 </style>
 </head>
@@ -4334,6 +4392,9 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const preview=new URLSearchParams(location.search).get("diwaliPreview")==="1";
   if(!isStaging||!preview)return;
   document.body.classList.add("gkk-diwali-preview");
+  [["gkkDiwaliLights","top"],["gkkDiwaliLeft","left"],["gkkDiwaliRight","right"]].forEach(([id,kind])=>{
+    if(!document.getElementById(id)){const el=document.createElement("div");el.id=id;el.setAttribute("aria-hidden","true");el.dataset.decoration=kind;document.body.appendChild(el);}
+  });
   const popular=document.getElementById("homePopular");
   if(!popular||document.getElementById("gkkDiwaliPreview"))return;
   const section=document.createElement("section");
