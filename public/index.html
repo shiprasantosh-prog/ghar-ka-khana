@@ -1635,24 +1635,25 @@ body.gkk-diwali-preview #gkkFestiveToran{
 body.gkk-diwali-preview #gkkFestiveDecor{
  position:fixed;inset:0;z-index:30;pointer-events:none;overflow:hidden;
 }
-body.gkk-diwali-preview #gkkFestiveDecor .diya-art{
- position:absolute;width:54px;height:48px;opacity:.86;
- filter:drop-shadow(0 3px 7px rgba(164,105,26,.25));
+body.gkk-diwali-preview #story{position:relative;overflow:hidden}
+body.gkk-diwali-preview #story .diya-art{
+ position:absolute;z-index:4;bottom:24px;width:54px;height:48px;opacity:.92;
+ filter:drop-shadow(0 3px 7px rgba(164,105,26,.25));pointer-events:none;
 }
-body.gkk-diwali-preview #gkkFestiveDecor .diya-art:before{
+body.gkk-diwali-preview #story .diya-art:before{
  content:"";position:absolute;left:7px;right:7px;bottom:4px;height:19px;
  background:linear-gradient(180deg,#e9b45c,#a94e22 78%,#713a20);
  border-radius:5px 5px 22px 22px/4px 4px 15px 15px;
  border-bottom:2px solid #f2ce83;
 }
-body.gkk-diwali-preview #gkkFestiveDecor .diya-art:after{
+body.gkk-diwali-preview #story .diya-art:after{
  content:"";position:absolute;left:22px;top:1px;width:11px;height:19px;
  background:radial-gradient(ellipse at 50% 72%,#fff5b8 0 18%,#ffc04f 38%,#ec7a24 65%,transparent 72%);
  border-radius:80% 15% 80% 15%;transform:rotate(8deg);
  filter:drop-shadow(0 0 6px rgba(255,181,67,.8));
 }
-body.gkk-diwali-preview #gkkFestiveDecor .diya-left{left:91px;bottom:14px}
-body.gkk-diwali-preview #gkkFestiveDecor .diya-right{right:16px;bottom:14px}
+body.gkk-diwali-preview #story .diya-left{left:clamp(18px,5vw,72px)}
+body.gkk-diwali-preview #story .diya-right{right:clamp(18px,5vw,72px)}
 body.gkk-diwali-preview #gkkFestiveDecor .rangoli{
  position:absolute;width:74px;height:74px;opacity:.24;
  background:
@@ -1682,9 +1683,9 @@ body.gkk-diwali-preview .home-section:not(:first-of-type):before{
 }
 @media(max-width:700px){
  body.gkk-diwali-preview #gkkFestiveToran{height:42px;opacity:.75}
- body.gkk-diwali-preview #gkkFestiveDecor .diya-art{transform:scale(.72);transform-origin:bottom}
- body.gkk-diwali-preview #gkkFestiveDecor .diya-left{left:2px;bottom:7px}
- body.gkk-diwali-preview #gkkFestiveDecor .diya-right{right:2px;bottom:7px}
+ body.gkk-diwali-preview #story .diya-art{transform:scale(.68);transform-origin:bottom;bottom:12px}
+ body.gkk-diwali-preview #story .diya-left{left:8px}
+ body.gkk-diwali-preview #story .diya-right{right:8px}
  body.gkk-diwali-preview #gkkFestiveDecor .rangoli{display:none}
  body.gkk-diwali-preview #gkkFestiveDecor .firework{right:8px;top:19%;transform:scale(.72)}
 }
@@ -4420,8 +4421,9 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
  const hero=document.getElementById("story");
  if(hero){const toran=document.createElement("div");toran.id="gkkFestiveToran";toran.setAttribute("aria-hidden","true");hero.appendChild(toran);}
  const decor=document.createElement("div");decor.id="gkkFestiveDecor";decor.setAttribute("aria-hidden","true");
- decor.innerHTML='<span class="diya-art diya-left"></span><span class="diya-art diya-right"></span><span class="rangoli rangoli-left"></span><span class="rangoli rangoli-right"></span><span class="firework"></span>';
+ decor.innerHTML='<span class="rangoli rangoli-left"></span><span class="rangoli rangoli-right"></span><span class="firework"></span>';
  document.body.appendChild(decor);
+ if(hero){hero.insertAdjacentHTML("beforeend",'<span class="diya-art diya-left" aria-hidden="true"></span><span class="diya-art diya-right" aria-hidden="true"></span>');}
 })();
 </script>
 </body></html>
