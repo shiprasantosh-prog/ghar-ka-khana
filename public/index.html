@@ -1571,80 +1571,83 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </style>
 
 <style id="gkk-diwali-preview-theme">
-/* Refined, restrained Diwali styling: staging preview only. */
+/* GKK Diwali atmosphere: no special-offer section; preserve every original page and flow. */
 body.gkk-diwali-preview{
-  --diwali-gold:#bd9145;--diwali-deep:#18563a;
-  background:#fbf6e9!important;
-  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,222,157,.18),transparent 54%)!important;
+ --diwali-gold:#c49a50;--diwali-warm:#fff4d8;
+ background-color:#fbf6e9!important;
+ background-image:radial-gradient(ellipse at 50% 0%,rgba(255,219,145,.16),transparent 58%)!important;
+}
+body.gkk-diwali-preview .page-view.active-view{
+ background-image:radial-gradient(ellipse at 50% 0%,rgba(255,220,142,.07),transparent 62%);
 }
 body.gkk-diwali-preview #story.hero.page-view.active-view{
-  background-image:linear-gradient(90deg,rgba(255,249,231,.96) 0%,rgba(255,247,224,.85) 38%,rgba(255,239,201,.14) 72%,rgba(255,239,201,.02) 100%),url('/images/hero.jpg?v=5')!important;
-  border-bottom:1px solid #e7d4a8;
-  box-shadow:inset 0 -12px 24px rgba(194,146,61,.08)
+ background-image:linear-gradient(90deg,rgba(255,249,231,.96) 0%,rgba(255,247,224,.85) 38%,rgba(255,239,201,.14) 72%,rgba(255,239,201,.02) 100%),url('/images/hero.jpg?v=5')!important;
+ border-bottom:1px solid #e7d4a8;
+ box-shadow:inset 0 -12px 24px rgba(194,146,61,.07)
 }
 body.gkk-diwali-preview #story .hero-copy .eyebrow,
-body.gkk-diwali-preview #story .hero-copy h1 em{color:#a76d24!important}
-body.gkk-diwali-preview #story .hero-copy .btn{
-  background:#1b5a3a!important;border:1px solid #c69a43!important;
-  box-shadow:0 5px 18px rgba(213,168,76,.24)
-}
-/* All site sections share the same warm festive palette, without adding frames over content. */
-body.gkk-diwali-preview .page-view.active-view{
-  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,220,142,.10),transparent 58%);
-}
-body.gkk-diwali-preview .section-head .eyebrow,
-body.gkk-diwali-preview .eyebrow{color:#aa792e}
+body.gkk-diwali-preview #story .hero-copy h1 em,
+body.gkk-diwali-preview .section-head .eyebrow{color:#a8792b!important}
 body.gkk-diwali-preview .btn,
-body.gkk-diwali-preview button.btn{box-shadow:0 3px 12px rgba(170,122,43,.12)}
+body.gkk-diwali-preview button.btn{box-shadow:0 3px 12px rgba(170,122,43,.11)}
 body.gkk-diwali-preview .card,
 body.gkk-diwali-preview .menu-card,
 body.gkk-diwali-preview .story-panel,
 body.gkk-diwali-preview .bulk-order-section{
-  border-color:#e8d8b7!important;
-  box-shadow:0 7px 20px rgba(125,89,37,.055)
+ border-color:#e8d8b7!important;
+ box-shadow:0 7px 20px rgba(125,89,37,.05)
 }
-/* Delicate festoon: fine gold cord with tiny warm bulbs, confined to the hero's lower edge. */
-body.gkk-diwali-preview #story.hero.page-view.active-view:after{
-  content:"";position:absolute;left:8%;right:8%;bottom:0;height:15px;z-index:2;pointer-events:none;
-  background:
-   radial-gradient(circle at 4% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 16% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 28% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 40% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 52% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 64% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 76% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   radial-gradient(circle at 88% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
-   linear-gradient(90deg,transparent,#c69a43 8%,#c69a43 92%,transparent) 0 4px/100% 1px no-repeat;
-  filter:drop-shadow(0 0 4px rgba(230,177,79,.5))
+/* A delicate marigold-and-light toran along the top of the site content. */
+body.gkk-diwali-preview #gkkFestiveToran{
+ position:fixed;left:80px;right:0;top:0;height:23px;z-index:60;pointer-events:none;
+ opacity:.88;
+ background:
+  radial-gradient(circle at 5% 8px,#ffd77d 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 15% 12px,#fff0bf 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 25% 8px,#ffd77d 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 35% 12px,#fff0bf 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 45% 8px,#ffd77d 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 55% 12px,#fff0bf 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 65% 8px,#ffd77d 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 75% 12px,#fff0bf 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 85% 8px,#ffd77d 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  radial-gradient(circle at 95% 12px,#fff0bf 0 2px,rgba(218,164,75,.75) 3px,transparent 5px),
+  linear-gradient(90deg,transparent,#c49a50 5%,#c49a50 95%,transparent) 0 2px/100% 1px no-repeat;
+ filter:drop-shadow(0 1px 4px rgba(225,171,79,.32))
 }
-#gkkDiwaliPreview{
-  position:relative;isolation:isolate;overflow:hidden;margin:0 auto 28px;
-  padding:clamp(24px,4vw,48px) clamp(20px,5vw,64px);
-  max-width:1400px;border:1px solid #e6d3a7;border-radius:18px;
-  background:
-    radial-gradient(ellipse at 82% 100%,rgba(225,183,104,.18),transparent 34%),
-    linear-gradient(115deg,#fff9eb 0%,#f8efd9 58%,#f6e9ce 100%);
-  box-shadow:0 10px 28px rgba(112,76,24,.07);
-  display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.65fr);gap:24px;align-items:center
+body.gkk-diwali-preview #gkkFestiveDecor{
+ position:fixed;inset:0;z-index:59;pointer-events:none;overflow:hidden;
 }
-#gkkDiwaliPreview:before{content:"";position:absolute;inset:9px;border:1px solid rgba(184,138,54,.2);border-radius:12px;pointer-events:none}
-#gkkDiwaliPreview .diwali-kicker{color:#a8792b;text-transform:uppercase;letter-spacing:3px;font-size:11px;font-weight:800}
-#gkkDiwaliPreview h2{font:clamp(30px,4.5vw,54px)/1.06 Georgia,serif;color:#164b36!important;margin:10px 0 12px;max-width:700px}
-#gkkDiwaliPreview p{color:#58695b!important;font-size:15px;line-height:1.7;max-width:620px;margin:0}
-#gkkDiwaliPreview .diwali-cta{display:inline-flex;margin-top:20px;padding:12px 22px;border-radius:10px;background:#18583a;color:#fff;text-decoration:none;font-weight:700;border:1px solid #b88a36}
-#gkkDiwaliPreview .diwali-art{min-height:150px;display:flex;align-items:center;justify-content:center;gap:18px;color:#a8792b}
-#gkkDiwaliPreview .diya{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fff5cb 0 18%,#e9c77d 19% 21%,#f6e6bd 22% 100%);box-shadow:0 0 0 7px rgba(217,183,107,.12),0 0 32px rgba(220,174,77,.32);font-size:42px}
-#gkkDiwaliPreview .diwali-art .sparkle{font-size:22px;color:#b88731}
+body.gkk-diwali-preview #gkkFestiveDecor .festive-piece{
+ position:absolute;display:block;line-height:1;user-select:none;
+ filter:drop-shadow(0 0 7px rgba(238,180,78,.45));
+}
+body.gkk-diwali-preview #gkkFestiveDecor .festive-diya-left{
+ left:88px;bottom:18px;font-size:29px;opacity:.82
+}
+body.gkk-diwali-preview #gkkFestiveDecor .festive-diya-right{
+ right:15px;bottom:18px;font-size:29px;opacity:.82
+}
+body.gkk-diwali-preview #gkkFestiveDecor .festive-spark-left{
+ left:105px;top:34%;font-size:22px;opacity:.58
+}
+body.gkk-diwali-preview #gkkFestiveDecor .festive-spark-right{
+ right:20px;top:36%;font-size:22px;opacity:.58
+}
+body.gkk-diwali-preview #gkkFestiveDecor .festive-firework{
+ right:26px;top:17%;font-size:25px;opacity:.48
+}
 @media(max-width:650px){
- #gkkDiwaliPreview{grid-template-columns:1fr;gap:6px;margin:0 12px 22px;padding:24px 20px;text-align:left}
- #gkkDiwaliPreview .diwali-art{min-height:72px;justify-content:flex-start}
- #gkkDiwaliPreview .diya{width:60px;height:60px;font-size:32px}
- body.gkk-diwali-preview #story.hero.page-view.active-view:after{left:5%;right:5%;height:10px}
+ body.gkk-diwali-preview #gkkFestiveToran{left:0;height:17px;opacity:.7}
+ body.gkk-diwali-preview #gkkFestiveDecor .festive-diya-left{left:5px;bottom:8px;font-size:20px;opacity:.65}
+ body.gkk-diwali-preview #gkkFestiveDecor .festive-diya-right{right:5px;bottom:8px;font-size:20px;opacity:.65}
+ body.gkk-diwali-preview #gkkFestiveDecor .festive-spark-left{left:5px;top:43%;font-size:16px;opacity:.38}
+ body.gkk-diwali-preview #gkkFestiveDecor .festive-spark-right{right:5px;top:43%;font-size:16px;opacity:.38}
+ body.gkk-diwali-preview #gkkFestiveDecor .festive-firework{right:8px;top:20%;font-size:18px;opacity:.35}
 }
 @media(prefers-reduced-motion:no-preference){
- body.gkk-diwali-preview #story.hero.page-view.active-view:after{animation:gkkFestiveGlow 3.8s ease-in-out infinite alternate}
- @keyframes gkkFestiveGlow{from{opacity:.65;filter:drop-shadow(0 0 2px rgba(230,177,79,.25))}to{opacity:1;filter:drop-shadow(0 0 7px rgba(230,177,79,.65))}}
+ body.gkk-diwali-preview #gkkFestiveDecor .festive-firework{animation:gkkSparkle 3.2s ease-in-out infinite alternate}
+ @keyframes gkkSparkle{from{opacity:.25;transform:scale(.88)}to{opacity:.68;transform:scale(1.08)}}
 }
 </style>
 </head>
@@ -4368,19 +4371,17 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
 
 <script id="gkk-diwali-preview-inject">
 (function(){
-  const isStaging=location.hostname.toLowerCase().includes("staging");
-  const preview=new URLSearchParams(location.search).get("diwaliPreview")==="1";
-  if(!isStaging||!preview)return;
-  document.body.classList.add("gkk-diwali-preview");
-  document.querySelectorAll("#gkkDiwaliLights,#gkkDiwaliLeft,#gkkDiwaliRight").forEach(el=>el.remove());
-  const popular=document.getElementById("homePopular");
-  if(!popular||document.getElementById("gkkDiwaliPreview"))return;
-  const section=document.createElement("section");
-  section.id="gkkDiwaliPreview";
-  section.className="page-view active-view";
-  section.setAttribute("aria-label","Diwali festive specials");
-  section.innerHTML='<div><div class="diwali-kicker">Diwali celebrations at GKK</div><h2>Celebrate Diwali with Homemade Goodness</h2><p>Share the joy of the season with freshly prepared festive favourites, homemade with love.</p><a class="diwali-cta" href="#menu" onclick="showPage(\'menu\');return false">Explore Diwali Specials →</a></div><div class="diwali-art" aria-hidden="true"><span class="sparkle">✦</span><div class="diya">🪔</div><span class="sparkle">✧</span><div class="diya">🪔</div><span class="sparkle">✦</span></div>';
-  popular.parentNode.insertBefore(section,popular);
+ const isStaging=location.hostname.toLowerCase().includes("staging");
+ const preview=new URLSearchParams(location.search).get("diwaliPreview")==="1";
+ if(!isStaging||!preview)return;
+ document.body.classList.add("gkk-diwali-preview");
+ // Remove any earlier banner/decorations if present; this preview is atmosphere-only.
+ document.getElementById("gkkDiwaliPreview")?.remove();
+ document.querySelectorAll("#gkkDiwaliLights,#gkkDiwaliLeft,#gkkDiwaliRight,#gkkFestiveToran,#gkkFestiveDecor").forEach(el=>el.remove());
+ const toran=document.createElement("div");toran.id="gkkFestiveToran";toran.setAttribute("aria-hidden","true");document.body.appendChild(toran);
+ const decor=document.createElement("div");decor.id="gkkFestiveDecor";decor.setAttribute("aria-hidden","true");
+ decor.innerHTML='<span class="festive-piece festive-diya-left">🪔</span><span class="festive-piece festive-diya-right">🪔</span><span class="festive-piece festive-spark-left">✦</span><span class="festive-piece festive-spark-right">✧</span><span class="festive-piece festive-firework">🎆</span>';
+ document.body.appendChild(decor);
 })();
 </script>
 </body></html>
