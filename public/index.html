@@ -1778,6 +1778,68 @@ body.gkk-diwali-preview #story .gkk-diwali-sparkler{
  body.gkk-diwali-preview #story .gkk-diwali-sparkler{animation:none!important}
 }
 </style>
+
+<style id="gkk-diwali-hero-redesign">
+/* Reset earlier experimental overlays; this design decorates the hero only. */
+body.gkk-diwali-preview #story{position:relative!important;isolation:isolate;overflow:hidden!important}
+body.gkk-diwali-preview #gkkFestiveToran,
+body.gkk-diwali-preview #gkkFestiveDecor{display:none!important}
+body.gkk-diwali-preview #story:after{
+ content:"";position:absolute;z-index:4;pointer-events:none;inset:9px;
+ border:2px solid rgba(183,132,48,.78);
+ box-shadow:inset 0 0 0 3px rgba(255,248,222,.72),0 0 0 1px rgba(255,255,255,.6);
+}
+body.gkk-diwali-preview #story:before{
+ z-index:1!important;
+}
+body.gkk-diwali-preview #story .hero-copy{position:relative;z-index:5}
+body.gkk-diwali-preview #story .hero-benefits{
+ position:relative;z-index:6;
+ border-top:2px solid #c79645!important;
+ box-shadow:0 -3px 12px rgba(125,83,22,.08);
+}
+body.gkk-diwali-preview #story .gkk-diwali-deities{
+ position:absolute;z-index:5;right:clamp(18px,3vw,42px);
+ bottom:calc(var(--hero-benefits-height, 68px) + 18px);
+ width:clamp(105px,11vw,148px);height:clamp(105px,11vw,148px);
+ object-fit:contain;object-position:center;
+ padding:7px;border-radius:50%;
+ border:2px solid #c99b50;
+ background:radial-gradient(circle,#fff7e4 0%,#f2dfb8 72%,#d6ad66 100%);
+ box-shadow:0 4px 18px rgba(94,58,13,.24),inset 0 0 0 3px rgba(255,255,255,.72);
+ pointer-events:none;
+}
+body.gkk-diwali-preview #story .gkk-diwali-sparkler{
+ position:absolute;z-index:5;right:clamp(140px,16vw,215px);top:26%;
+ width:clamp(55px,6vw,82px);height:clamp(55px,6vw,82px);
+ object-fit:contain;pointer-events:none;mix-blend-mode:screen;
+ filter:drop-shadow(0 0 9px rgba(255,190,77,.8));opacity:.9
+}
+/* Small traditional diyas sit within the hero's lower corners, above the benefits strip. */
+body.gkk-diwali-preview #story .diya-art{
+ z-index:5!important;bottom:calc(var(--hero-benefits-height, 68px) + 12px)!important;
+ width:50px;height:44px;transform:scale(.9)
+}
+body.gkk-diwali-preview #story .diya-left{left:clamp(16px,3vw,38px)!important}
+body.gkk-diwali-preview #story .diya-right{right:clamp(16px,3vw,38px)!important}
+body.gkk-diwali-preview #story #gkkFestiveToran{display:none!important}
+body.gkk-diwali-preview #story:focus{outline:none}
+@media(max-width:700px){
+ body.gkk-diwali-preview #story:after{inset:5px;border-width:1.5px}
+ body.gkk-diwali-preview #story .gkk-diwali-deities{
+  width:76px;height:76px;right:12px;bottom:82px;padding:4px
+ }
+ body.gkk-diwali-preview #story .gkk-diwali-sparkler{
+  width:44px;height:44px;right:90px;top:25%
+ }
+ body.gkk-diwali-preview #story .diya-art{transform:scale(.68)!important;bottom:78px!important}
+ body.gkk-diwali-preview #story .diya-left{left:4px!important}
+ body.gkk-diwali-preview #story .diya-right{right:4px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ body.gkk-diwali-preview #story .gkk-diwali-sparkler{animation:none!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
