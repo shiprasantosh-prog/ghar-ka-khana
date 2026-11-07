@@ -4415,6 +4415,79 @@ body.gkk-diwali-preview .gkk-diwali-corner{display:none!important}
 @media(prefers-reduced-motion:reduce){body.gkk-diwali-preview *{animation:none!important;transition:none!important}}
 </style>
 
+
+<style id="gkk-diwali-reference-composition">
+/* Final composition correction: one continuous scene, not two adjacent panels. */
+body.gkk-diwali-preview .gkk-diwali-inner{
+  display:block!important;position:relative!important;min-height:500px!important;
+  background:#17432d url('/images/hero.jpg') center/cover no-repeat!important;
+}
+body.gkk-diwali-preview .gkk-diwali-copy{
+  position:relative!important;z-index:4!important;display:flex!important;
+  width:63%!important;min-height:500px!important;padding:78px 30px 58px clamp(36px,6vw,90px)!important;
+  background:linear-gradient(90deg,#fff8e9 0%,#fff6e5 72%,rgba(255,246,229,.92) 86%,rgba(255,246,229,0) 100%)!important;
+}
+body.gkk-diwali-preview .gkk-diwali-brand{
+  display:flex!important;flex-direction:row!important;align-items:center!important;
+  justify-content:flex-start!important;gap:13px!important;width:auto!important;
+  max-width:100%!important;margin:0 0 24px!important;text-decoration:none!important;
+  border:0!important;white-space:normal!important;
+}
+body.gkk-diwali-preview .gkk-diwali-brand>span{
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+  gap:4px!important;min-width:0!important;
+}
+body.gkk-diwali-preview .gkk-diwali-brand strong{
+  display:block!important;line-height:1.05!important;white-space:nowrap!important;
+  font-size:30px!important;
+}
+body.gkk-diwali-preview .gkk-diwali-brand small,
+body.gkk-diwali-preview .gkk-diwali-brand b{
+  display:block!important;line-height:1.4!important;white-space:nowrap!important;
+}
+body.gkk-diwali-preview .gkk-diwali-art{
+  position:absolute!important;inset:0!important;z-index:2!important;
+  width:100%!important;height:100%!important;min-height:500px!important;
+  background:transparent!important;overflow:hidden!important;
+}
+body.gkk-diwali-preview .gkk-diwali-art:before{
+  content:""!important;position:absolute!important;inset:0!important;z-index:1!important;
+  background:linear-gradient(90deg,rgba(13,58,36,0) 38%,rgba(10,47,29,.08) 62%,rgba(5,34,21,.26) 100%)!important;
+}
+body.gkk-diwali-preview .gkk-diwali-god-art{
+  left:auto!important;right:2%!important;top:0!important;bottom:0!important;
+  width:43%!important;height:100%!important;padding:40px 0 0!important;
+  object-fit:contain!important;object-position:center bottom!important;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.8) 15%,#000 30%)!important;
+  mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.8) 15%,#000 30%)!important;
+}
+body.gkk-diwali-preview .gkk-diwali-toran{
+  background:url('/images/Diwali/diya-garland.gif') center top/100% 76px no-repeat!important;
+  height:82px!important;z-index:7!important;
+}
+body.gkk-diwali-preview .gkk-diwali-copy h1{max-width:740px!important}
+@media(max-width:760px){
+  body.gkk-diwali-preview .gkk-diwali-inner{
+    display:flex!important;flex-direction:column!important;min-height:0!important;
+    background:#fff5df!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-copy{
+    width:100%!important;min-height:0!important;padding:82px 24px 28px!important;
+    background:linear-gradient(180deg,#fff8e9,#fff2dc)!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-brand strong{font-size:25px!important}
+  body.gkk-diwali-preview .gkk-diwali-art{
+    position:relative!important;inset:auto!important;width:100%!important;
+    height:340px!important;min-height:340px!important;background:#123b28!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-god-art{
+    right:0!important;width:100%!important;height:100%!important;padding:32px 8px 0!important;
+    object-position:center bottom!important;
+  }
+  body.gkk-diwali-preview .gkk-diwali-toran{background-size:100% 68px!important;height:72px!important}
+}
+</style>
+
 <script id="gkk-diwali-preview-inject">
 (function(){
   const staging = location.hostname.toLowerCase().includes("staging");
