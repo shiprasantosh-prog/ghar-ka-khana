@@ -1691,6 +1691,68 @@ body.gkk-diwali-preview .home-section:not(:first-of-type):before{
 }
 @media(prefers-reduced-motion:reduce){body.gkk-diwali-preview #gkkFestiveDecor .firework{animation:none}}
 </style>
+
+<style id="gkk-diwali-hero-finish">
+/* Hero-only Diwali frame: keep the original brand, copy and CTA unobstructed. */
+body.gkk-diwali-preview #story.hero{
+ position:relative!important;isolation:isolate;overflow:hidden!important;
+ border:0!important;border-bottom:3px solid #b47b27!important;
+ box-shadow:inset 0 0 0 5px #173e2b,inset 0 0 0 8px #d5a64d,inset 0 0 0 11px rgba(255,224,153,.7),0 8px 24px rgba(113,72,21,.16)!important;
+}
+body.gkk-diwali-preview #story.hero:after{
+ content:"";position:absolute;z-index:3;pointer-events:none;inset:0;
+ border:1px solid rgba(255,231,173,.9);
+ background:
+ radial-gradient(ellipse at 5% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 13% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 21% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 29% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 37% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 45% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 53% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 61% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 69% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 77% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 85% 0%,#f6a928 0 4px,transparent 5px),
+ radial-gradient(ellipse at 93% 0%,#f6a928 0 4px,transparent 5px);
+ opacity:.92;
+}
+body.gkk-diwali-preview #gkkFestiveToran{
+ height:68px!important;z-index:5!important;
+ background:
+ radial-gradient(ellipse 17px 11px at 4% 5px,#e89a1e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 12% 10px,#f3b52e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 20% 5px,#e89a1e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 28% 10px,#f3b52e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 36% 5px,#e89a1e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 44% 10px,#f3b52e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 52% 5px,#e89a1e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 60% 10px,#f3b52e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 68% 5px,#e89a1e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 76% 10px,#f3b52e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 84% 5px,#e89a1e 0 65%,transparent 75%),
+ radial-gradient(ellipse 17px 11px at 92% 10px,#f3b52e 0 65%,transparent 75%),
+ linear-gradient(180deg,transparent 0 28px,rgba(189,140,60,.9) 29px 31px,transparent 32px);
+}
+body.gkk-diwali-preview #story .diya-art{z-index:6!important;bottom:18px!important;transform:scale(1.12)}
+body.gkk-diwali-preview #story .diya-art:before{height:22px!important;left:3px!important;right:3px!important;border-radius:6px 6px 28px 28px!important;box-shadow:inset 0 2px 4px rgba(255,235,160,.8),0 4px 12px rgba(128,66,15,.25)}
+body.gkk-diwali-preview #story .diya-art:after{width:14px!important;height:25px!important;left:20px!important;top:-5px!important;animation:gkkDiwaliFlame 1.1s ease-in-out infinite alternate}
+@keyframes gkkDiwaliFlame{from{transform:rotate(-7deg) scale(.92);filter:drop-shadow(0 0 4px #ffb33c)}to{transform:rotate(8deg) scale(1.12);filter:drop-shadow(0 0 11px #ffd56c)}}
+body.gkk-diwali-preview #gkkFestiveDecor .firework{
+ width:100px!important;height:100px!important;opacity:.68!important;
+ background:radial-gradient(circle,#fff6c8 0 2px,transparent 3px),repeating-conic-gradient(from 0deg,transparent 0 7deg,#f7c35d 7.5deg 9deg,transparent 9.5deg 18deg)!important;
+ animation:gkkDiwaliSparkler 1.7s ease-in-out infinite!important;
+}
+@keyframes gkkDiwaliSparkler{0%,100%{opacity:.15;transform:scale(.55) rotate(0deg)}45%{opacity:.9;transform:scale(1.12) rotate(22deg)}}
+@media(max-width:700px){
+ body.gkk-diwali-preview #story.hero{box-shadow:inset 0 0 0 3px #173e2b,inset 0 0 0 5px #d5a64d!important}
+ body.gkk-diwali-preview #gkkFestiveToran{height:44px!important}
+ body.gkk-diwali-preview #story .diya-art{bottom:12px!important;transform:scale(.76)!important}
+ body.gkk-diwali-preview #story .diya-left{left:8px!important}
+ body.gkk-diwali-preview #story .diya-right{right:8px!important}
+ body.gkk-diwali-preview #gkkFestiveDecor .firework{width:62px!important;height:62px!important}
+}
+</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
