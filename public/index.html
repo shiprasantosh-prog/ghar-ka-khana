@@ -1761,8 +1761,8 @@ body.gkk-diwali-preview #story .gkk-diwali-garland{
  pointer-events:none;opacity:.96;filter:drop-shadow(0 3px 5px rgba(112,65,10,.22))
 }
 body.gkk-diwali-preview #story .gkk-diwali-deities{
- position:absolute;z-index:6;right:clamp(12px,2.2vw,34px);bottom:14px;
- width:clamp(86px,10vw,142px);height:auto;max-height:42%;
+ position:absolute;z-index:6;right:clamp(14px,2vw,28px);bottom:76px;
+ width:clamp(72px,7vw,104px);height:auto;max-height:32%;
  object-fit:contain;pointer-events:none;filter:drop-shadow(0 3px 9px rgba(92,54,10,.35))
 }
 body.gkk-diwali-preview #story .gkk-diwali-sparkler{
@@ -1771,12 +1771,10 @@ body.gkk-diwali-preview #story .gkk-diwali-sparkler{
  mix-blend-mode:screen;filter:drop-shadow(0 0 8px #f5b64b);opacity:.9
 }
 @media(max-width:700px){
- body.gkk-diwali-preview #story .gkk-diwali-garland{height:48px}
- body.gkk-diwali-preview #story .gkk-diwali-deities{width:76px;right:7px;bottom:9px;max-height:28%}
+ body.gkk-diwali-preview #story .gkk-diwali-deities{width:64px;right:7px;bottom:68px;max-height:25%}
  body.gkk-diwali-preview #story .gkk-diwali-sparkler{width:48px;right:82px;top:22%}
 }
 @media(prefers-reduced-motion:reduce){
- body.gkk-diwali-preview #story .gkk-diwali-garland,
  body.gkk-diwali-preview #story .gkk-diwali-sparkler{animation:none!important}
 }
 </style>
@@ -4510,7 +4508,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
  const hero=document.getElementById("story");
  if(hero){const toran=document.createElement("div");toran.id="gkkFestiveToran";toran.setAttribute("aria-hidden","true");hero.appendChild(toran);}
  if(hero){
-  const garland=document.createElement("img");garland.className="gkk-diwali-garland";garland.src="/images/Diwali/diya-garland.gif";garland.alt="";garland.setAttribute("aria-hidden","true");hero.appendChild(garland);
+
   const deities=document.createElement("img");deities.className="gkk-diwali-deities";deities.src="/images/Diwali/lakshmi-ganesh.webp";deities.alt="";deities.setAttribute("aria-hidden","true");hero.appendChild(deities);
   const sparkler=document.createElement("img");sparkler.className="gkk-diwali-sparkler";sparkler.src="/images/Diwali/fuljhadi.gif";sparkler.alt="";sparkler.setAttribute("aria-hidden","true");hero.appendChild(sparkler);
  }
