@@ -1571,100 +1571,80 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 </style>
 
 <style id="gkk-diwali-preview-theme">
-/* Full-site Diwali atmosphere, strictly staging-preview gated. */
+/* Refined, restrained Diwali styling: staging preview only. */
 body.gkk-diwali-preview{
-  --diwali-gold:#c69a43;--diwali-saffron:#b96b32;
-  background-color:#fbf5e8!important;
-  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,220,142,.24),transparent 48%)!important;
+  --diwali-gold:#bd9145;--diwali-deep:#18563a;
+  background:#fbf6e9!important;
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,222,157,.18),transparent 54%)!important;
 }
 body.gkk-diwali-preview #story.hero.page-view.active-view{
-  background-image:linear-gradient(90deg,rgba(255,249,231,.97) 0%,rgba(255,247,224,.87) 36%,rgba(255,239,201,.18) 70%,rgba(255,239,201,.02) 100%),url('/images/hero.jpg?v=5')!important;
-  border-bottom:1px solid #e7d4a8
+  background-image:linear-gradient(90deg,rgba(255,249,231,.96) 0%,rgba(255,247,224,.85) 38%,rgba(255,239,201,.14) 72%,rgba(255,239,201,.02) 100%),url('/images/hero.jpg?v=5')!important;
+  border-bottom:1px solid #e7d4a8;
+  box-shadow:inset 0 -12px 24px rgba(194,146,61,.08)
 }
 body.gkk-diwali-preview #story .hero-copy .eyebrow,
 body.gkk-diwali-preview #story .hero-copy h1 em{color:#a76d24!important}
-body.gkk-diwali-preview #story .hero-copy .btn{background:#1b5a3a!important;border:1px solid #c69a43!important;box-shadow:0 5px 18px #d5a84c45}
-body.gkk-diwali-preview .home-section,
-body.gkk-diwali-preview .page-view.active-view:not(#story){
-  border-color:#e7d5ad!important;
+body.gkk-diwali-preview #story .hero-copy .btn{
+  background:#1b5a3a!important;border:1px solid #c69a43!important;
+  box-shadow:0 5px 18px rgba(213,168,76,.24)
+}
+/* All site sections share the same warm festive palette, without adding frames over content. */
+body.gkk-diwali-preview .page-view.active-view{
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,220,142,.10),transparent 58%);
 }
 body.gkk-diwali-preview .section-head .eyebrow,
 body.gkk-diwali-preview .eyebrow{color:#aa792e}
 body.gkk-diwali-preview .btn,
-body.gkk-diwali-preview button.btn{box-shadow:0 3px 12px rgba(170,122,43,.14)}
+body.gkk-diwali-preview button.btn{box-shadow:0 3px 12px rgba(170,122,43,.12)}
 body.gkk-diwali-preview .card,
 body.gkk-diwali-preview .menu-card,
 body.gkk-diwali-preview .story-panel,
 body.gkk-diwali-preview .bulk-order-section{
-  border-color:#e8d8b7!important;box-shadow:0 8px 22px rgba(125,89,37,.07)
+  border-color:#e8d8b7!important;
+  box-shadow:0 7px 20px rgba(125,89,37,.055)
 }
-/* A continuous overhead fairy-light garland and softly glowing bulbs. */
-body.gkk-diwali-preview #gkkDiwaliLights{
-  position:fixed;left:78px;right:0;top:0;height:36px;z-index:48;pointer-events:none;
+/* Delicate festoon: fine gold cord with tiny warm bulbs, confined to the hero's lower edge. */
+body.gkk-diwali-preview #story.hero.page-view.active-view:after{
+  content:"";position:absolute;left:8%;right:8%;bottom:0;height:15px;z-index:2;pointer-events:none;
   background:
-    radial-gradient(ellipse at 50% 0%,rgba(255,204,99,.32),transparent 72%),
-    repeating-radial-gradient(circle at 16px 25px,#fff3bb 0 2px,rgba(255,202,92,.9) 2.5px 4px,transparent 5px 54px);
-  filter:drop-shadow(0 2px 5px rgba(207,153,54,.65));
-  opacity:.9
+   radial-gradient(circle at 4% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 16% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 28% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 40% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 52% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 64% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 76% 70%,#ffe6a2 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   radial-gradient(circle at 88% 70%,#fff0c0 0 2px,rgba(220,168,76,.7) 3px,transparent 5px),
+   linear-gradient(90deg,transparent,#c69a43 8%,#c69a43 92%,transparent) 0 4px/100% 1px no-repeat;
+  filter:drop-shadow(0 0 4px rgba(230,177,79,.5))
 }
-body.gkk-diwali-preview #gkkDiwaliLights:before{
-  content:"";position:absolute;left:0;right:0;top:5px;height:23px;
-  border-top:2px solid #a77b35;border-radius:0 0 50% 50%/0 0 100% 100%;opacity:.72
-}
-/* Decorative diya strings sit inside the page gutters, never over content. */
-body.gkk-diwali-preview #gkkDiwaliLeft,
-body.gkk-diwali-preview #gkkDiwaliRight{
-  position:fixed;top:46px;bottom:14px;width:38px;z-index:47;pointer-events:none;
-  opacity:.88;
-  background:
-   radial-gradient(ellipse at 50% 50%,rgba(255,211,111,.38),transparent 70%),
-   repeating-linear-gradient(to bottom,transparent 0 52px,#b88a3a 53px 54px,transparent 55px 108px);
-}
-body.gkk-diwali-preview #gkkDiwaliLeft{left:80px}
-body.gkk-diwali-preview #gkkDiwaliRight{right:0}
-body.gkk-diwali-preview #gkkDiwaliLeft:after,
-body.gkk-diwali-preview #gkkDiwaliRight:after{
-  content:"🪔\\A 🪔\\A 🪔\\A 🪔\\A 🪔\\A 🪔\\A 🪔";position:absolute;top:0;left:4px;width:30px;
-  font-size:22px;line-height:108px;white-space:pre;
-  text-shadow:0 0 12px rgba(255,193,72,.85);
-}
-body.gkk-diwali-preview #gkkDiwaliRight:after{content:"🪔\\A 🪔\\A 🪔\\A 🪔\\A 🪔\\A 🪔\\A 🪔"}
-/* Warm festive edge treatment across the full scrollable page, not just the home section. */
-body.gkk-diwali-preview .page-view.active-view{position:relative}
-body.gkk-diwali-preview .page-view.active-view:before{
-  content:"";position:absolute;inset:8px 10px;border:1px solid rgba(190,147,69,.16);
-  border-radius:12px;pointer-events:none;z-index:0
-}
-body.gkk-diwali-preview #homePopular.best-selling-section{border-top:1px solid #e8d9b7}
 #gkkDiwaliPreview{
   position:relative;isolation:isolate;overflow:hidden;margin:0 auto 28px;
   padding:clamp(24px,4vw,48px) clamp(20px,5vw,64px);
-  max-width:1400px;border:1px solid #e6d3a7;border-radius:20px;
-  background:radial-gradient(ellipse at 88% 20%,#fff4d7 0,transparent 34%),linear-gradient(115deg,#fff9eb 0%,#f8efd9 55%,#f3e3bf 100%);
-  box-shadow:0 12px 32px rgba(112,76,24,.08);display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.65fr);gap:24px;align-items:center
+  max-width:1400px;border:1px solid #e6d3a7;border-radius:18px;
+  background:
+    radial-gradient(ellipse at 82% 100%,rgba(225,183,104,.18),transparent 34%),
+    linear-gradient(115deg,#fff9eb 0%,#f8efd9 58%,#f6e9ce 100%);
+  box-shadow:0 10px 28px rgba(112,76,24,.07);
+  display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.65fr);gap:24px;align-items:center
 }
-#gkkDiwaliPreview:before{content:"";position:absolute;inset:10px;border:1px solid rgba(184,138,54,.28);border-radius:14px;pointer-events:none;z-index:-1}
+#gkkDiwaliPreview:before{content:"";position:absolute;inset:9px;border:1px solid rgba(184,138,54,.2);border-radius:12px;pointer-events:none}
 #gkkDiwaliPreview .diwali-kicker{color:#a8792b;text-transform:uppercase;letter-spacing:3px;font-size:11px;font-weight:800}
 #gkkDiwaliPreview h2{font:clamp(30px,4.5vw,54px)/1.06 Georgia,serif;color:#164b36!important;margin:10px 0 12px;max-width:700px}
 #gkkDiwaliPreview p{color:#58695b!important;font-size:15px;line-height:1.7;max-width:620px;margin:0}
 #gkkDiwaliPreview .diwali-cta{display:inline-flex;margin-top:20px;padding:12px 22px;border-radius:10px;background:#18583a;color:#fff;text-decoration:none;font-weight:700;border:1px solid #b88a36}
-#gkkDiwaliPreview .diwali-art{min-height:150px;display:flex;align-items:center;justify-content:center;gap:12px;color:#a8792b}
-#gkkDiwaliPreview .diya{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fff5cb 0 18%,#e9c77d 19% 21%,#f6e6bd 22% 100%);box-shadow:0 0 0 8px #d9b76b22,0 0 42px #dcae4d66;font-size:48px}
-#gkkDiwaliPreview .diwali-art .sparkle{font-size:26px;color:#b88731}
+#gkkDiwaliPreview .diwali-art{min-height:150px;display:flex;align-items:center;justify-content:center;gap:18px;color:#a8792b}
+#gkkDiwaliPreview .diya{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fff5cb 0 18%,#e9c77d 19% 21%,#f6e6bd 22% 100%);box-shadow:0 0 0 7px rgba(217,183,107,.12),0 0 32px rgba(220,174,77,.32);font-size:42px}
+#gkkDiwaliPreview .diwali-art .sparkle{font-size:22px;color:#b88731}
 @media(max-width:650px){
- body.gkk-diwali-preview #gkkDiwaliLights{left:0;height:27px}
- body.gkk-diwali-preview #gkkDiwaliLeft{left:0;width:15px;opacity:.6}
- body.gkk-diwali-preview #gkkDiwaliRight{width:15px;opacity:.6}
- body.gkk-diwali-preview #gkkDiwaliLeft:after,
- body.gkk-diwali-preview #gkkDiwaliRight:after{font-size:13px;left:0;line-height:108px}
- #gkkDiwaliPreview{grid-template-columns:1fr;gap:8px;margin:0 12px 22px;padding:25px 22px;text-align:left}
- #gkkDiwaliPreview .diwali-art{min-height:88px;justify-content:flex-start}
- #gkkDiwaliPreview .diya{width:66px;height:66px;font-size:36px}
- body.gkk-diwali-preview .page-view.active-view:before{inset:5px 4px}
+ #gkkDiwaliPreview{grid-template-columns:1fr;gap:6px;margin:0 12px 22px;padding:24px 20px;text-align:left}
+ #gkkDiwaliPreview .diwali-art{min-height:72px;justify-content:flex-start}
+ #gkkDiwaliPreview .diya{width:60px;height:60px;font-size:32px}
+ body.gkk-diwali-preview #story.hero.page-view.active-view:after{left:5%;right:5%;height:10px}
 }
 @media(prefers-reduced-motion:no-preference){
- body.gkk-diwali-preview #gkkDiwaliLights{animation:gkkDiwaliTwinkle 4s ease-in-out infinite alternate}
- @keyframes gkkDiwaliTwinkle{from{opacity:.62;filter:drop-shadow(0 1px 3px rgba(207,153,54,.35))}to{opacity:1;filter:drop-shadow(0 2px 9px rgba(255,194,75,.85))}}
+ body.gkk-diwali-preview #story.hero.page-view.active-view:after{animation:gkkFestiveGlow 3.8s ease-in-out infinite alternate}
+ @keyframes gkkFestiveGlow{from{opacity:.65;filter:drop-shadow(0 0 2px rgba(230,177,79,.25))}to{opacity:1;filter:drop-shadow(0 0 7px rgba(230,177,79,.65))}}
 }
 </style>
 </head>
@@ -4392,16 +4372,14 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const preview=new URLSearchParams(location.search).get("diwaliPreview")==="1";
   if(!isStaging||!preview)return;
   document.body.classList.add("gkk-diwali-preview");
-  [["gkkDiwaliLights","top"],["gkkDiwaliLeft","left"],["gkkDiwaliRight","right"]].forEach(([id,kind])=>{
-    if(!document.getElementById(id)){const el=document.createElement("div");el.id=id;el.setAttribute("aria-hidden","true");el.dataset.decoration=kind;document.body.appendChild(el);}
-  });
+  document.querySelectorAll("#gkkDiwaliLights,#gkkDiwaliLeft,#gkkDiwaliRight").forEach(el=>el.remove());
   const popular=document.getElementById("homePopular");
   if(!popular||document.getElementById("gkkDiwaliPreview"))return;
   const section=document.createElement("section");
   section.id="gkkDiwaliPreview";
   section.className="page-view active-view";
   section.setAttribute("aria-label","Diwali festive specials");
-  section.innerHTML='<div><div class="diwali-kicker">A little festive sparkle</div><h2>Celebrate Diwali with Homemade Goodness</h2><p>Bring home the warmth of festive flavours, freshly prepared with love. Explore delicious treats and share a little joy with family and friends.</p><a class="diwali-cta" href="#menu" onclick="showPage(\'menu\');return false">Explore Diwali Specials →</a></div><div class="diwali-art" aria-hidden="true"><span class="sparkle">✦</span><div class="diya">🪔</div><span class="sparkle">✧</span><div class="diya">🪔</div><span class="sparkle">✦</span></div>';
+  section.innerHTML='<div><div class="diwali-kicker">Diwali celebrations at GKK</div><h2>Celebrate Diwali with Homemade Goodness</h2><p>Share the joy of the season with freshly prepared festive favourites, homemade with love.</p><a class="diwali-cta" href="#menu" onclick="showPage(\'menu\');return false">Explore Diwali Specials →</a></div><div class="diwali-art" aria-hidden="true"><span class="sparkle">✦</span><div class="diya">🪔</div><span class="sparkle">✧</span><div class="diya">🪔</div><span class="sparkle">✦</span></div>';
   popular.parentNode.insertBefore(section,popular);
 })();
 </script>
