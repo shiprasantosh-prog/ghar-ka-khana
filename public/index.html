@@ -4509,6 +4509,11 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
  document.querySelectorAll("#gkkDiwaliLights,#gkkDiwaliLeft,#gkkDiwaliRight,#gkkFestiveToran,#gkkFestiveDecor").forEach(el=>el.remove());
  const hero=document.getElementById("story");
  if(hero){const toran=document.createElement("div");toran.id="gkkFestiveToran";toran.setAttribute("aria-hidden","true");hero.appendChild(toran);}
+ if(hero){
+  const garland=document.createElement("img");garland.className="gkk-diwali-garland";garland.src="/images/Diwali/diya-garland.gif";garland.alt="";garland.setAttribute("aria-hidden","true");hero.appendChild(garland);
+  const deities=document.createElement("img");deities.className="gkk-diwali-deities";deities.src="/images/Diwali/lakshmi-ganesh.webp";deities.alt="";deities.setAttribute("aria-hidden","true");hero.appendChild(deities);
+  const sparkler=document.createElement("img");sparkler.className="gkk-diwali-sparkler";sparkler.src="/images/Diwali/fuljhadi.gif";sparkler.alt="";sparkler.setAttribute("aria-hidden","true");hero.appendChild(sparkler);
+ }
  const decor=document.createElement("div");decor.id="gkkFestiveDecor";decor.setAttribute("aria-hidden","true");
  decor.innerHTML='<span class="rangoli rangoli-left"></span><span class="rangoli rangoli-right"></span><span class="firework"></span>';
  document.body.appendChild(decor);
