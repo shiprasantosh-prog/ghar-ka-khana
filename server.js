@@ -798,6 +798,32 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   }
 }));
 
+// Sign in existing customer accounts using a Firebase-verified mobile OTP.
+const phoneOtpLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/phone-otp-login", phoneOtpLoginLimiter, asyncRoute(async (req, res) => {
+  if (!firebaseAdminReady) return res.status(503).json({ error: "Mobile OTP sign-in is not configured on this server yet." });
+  const idToken = String(req.body?.idToken || "");
+  if (!idToken) return res.status(400).json({ error: "Mobile verification token is missing." });
+  let decoded;
+  try { decoded = await firebaseAdminSdk.auth().verifyIdToken(idToken, true); }
+  catch (_) { return res.status(401).json({ error: "Your mobile verification has expired. Please request a new OTP." }); }
+  const verifiedPhone = String(decoded.phone_number || "").trim();
+  const normalizedPhone = verifiedPhone.replace(/\D/g, "").slice(-10);
+  if (!decoded.uid || !/^\+?[1-9]\d{7,14}$/.test(verifiedPhone) || normalizedPhone.length !== 10) {
+    return res.status(403).json({ error: "Please verify a valid mobile number to continue." });
+  }
+  const result = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    [normalizedPhone]
+  );
+  if (!result.rowCount || result.rows[0].role !== "customer") {
+    return res.status(404).json({ error: "We couldn't find a GKK customer account for this mobile number. Please create an account or contact support." });
+  }
+  const user = result.rows[0];
+  res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+  return res.json({ user, method: "phone_otp" });
+}));
+
 // Customer registration
 app.post("/api/auth/register", asyncRoute(async (req, res) => {
   const { name, phone, email, password, address = "" } = req.body || {};
