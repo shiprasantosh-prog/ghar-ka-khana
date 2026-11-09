@@ -852,12 +852,48 @@ app.post("/api/auth/phone-otp-login", phoneOtpLoginLimiter, asyncRoute(async (re
     "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
     [normalizedPhone]
   );
-  if (!result.rowCount || result.rows[0].role !== "customer") {
-    return res.status(404).json({ error: "We couldn't find a GKK customer account for this mobile number. Please create an account or contact support." });
+  if (result.rowCount && result.rows[0].role === "customer") {
+    const user = result.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, method: "phone_otp", created: false });
   }
-  const user = result.rows[0];
-  res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
-  return res.json({ user, method: "phone_otp" });
+  if (result.rowCount && result.rows[0].role !== "customer") {
+    return res.status(403).json({ error: "This mobile number is not registered to a customer account." });
+  }
+
+  // A verified but previously unseen phone number can register without a password.
+  const name = String(req.body?.name || "").trim().replace(/\\s+/g, " ").slice(0, 100);
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const referralCode = String(req.body?.referralCode || "").trim().toUpperCase();
+  if (!name) return res.status(404).json({ code: "NEW_CUSTOMER_REQUIRED", error: "This mobile number is not registered yet. Enter your name to create your GKK account." });
+  if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Please enter a valid email address." });
+  }
+  let referrerId = null;
+  if (referralCode) {
+    const referrer = await pool.query("SELECT id FROM users WHERE UPPER(referral_code)=UPPER($1) AND role='customer'", [referralCode]);
+    if (!referrer.rowCount) return res.status(400).json({ error: "That referral code is not valid." });
+    referrerId = Number(referrer.rows[0].id);
+  }
+  if (email) {
+    const emailExists = await pool.query("SELECT id FROM users WHERE LOWER(BTRIM(email))=$1 LIMIT 1", [email]);
+    if (emailExists.rowCount) return res.status(409).json({ error: "This email address is already linked to another GKK account. Please sign in to that account or use another email." });
+  }
+  try {
+    const randomPassword = crypto.randomBytes(48).toString("hex");
+    const inserted = await pool.query(
+      `INSERT INTO users (name, phone, email, password_hash, role, referred_by_user_id, referral_code, firebase_uid)
+       VALUES ($1,$2,$3,$4,'customer',$5,$6,$7)
+       RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+      [name, verifiedPhone, email || null, bcrypt.hashSync(randomPassword, 12), referrerId, "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), decoded.uid]
+    );
+    const user = inserted.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.status(201).json({ user, method: "phone_otp", created: true });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "This mobile number or email is already registered. Please sign in with your existing account." });
+    throw error;
+  }
 }));
 
 // Customer registration
