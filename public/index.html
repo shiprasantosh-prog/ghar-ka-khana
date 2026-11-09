@@ -4484,6 +4484,18 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if (!e164 || !/^\+[1-9]\d{7,14}$/.test(e164)) { message.textContent = "Enter a valid mobile number, including country code if outside India."; return; }
     otpSendButton.disabled = true; message.textContent = "Preparing secure verification…";
     try {
+      // Reserve from the shared server-side daily cap before Firebase can send an SMS.
+      const quotaResponse = await fetch("/api/auth/otp-quota/reserve", {
+        method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:"{}"
+      });
+      const quota = await quotaResponse.json().catch(()=>({}));
+      if (!quotaResponse.ok) {
+        if (quotaResponse.status === 429) {
+          message.textContent = quota.error || "Today's OTP limit has been reached. Please try again after midnight IST.";
+          return;
+        }
+        throw new Error(quota.error || "OTP limit check failed. Please try again.");
+      }
       const app = await getFirebaseApp();
       if (!otpRecaptcha) otpRecaptcha = new firebase.auth.RecaptchaVerifier("gkkOtpRecaptcha", {size:"invisible"});
       await otpRecaptcha.render();
