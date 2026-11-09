@@ -33,6 +33,11 @@ assert.match(html, /google-signin-highlight/, "Google sign-in button must have a
 assert.match(html, /fetch\("\/api\/auth\/google"/, "Browser must submit the Firebase token to the backend");
 assert.match(html, /PHONE_REQUIRED/, "New Google accounts must complete the phone onboarding step");
 assert.match(html, /currentUser = data\.user/, "Google sign-in must update the existing account state");
+assert.match(server, /app\.post\("\/api\/auth\/phone-otp-login"/, "Backend must expose phone OTP login");
+assert.match(server, /decoded\.phone_number/, "Phone OTP login must use the verified phone claim");
+assert.match(html, /id="gkkShowOtpButton"/, "Customer login must offer mobile OTP");
+assert.match(html, /signInWithPhoneNumber\(e164, otpRecaptcha\)/, "Frontend must send OTP through Firebase Phone Auth");
+assert.match(html, /phone-otp-login/, "Frontend must exchange the verified phone token for a GKK session");
 
 const inlineGoogleScript = html.match(/<script id="gkk-google-signin">([\s\S]*?)<\/script>/);
 assert.ok(inlineGoogleScript, "Google sign-in browser script must exist");
