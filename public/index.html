@@ -4406,7 +4406,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
         await finishGoogleSignIn(token, "");
       } else if (redirectPending) {
         showPage("account");
-        message.textContent = "If Google sign-in did not complete, please try again.";
+        message.textContent = "You are not signed in yet. Google did not complete the sign-in. Please tap “Continue with Google” to try again.";
       }
     } catch (error) {
       showPage("account");
