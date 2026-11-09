@@ -25,6 +25,8 @@ assert.match(html, /signInWithRedirect\(provider\)/, "Closed Google popup must e
 assert.match(html, /GKK Google sign-in.*Authentication failed/, "Firebase failures must be logged with a diagnostic code");
 assert.match(html, /signInWithRedirect\(provider\)/, "Google sign-in must use redirect flow to avoid popup lifecycle issues");
 assert.match(html, /getRedirectResult\(\)/, "Google redirect result must be handled after returning to the site");
+assert.match(html, /html\.google-auth-return-pending body:before/, "Google redirect return must show a blocking sign-in screen before the homepage paints");
+assert.match(html, /You are not signed in yet\. Google did not complete the sign-in\./, "An incomplete redirect must clearly tell customers they are not signed in");
 assert.match(html, /unauthorized-domain/, "Unauthorized Firebase domains must show a specific message");
 assert.match(html, /account-exists-with-different-credential/, "Existing Google/email credential conflicts must show a useful message");
 assert.match(html, /google-signin-highlight/, "Google sign-in button must have a distinct visual treatment");
