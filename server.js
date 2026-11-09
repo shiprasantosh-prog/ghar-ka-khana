@@ -633,6 +633,13 @@ async function initializeDatabase() {
     console.log("Starter menu created.");
   }
 
+  // Global Firebase SMS quota: one shared counter per IST calendar day.
+  await pool.query(`CREATE TABLE IF NOT EXISTS firebase_otp_daily_quota (
+    quota_date DATE PRIMARY KEY,
+    sms_count INTEGER NOT NULL DEFAULT 0 CHECK (sms_count >= 0 AND sms_count <= 10),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   console.log("PostgreSQL database is ready.");
 }
 
@@ -686,6 +693,35 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
+
+// Reserve one SMS from the shared 10-per-IST-day staging quota before calling Firebase.
+const otpQuotaLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/otp-quota/reserve", otpQuotaLimiter, asyncRoute(async (req, res) => {
+  const result = await pool.query(`
+    INSERT INTO firebase_otp_daily_quota (quota_date, sms_count)
+    VALUES ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date, 1)
+    ON CONFLICT (quota_date) DO UPDATE
+      SET sms_count = firebase_otp_daily_quota.sms_count + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE firebase_otp_daily_quota.sms_count < 10
+    RETURNING sms_count
+  `);
+  if (!result.rowCount) {
+    const count = await pool.query(`
+      SELECT sms_count FROM firebase_otp_daily_quota
+      WHERE quota_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+    `);
+    return res.status(429).json({
+      error: "Today's OTP limit has been reached. Please try again after midnight IST.",
+      limit: 10,
+      used: Number(count.rows[0]?.sms_count || 10),
+      remaining: 0
+    });
+  }
+  const used = Number(result.rows[0].sms_count);
+  res.set("Cache-Control", "no-store");
+  return res.json({ allowed: true, limit: 10, used, remaining: Math.max(0, 10 - used), reset: "midnight IST" });
+}));
 
 // Public Firebase web configuration. These values identify the web app and are not server secrets.
 app.get("/api/firebase-config", (req, res) => {
