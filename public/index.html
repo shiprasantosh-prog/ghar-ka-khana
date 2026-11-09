@@ -1782,7 +1782,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
 <div class="field"><label>Password</label><input name="password" required type="password" minlength="8" placeholder="At least 8 characters" autocomplete="current-password"></div>
 <div class="field" id="referralSignupField" hidden><label>Referral code (optional)</label><input name="referralCode" placeholder="Enter a friend’s referral code" autocomplete="off"><small class="notice">Enter it while creating your account. It cannot be added later.</small></div>
 <div id="signupAddressFields" hidden style="border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0"><h3 style="margin:0 0 8px">Delivery address</h3><p class="notice">Search for your apartment, building, street or landmark, then select a Google Maps result to verify the location before creating your account.</p><div class="field"><label for="signupAddressSearch">Search your delivery address</label><input id="signupAddressSearch" autocomplete="off" placeholder="Search apartment, street, landmark or PIN code" required><div id="signupAddressSuggestions" class="notice address-suggestions" role="listbox"></div><small class="notice">Select a suggested location. Your delivery address cannot be verified by typing alone.</small></div><div class="field"><label>Address label</label><select name="addressLabel" style="width:100%;background:#fff;border:1px solid #cbd9cc;color:#203b2e;border-radius:5px;padding:12px"><option value="Home">Home</option><option value="Work">Office</option><option value="Other">Other</option></select></div><div class="field"><label>House / Flat / Door number</label><input name="house" autocomplete="address-line1" placeholder="House, flat or door number" required></div><div class="field"><label>Street / Area</label><input name="street" autocomplete="address-line2" placeholder="Street, locality or area" required></div><div class="field"><label>City</label><input name="city" autocomplete="address-level2" value="Bengaluru" required></div><div class="field"><label>State</label><input name="state" autocomplete="address-level1" value="Karnataka" required></div><div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="6-digit PIN code" required></div></div>
-<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button><div id="googleAuthArea" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost" id="googleSignInButton" type="button" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px"><span aria-hidden="true" style="font-weight:800;font-size:18px">G</span> Continue with Google</button><p class="notice" style="margin:8px 0 0">Quick and secure sign-in with your Google account.</p><div id="googlePhonePanel" hidden style="margin-top:12px"><label for="googlePhoneInput">Mobile number</label><input id="googlePhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="Enter your 10-digit mobile number" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><button class="btn" id="googleCompleteButton" type="button" style="width:100%">Continue</button></div><div id="googleLinkPanel" hidden style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:8px"><p class="notice" style="margin-top:0">This Google email belongs to an existing Ghar ka Khana account. Verify your existing account to link Google sign-in without creating a duplicate.</p><div class="field"><label for="googleLinkPhone">Existing mobile number</label><input id="googleLinkPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Your account mobile number" style="width:100%"></div><div class="field"><label for="googleLinkPassword">Existing account password</label><input id="googleLinkPassword" type="password" autocomplete="current-password" placeholder="Your existing password" style="width:100%"></div><button class="btn" id="googleLinkCompleteButton" type="button" style="width:100%">Verify &amp; link Google</button></div><p id="googleAuthMessage" class="notice" role="status" aria-live="polite"></p></div>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="authSubmit" type="submit">Sign in</button><button class="btn ghost" id="toggleAuth" type="button">Create account</button></div><button class="btn ghost" id="showForgotPassword" type="button" style="margin-top:10px">Forgot password?</button><div id="googleAuthArea" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost" id="googleSignInButton" type="button" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px"><span aria-hidden="true" style="font-weight:800;font-size:18px">G</span> Continue with Google</button><p class="notice" style="margin:8px 0 0">Quick and secure sign-in with your Google account.</p><div id="gkkOtpArea" style="margin-top:12px"><button class="btn ghost" id="gkkShowOtpButton" type="button" style="width:100%">Sign in with mobile OTP</button><div id="gkkOtpPanel" hidden style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:8px"><p class="notice" style="margin-top:0">We'll send a one-time code to the mobile number registered with your GKK account.</p><label for="gkkOtpPhone">Registered mobile number</label><input id="gkkOtpPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><div id="gkkOtpRecaptcha"></div><button class="btn" id="gkkSendOtpButton" type="button" style="width:100%">Send OTP</button><div id="gkkOtpCodePanel" hidden style="margin-top:12px"><label for="gkkOtpCode">Enter verification code</label><input id="gkkOtpCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit OTP" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><button class="btn" id="gkkVerifyOtpButton" type="button" style="width:100%">Verify OTP &amp; sign in</button></div></div></div><div id="googlePhonePanel" hidden style="margin-top:12px"><label for="googlePhoneInput">Mobile number</label><input id="googlePhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="Enter your 10-digit mobile number" style="width:100%;margin:6px 0 10px;padding:12px;border-radius:6px;border:1px solid var(--line)"><button class="btn" id="googleCompleteButton" type="button" style="width:100%">Continue</button></div><div id="googleLinkPanel" hidden style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:8px"><p class="notice" style="margin-top:0">This Google email belongs to an existing Ghar ka Khana account. Verify your existing account to link Google sign-in without creating a duplicate.</p><div class="field"><label for="googleLinkPhone">Existing mobile number</label><input id="googleLinkPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Your account mobile number" style="width:100%"></div><div class="field"><label for="googleLinkPassword">Existing account password</label><input id="googleLinkPassword" type="password" autocomplete="current-password" placeholder="Your existing password" style="width:100%"></div><button class="btn" id="googleLinkCompleteButton" type="button" style="width:100%">Verify &amp; link Google</button></div><p id="googleAuthMessage" class="notice" role="status" aria-live="polite"></p></div>
 
 </form><form id="forgotPasswordForm" hidden style="margin-top:14px"><h3>Reset your password</h3><p class="notice">We’ll email a secure, one-time reset link to your registered email address.</p><div class="field"><label>Registered email address</label><input id="resetEmail" name="email" type="email" autocomplete="email" placeholder="Email address used for your account" required></div><button class="btn secondary" id="sendResetLink" type="button">Send Reset Link</button><div id="resetPasswordFields" hidden><div class="field" style="margin-top:12px"><label>New password (at least 8 characters)</label><input name="newPassword" type="password" minlength="8" autocomplete="new-password"></div><div class="field"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" autocomplete="new-password"></div><button class="btn" type="submit">Save Password</button></div><button class="btn ghost" id="backToSignIn" type="button" style="margin-top:10px">Back to sign in</button><p id="resetPasswordMessage" class="notice" role="status"></p></form><p class="notice" id="authMessage" role="status"></p></div></section>
 <section class="wrap page-view" id="myorders" style="border-top:1px solid #332b1d;padding-top:35px">
@@ -4311,6 +4311,14 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const linkPhone = document.getElementById("googleLinkPhone");
   const linkPassword = document.getElementById("googleLinkPassword");
   const linkButton = document.getElementById("googleLinkCompleteButton");
+  const otpShowButton = document.getElementById("gkkShowOtpButton");
+  const otpPanel = document.getElementById("gkkOtpPanel");
+  const otpPhone = document.getElementById("gkkOtpPhone");
+  const otpSendButton = document.getElementById("gkkSendOtpButton");
+  const otpCodePanel = document.getElementById("gkkOtpCodePanel");
+  const otpCode = document.getElementById("gkkOtpCode");
+  const otpVerifyButton = document.getElementById("gkkVerifyOtpButton");
+  let otpConfirmation = null, otpRecaptcha = null;
   if (!button || !message) return;
   async function getFirebaseApp(){
     if (firebaseApp) return firebaseApp;
@@ -4463,6 +4471,55 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     try { await finishGoogleSignIn(pendingGoogleToken, phone); }
     catch(error) { showFirebaseError(error); }
     finally { completeButton.disabled = false; }
+  });
+  if (otpShowButton) otpShowButton.addEventListener("click", function(){
+    otpPanel.hidden = !otpPanel.hidden;
+    phonePanel.hidden = true;
+    linkPanel.hidden = true;
+    if (!otpPanel.hidden) otpPhone.focus();
+  });
+  if (otpSendButton) otpSendButton.addEventListener("click", async function(){
+    const raw = otpPhone.value.trim(), digits = raw.replace(/\D/g,"");
+    const e164 = raw.startsWith("+") ? "+" + digits : (digits.length === 10 ? "+91" + digits : (digits.length === 12 && digits.startsWith("91") ? "+" + digits : ""));
+    if (!e164 || !/^\+[1-9]\d{7,14}$/.test(e164)) { message.textContent = "Enter a valid mobile number, including country code if outside India."; return; }
+    otpSendButton.disabled = true; message.textContent = "Preparing secure verification…";
+    try {
+      const app = await getFirebaseApp();
+      if (!otpRecaptcha) otpRecaptcha = new firebase.auth.RecaptchaVerifier("gkkOtpRecaptcha", {size:"invisible"});
+      await otpRecaptcha.render();
+      otpConfirmation = await app.auth().signInWithPhoneNumber(e164, otpRecaptcha);
+      otpCodePanel.hidden = false; message.textContent = "OTP sent. Please check your mobile messages."; otpCode.focus();
+    } catch(error) {
+      try { if (otpRecaptcha) { otpRecaptcha.clear(); otpRecaptcha = null; } } catch (_) {}
+      const code = String(error && error.code || "");
+      if (code === "auth/operation-not-allowed") message.textContent = "Mobile OTP sign-in is not enabled in Firebase yet.";
+      else if (code === "auth/too-many-requests") message.textContent = "Too many attempts. Please wait before requesting another OTP.";
+      else if (code === "auth/invalid-phone-number") message.textContent = "That mobile number is not valid. Please check it and try again.";
+      else showFirebaseError(error);
+    } finally { otpSendButton.disabled = false; }
+  });
+  if (otpVerifyButton) otpVerifyButton.addEventListener("click", async function(){
+    const code = otpCode.value.trim();
+    if (!otpConfirmation) { message.textContent = "Please request an OTP first."; return; }
+    if (!/^\d{6}$/.test(code)) { message.textContent = "Enter the 6-digit OTP sent to your mobile."; return; }
+    otpVerifyButton.disabled = true; message.textContent = "Verifying your mobile number…";
+    try {
+      const credential = await otpConfirmation.confirm(code);
+      const idToken = await credential.user.getIdToken(true);
+      const response = await fetch("/api/auth/phone-otp-login", {method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken})});
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(data.error || "We couldn't sign you in with this mobile number.");
+      if (!data.user || !data.user.phone) throw new Error("Your account details could not be loaded. Please try again.");
+      currentUser = data.user; try { switchCartOwner(data.user.phone); } catch (_) {}
+      otpConfirmation = null; otpPanel.hidden = true; otpCodePanel.hidden = true;
+      message.textContent = "Mobile number verified. You're signed in!";
+      showPage("account"); await renderAccount(); showPage("account");
+    } catch(error) {
+      const code = String(error && error.code || "");
+      if (code === "auth/invalid-verification-code") message.textContent = "That OTP is incorrect. Please check the code and try again.";
+      else if (code === "auth/code-expired") message.textContent = "This OTP has expired. Please request a new one.";
+      else message.textContent = error.message || "OTP verification failed. Please try again.";
+    } finally { otpVerifyButton.disabled = false; }
   });
   linkButton.addEventListener("click", async function(){
     const phone = linkPhone.value.trim(), password = linkPassword.value;
