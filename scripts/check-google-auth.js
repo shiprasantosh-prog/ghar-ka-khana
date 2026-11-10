@@ -17,7 +17,7 @@ assert.match(server, /app\.use\("\/\_\_\/auth", \(req, res\) => \{/, "Firebase a
 assert.match(server, /projectId \+ "\.firebaseapp\.com"/, "Firebase auth proxy must target the configured Firebase project, not a request-controlled host");
 assert.match(server, /RIGHT\(REGEXP_REPLACE\(COALESCE\(phone, ''\), '\[\^0-9\]', '', 'g'\), 10\) = \$1/, "Phone duplicate checks must compare normalized last 10 digits");
 assert.match(server, /LOWER\(BTRIM\(email\)\) = \$1/, "Existing email lookup must be case-insensitive and trim surrounding whitespace");
-assert.match(server, /code: "EXISTING_EMAIL"/, "Existing email conflicts must return a stable conflict code");
+assert.match(server, /code: "EXISTING_PHONE"/, "A different Google identity matching an existing email must require verified phone OTP");
 assert.match(html, /\["EXISTING_EMAIL","EXISTING_PHONE"\]\.includes\(data\.code\)/, "Frontend must show secure account-linking UI for existing email and phone conflicts");
 assert.match(server, /code: "EXISTING_PHONE"/, "An existing phone entered during Google onboarding must trigger secure account linking");
 assert.match(server, /LOWER\(BTRIM\(google_email\)\) = \$1/, "Google sign-in must also find customer accounts by their stored Google email");
