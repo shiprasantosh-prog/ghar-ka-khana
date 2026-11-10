@@ -1594,6 +1594,7 @@ body.sidebar-expanded .sidebar .sidebar-brand{display:flex!important;}
  #homePopular #popularGrid.best-selling-track .food-img{height:145px!important}
 }
 </style>
+<style id="google-account-link-clean-ui">#authForm.google-link-mode>.field,#authForm.google-link-mode>#signupAddressFields,#authForm.google-link-mode>div[style*="display:flex"],#authForm.google-link-mode>#showForgotPassword,#authForm.google-link-mode>#googleAuthArea{display:none!important}#authForm.google-link-mode>#googleLinkPanel{display:block!important}</style>
 </head>
 <body>
 <div id="kitchenClosedBanner" role="status" style="display:none;position:relative;z-index:26;background:#5b2b24;color:#fff1e9;text-align:center;padding:12px 18px;font-size:14px">Our kitchen is currently closed and we are not accepting orders. Please check back later.</div>
@@ -4348,6 +4349,11 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   const button = document.getElementById("googleSignInButton");
   const completeButton = document.getElementById("googleCompleteButton");
   const message = document.getElementById("googleAuthMessage");
+  const authFormElement = document.getElementById("authForm");
+  function setGoogleLinkMode(enabled){
+    if(authFormElement) authFormElement.classList.toggle("google-link-mode",!!enabled);
+    if(enabled){ phonePanel.hidden=true; otpPanel.hidden=true; }
+  }
   const phonePanel = document.getElementById("googlePhonePanel");
   const phoneInput = document.getElementById("googlePhoneInput");
   const linkPanel = document.getElementById("googleLinkPanel");
@@ -4395,9 +4401,10 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     }
     if (response.status === 409 && ["EXISTING_EMAIL","EXISTING_PHONE"].includes(data.code)) {
       pendingGoogleToken = token;
+      setGoogleLinkMode(true);
       linkPanel.hidden = false;
       phonePanel.hidden = true;
-      message.textContent = data.error || "This mobile number belongs to an existing account. Enter its password to securely link Google sign-in.";
+      message.textContent = "";
       linkPhone.value = phone || linkPhone.value;
       linkPhone.focus();
       return false;
@@ -4426,10 +4433,12 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if (code.includes("unauthorized-domain")) {
       message.textContent = "This website is not authorized in Firebase yet. Please contact support.";
     } else if (code === "EXISTING_EMAIL") {
+      setGoogleLinkMode(true);
       linkPanel.hidden = false;
       phonePanel.hidden = true;
       message.textContent = error.message || "Verify your existing account to link Google sign-in.";
     } else if (code === "LINK_CREDENTIALS_INVALID") {
+      setGoogleLinkMode(true);
       linkPanel.hidden = false;
       message.textContent = error.message || "The mobile number or password does not match. Please try again.";
     } else if (code === "GOOGLE_ALREADY_LINKED") {
@@ -4482,6 +4491,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   button.addEventListener("click", async function(){
     const diagnosticId = (typeof crypto!=="undefined"&&crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
     console.info("[GKK auth diagnostic]",{event:"google_button_clicked",diagnosticId,at:new Date().toISOString(),userAgent:/iPhone|iPad|iPod/i.test(navigator.userAgent)?"ios":/Android/i.test(navigator.userAgent)?"android":"other"});
+    setGoogleLinkMode(false);
     button.disabled = true;
     message.textContent = "Opening Google sign-in…";
     try {
@@ -4648,7 +4658,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       try{await (await getFirebaseApp()).auth().signOut();}catch(_){}
       currentUser=data.user;
       try{switchCartOwner(data.user.phone);}catch(_){}
-      linkPanel.hidden=true;message.textContent="Mobile verified. Google sign-in is now linked to your existing Ghar ka Khana account.";
+      linkPanel.hidden=true;setGoogleLinkMode(false);message.textContent="Mobile verified. Google sign-in is now linked to your existing Ghar ka Khana account.";
       showPage("account");await renderAccount();showPage("account");
     }catch(error){
       const code=String(error&&error.code||"");
@@ -4661,6 +4671,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
   // Signing out must also discard transient Firebase state and every pending step.
   window.gkkResetFirebaseAuthUi = async function(){
     pendingGoogleToken = null;
+    setGoogleLinkMode(false);
     pendingOtpIdToken = "";
     otpConfirmation = null;
     try { if (otpRecaptcha) { otpRecaptcha.clear(); otpRecaptcha = null; } } catch (_) {}
