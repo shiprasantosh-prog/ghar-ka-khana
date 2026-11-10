@@ -28,6 +28,9 @@ assert.match(server, /item\.providerId === "phone"/, "Linking must verify that t
 assert.match(server, /google_email TEXT/, "Database must retain the Google email separately when an existing primary email is present");
 assert.match(server, /SET firebase_uid = \$1, google_email = \$2, email = COALESCE\(NULLIF\(BTRIM\(email\), ''\), \$2\)/, "Linking must preserve an existing email and store the Google email separately");
 assert.match(html, /googleLinkSendOtpButton/, "Existing phone account linking must offer OTP instead of requiring the old password");
+assert.match(html, /linkOtpConfirmation\.confirm\(code\)/, "Google account linking must require the customer's verified phone OTP");
+assert.match(html, /linkRecaptcha\.render\(\)/, "Google account linking must use its own reCAPTCHA verifier");
+assert.doesNotMatch(html, /linkButton|linkPassword/, "Google account linking UI reset must not reference removed password controls");
 assert.match(html, /\/api\/auth\/google\/link-phone/, "Frontend must submit both verified identities to the secure linking endpoint");
 assert.match(server, /UPDATE users SET firebase_uid = \$1 WHERE id = \$2 AND \(firebase_uid IS NULL OR firebase_uid = \$1\)/, "Existing phone accounts must only link after password verification and must not overwrite another Google link");
 assert.match(html, /error\.status = response\.status/, "Frontend must retain backend HTTP status for account conflict handling");
