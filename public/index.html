@@ -4544,9 +4544,9 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if (!e164 || !/^\+[1-9]\d{7,14}$/.test(e164)) { message.textContent = "Enter a valid mobile number, including country code if outside India."; return; }
     otpSendButton.disabled = true; message.textContent = "Preparing secure verification…";
     try {
-      // Reserve from the shared server-side daily cap before Firebase can send an SMS.
+      // Reserve against this mobile number before Firebase can send an SMS.
       const quotaResponse = await fetch("/api/auth/otp-quota/reserve", {
-        method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:"{}"
+        method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify({phone:e164})
       });
       const quota = await quotaResponse.json().catch(()=>({}));
       if (!quotaResponse.ok) {
@@ -4633,7 +4633,7 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     if(!e164||!/^\+[1-9]\d{7,14}$/.test(e164)){message.textContent="Enter a valid mobile number.";return;}
     linkSendOtpButton.disabled=true;message.textContent="Preparing secure phone verification…";
     try{
-      const quotaResponse=await fetch("/api/auth/otp-quota/reserve",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:"{}"});
+      const quotaResponse=await fetch("/api/auth/otp-quota/reserve",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:e164})});
       const quota=await quotaResponse.json().catch(()=>({}));
       if(!quotaResponse.ok)throw new Error(quota.error||"OTP limit check failed. Please try again.");
       const app=await getFirebaseApp();
