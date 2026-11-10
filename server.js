@@ -827,7 +827,7 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   // Existing accounts may be linked only after the customer proves ownership with
   // both their existing phone/password credentials and a verified Google identity.
   const existingByEmail = await pool.query(
-    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid FROM users WHERE LOWER(BTRIM(email)) = $1 LIMIT 1",
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid, google_email FROM users WHERE LOWER(BTRIM(email)) = $1 OR LOWER(BTRIM(google_email)) = $1 LIMIT 1",
     [email]
   );
   if (existingByEmail.rowCount) {
@@ -836,7 +836,10 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
       return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
     }
     if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
-      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account is already linked to a different Google account. Please contact support." });
+      return res.status(409).json({
+        code: "EXISTING_PHONE",
+        error: "This email belongs to an existing customer account. Verify the registered mobile number by OTP to access the same Ghar ka Khana profile."
+      });
     }
     const submittedPhone = phone.replace(/\D/g, "").slice(-10);
     const existingPhone = String(existing.phone || "").replace(/\D/g, "").slice(-10);
@@ -881,8 +884,8 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
   const randomPassword = crypto.randomBytes(48).toString("hex");
   try {
     const inserted = await pool.query(
-      `INSERT INTO users (name, phone, email, password_hash, role, referral_code, firebase_uid)
-       VALUES ($1, $2, $3, $4, 'customer', $5, $6)
+      `INSERT INTO users (name, phone, email, google_email, password_hash, role, referral_code, firebase_uid)
+       VALUES ($1, $2, $3, $3, $4, 'customer', $5, $6)
        RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
       [name, phone, email, bcrypt.hashSync(randomPassword, 12), "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), decoded.uid]
     );
