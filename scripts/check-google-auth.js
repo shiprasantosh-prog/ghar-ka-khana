@@ -41,6 +41,7 @@ assert.match(html, /phone-otp-login/, "Frontend must exchange the verified phone
 assert.match(html, /function clearAuthenticationNotices\(\)/, "Signing out must clear all customer authentication messages and return to login mode");
 assert.match(html, /await window\.gkkResetFirebaseAuthUi\(\)/, "Signing out must reset pending Firebase authentication state");
 assert.match(html, /window\.gkkResetFirebaseAuthUi = async function\(\)/, "Firebase UI reset must clear pending Google and OTP flows");
+assert.match(html, /if \(!otpRecaptcha\) \{[\s\S]*?await otpRecaptcha\.render\(\);[\s\S]*?signInWithPhoneNumber\(e164, otpRecaptcha\)/, "OTP retries must reuse the already-rendered reCAPTCHA verifier rather than rendering it twice");
 assert.match(html, /firebaseApp\.auth\(\)\.signOut\(\)/, "Firebase client session must be signed out along with the GKK session");
 
 const inlineGoogleScript = html.match(/<script id="gkk-google-signin">([\s\S]*?)<\/script>/);
