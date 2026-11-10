@@ -38,6 +38,10 @@ assert.match(server, /decoded\.phone_number/, "Phone OTP login must use the veri
 assert.match(html, /id="gkkShowOtpButton"/, "Customer login must offer mobile OTP");
 assert.match(html, /signInWithPhoneNumber\(e164, otpRecaptcha\)/, "Frontend must send OTP through Firebase Phone Auth");
 assert.match(html, /phone-otp-login/, "Frontend must exchange the verified phone token for a GKK session");
+assert.match(html, /function clearAuthenticationNotices\(\)/, "Signing out must clear all customer authentication messages and return to login mode");
+assert.match(html, /await window\.gkkResetFirebaseAuthUi\(\)/, "Signing out must reset pending Firebase authentication state");
+assert.match(html, /window\.gkkResetFirebaseAuthUi = async function\(\)/, "Firebase UI reset must clear pending Google and OTP flows");
+assert.match(html, /firebaseApp\.auth\(\)\.signOut\(\)/, "Firebase client session must be signed out along with the GKK session");
 
 const inlineGoogleScript = html.match(/<script id="gkk-google-signin">([\s\S]*?)<\/script>/);
 assert.ok(inlineGoogleScript, "Google sign-in browser script must exist");
