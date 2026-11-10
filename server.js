@@ -687,11 +687,13 @@ async function initializeDatabase() {
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT UNIQUE");
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email TEXT");
 
-  // One shared limit per IST calendar day; failed send attempts remain reserved.
-  await pool.query(`CREATE TABLE IF NOT EXISTS firebase_otp_daily_quota (
-    quota_date DATE PRIMARY KEY,
-    sms_count INTEGER NOT NULL DEFAULT 0 CHECK (sms_count >= 0 AND sms_count <= 10),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  // Per-mobile-number OTP limits, keyed with an HMAC so raw phone numbers are never stored here.
+  await pool.query(`CREATE TABLE IF NOT EXISTS firebase_otp_phone_quota (
+    phone_hash TEXT NOT NULL,
+    quota_date DATE NOT NULL,
+    sms_count INTEGER NOT NULL DEFAULT 0 CHECK (sms_count >= 0 AND sms_count <= 5),
+    last_requested_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (phone_hash, quota_date)
   )`);
 
   console.log("PostgreSQL database is ready.");
@@ -748,33 +750,53 @@ const limiter = rateLimit({
 
 app.use("/api", limiter);
 
-// Reserve one SMS from the shared 10-per-IST-day daily app quota before calling Firebase.
+// Per-IP protection remains in place; the daily quota itself is enforced per mobile number.
 const otpQuotaLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 app.post("/api/auth/otp-quota/reserve", otpQuotaLimiter, asyncRoute(async (req, res) => {
+  const phone = String(req.body?.phone || "").trim();
+  if (!/^\\+[1-9]\\d{7,14}$/.test(phone)) {
+    return res.status(400).json({ error: "Enter a valid mobile number before requesting an OTP." });
+  }
+
+  // HMAC prevents the quota table from exposing raw phone numbers or reversible plain hashes.
+  const phoneHash = crypto.createHmac("sha256", SECRET || "dev-only-change-me").update(phone).digest("hex");
   const result = await pool.query(`
-    INSERT INTO firebase_otp_daily_quota (quota_date, sms_count)
-    VALUES ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date, 1)
-    ON CONFLICT (quota_date) DO UPDATE
-      SET sms_count = firebase_otp_daily_quota.sms_count + 1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE firebase_otp_daily_quota.sms_count < 10
+    INSERT INTO firebase_otp_phone_quota (phone_hash, quota_date, sms_count, last_requested_at)
+    VALUES ($1, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date, 1, CURRENT_TIMESTAMP)
+    ON CONFLICT (phone_hash, quota_date) DO UPDATE
+      SET sms_count = firebase_otp_phone_quota.sms_count + 1,
+          last_requested_at = CURRENT_TIMESTAMP
+      WHERE firebase_otp_phone_quota.sms_count < 5
+        AND firebase_otp_phone_quota.last_requested_at <= CURRENT_TIMESTAMP - INTERVAL '60 seconds'
     RETURNING sms_count
-  `);
+  `, [phoneHash]);
+
   if (!result.rowCount) {
-    const count = await pool.query(`
-      SELECT sms_count FROM firebase_otp_daily_quota
-      WHERE quota_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
-    `);
+    const existing = await pool.query(`
+      SELECT sms_count, last_requested_at,
+             GREATEST(0, CEIL(EXTRACT(EPOCH FROM (last_requested_at + INTERVAL '60 seconds' - CURRENT_TIMESTAMP))))::integer AS retry_after
+      FROM firebase_otp_phone_quota
+      WHERE phone_hash = $1
+        AND quota_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+    `, [phoneHash]);
+    const row = existing.rows[0];
+    const used = Number(row?.sms_count || 0);
+    if (row && Number(row.retry_after || 0) > 0 && used < 5) {
+      return res.status(429).json({
+        error: "Please wait before requesting another OTP for this mobile number.",
+        limit: 5, used, remaining: Math.max(0, 5 - used),
+        retryAfterSeconds: Number(row.retry_after)
+      });
+    }
     return res.status(429).json({
-      error: "Today's OTP limit has been reached. Please try again after midnight IST.",
-      limit: 10,
-      used: Number(count.rows[0]?.sms_count || 10),
-      remaining: 0
+      error: "This mobile number has reached its daily OTP limit. Please try again after midnight IST.",
+      limit: 5, used, remaining: 0, reset: "midnight IST"
     });
   }
+
   const used = Number(result.rows[0].sms_count);
   res.set("Cache-Control", "no-store");
-  return res.json({ allowed: true, limit: 10, used, remaining: Math.max(0, 10 - used), reset: "midnight IST" });
+  return res.json({ allowed: true, limit: 5, used, remaining: Math.max(0, 5 - used), reset: "midnight IST" });
 }));
 
 // Public Firebase web configuration. These values identify the web app and are not server secrets.
