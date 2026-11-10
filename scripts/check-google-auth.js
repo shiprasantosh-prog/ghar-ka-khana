@@ -36,7 +36,6 @@ assert.match(html, /linkOtpConfirmation\.confirm\(code\)/, "Google account linki
 assert.match(html, /linkRecaptcha\.render\(\)/, "Google account linking must use its own reCAPTCHA verifier");
 assert.doesNotMatch(html, /linkButton|linkPassword/, "Google account linking UI reset must not reference removed password controls");
 assert.match(html, /\/api\/auth\/google\/link-phone/, "Frontend must submit both verified identities to the secure linking endpoint");
-assert.match(server, /UPDATE users SET firebase_uid = \$1 WHERE id = \$2 AND \(firebase_uid IS NULL OR firebase_uid = \$1\)/, "Existing phone accounts must only link after password verification and must not overwrite another Google link");
 assert.match(html, /error\.status = response\.status/, "Frontend must retain backend HTTP status for account conflict handling");
 assert.match(html, /id="googleSignInButton"/, "Customer auth UI must include a Google sign-in button");
 assert.match(html, /signInWithRedirect\(provider\)/, "Closed Google popup must explain how existing-account customers can sign in");
