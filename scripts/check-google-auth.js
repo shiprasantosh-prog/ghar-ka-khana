@@ -66,9 +66,14 @@ assert.ok(inlineGoogleScript, "Google sign-in browser script must exist");
 new vm.Script(server, { filename: "server.js" });
 new vm.Script(inlineGoogleScript[1], { filename: "gkk-google-signin.inline.js" });
 
-assert.match(server, /sms_count INTEGER NOT NULL DEFAULT 0 CHECK \(sms_count >= 0 AND sms_count <= 10\)/, "Daily quota must have a database bound of ten");
-assert.match(server, /WHERE firebase_otp_daily_quota\.sms_count < 10/, "Daily quota must reject attempt eleven");
-assert.match(server, /Asia\/Kolkata/, "Daily quota must use IST");
+assert.match(server, /CREATE TABLE IF NOT EXISTS firebase_otp_phone_quota/, "OTP quota must be tracked per mobile number");
+assert.match(server, /sms_count INTEGER NOT NULL DEFAULT 0 CHECK \(sms_count >= 0 AND sms_count <= 5\)/, "Per-number daily quota must have a database bound of five");
+assert.match(server, /firebase_otp_phone_quota\.sms_count < 5/, "Per-number daily quota must reject the sixth OTP request");
+assert.match(server, /createHmac\("sha256"/, "Quota records must store an HMAC of the phone number, not the raw number");
+assert.match(server, /INTERVAL '60 seconds'/, "Per-number OTP requests must have a 60-second resend cooldown");
+assert.match(server, /Asia\/Kolkata/, "Daily OTP quota must use IST");
+assert.doesNotMatch(server, /firebase_otp_daily_quota/, "The global daily OTP quota must be removed");
+assert.match(html, /otp-quota\/reserve[\s\S]{0,220}JSON\.stringify\(\{phone:e164\}\)/, "OTP reservation must be bound to the requested mobile number");
 assert.match(server, /NEW_CUSTOMER_REQUIRED/, "Unregistered verified phone numbers must receive the new-customer response");
 assert.ok(server.includes('.replace(/\\s+/g, " ")'), "New-customer names must normalize whitespace correctly");
 assert.ok(server.includes('!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)'), "New-customer email validation must accept normal email addresses");
