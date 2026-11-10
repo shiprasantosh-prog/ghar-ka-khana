@@ -914,6 +914,20 @@ app.post("/api/auth/google/link-phone", googlePhoneLinkLimiter, asyncRoute(async
   if (!google.uid || !google.email || google.email_verified !== true) {
     return res.status(403).json({ error: "Please use a Google account with a verified email address." });
   }
+  try {
+    const [googleFirebaseUser, phoneFirebaseUser] = await Promise.all([
+      firebaseAdminSdk.auth().getUser(google.uid),
+      firebaseAdminSdk.auth().getUser(phone.uid)
+    ]);
+    if (!(googleFirebaseUser.providerData || []).some(item => item.providerId === "google.com")) {
+      return res.status(403).json({ error: "Please complete sign-in with Google before linking this account." });
+    }
+    if (!(phoneFirebaseUser.providerData || []).some(item => item.providerId === "phone")) {
+      return res.status(403).json({ error: "Please complete mobile OTP verification before linking this account." });
+    }
+  } catch (_) {
+    return res.status(401).json({ error: "We couldn't verify the Google or phone identity. Please try again." });
+  }
   const verifiedPhone = String(phone.phone_number || "").trim();
   const normalizedPhone = verifiedPhone.replace(/\D/g, "").slice(-10);
   if (!phone.uid || !/^\+?[1-9]\d{7,14}$/.test(verifiedPhone) || normalizedPhone.length !== 10) {
