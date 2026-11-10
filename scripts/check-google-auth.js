@@ -48,4 +48,6 @@ assert.match(server, /sms_count INTEGER NOT NULL DEFAULT 0 CHECK \(sms_count >= 
 assert.match(server, /WHERE firebase_otp_daily_quota\.sms_count < 10/, "Daily quota must reject attempt eleven");
 assert.match(server, /Asia\/Kolkata/, "Daily quota must use IST");
 assert.match(server, /NEW_CUSTOMER_REQUIRED/, "Unregistered verified phone numbers must receive the new-customer response");
+assert.ok(server.includes('.replace(/\\s+/g, " ")'), "New-customer names must normalize whitespace correctly");
+assert.ok(server.includes('!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)'), "New-customer email validation must accept normal email addresses");
 console.log("Google sign-in and phone OTP checks passed.");
