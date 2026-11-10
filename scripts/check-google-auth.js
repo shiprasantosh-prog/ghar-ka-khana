@@ -20,6 +20,10 @@ assert.match(server, /LOWER\(BTRIM\(email\)\) = \$1/, "Existing email lookup mus
 assert.match(server, /code: "EXISTING_EMAIL"/, "Existing email conflicts must return a stable conflict code");
 assert.match(html, /\["EXISTING_EMAIL","EXISTING_PHONE"\]\.includes\(data\.code\)/, "Frontend must show secure account-linking UI for existing email and phone conflicts");
 assert.match(server, /code: "EXISTING_PHONE"/, "An existing phone entered during Google onboarding must trigger secure account linking");
+assert.match(server, /LOWER\(BTRIM\(google_email\)\) = \$1/, "Google sign-in must also find customer accounts by their stored Google email");
+assert.match(server, /SET firebase_uid = \$1, google_email = \$2, email = COALESCE\(NULLIF\(BTRIM\(email\), ''\), \$2\)/, "OTP linking must retain the primary email and update the latest Google email");
+assert.match(server, /EXISTING_PHONE[\s\S]{0,180}registered mobile number by OTP/, "A different Google identity matching either stored email must require phone OTP verification");
+assert.match(server, /LOWER\(BTRIM\(email\)\) = \$1 OR LOWER\(BTRIM\(google_email\)\) = \$1/, "Email ownership checks must consider both email fields");
 assert.match(server, /app\.post\("\/api\/auth\/google\/link-phone"/, "Google linking to an existing phone account must require the dedicated verified-phone endpoint");
 assert.match(server, /verifyIdToken\(googleToken, true\)/, "Google linking must verify the Google ID token on the backend");
 assert.match(server, /verifyIdToken\(phoneToken, true\)/, "Google linking must verify the phone OTP ID token on the backend");
