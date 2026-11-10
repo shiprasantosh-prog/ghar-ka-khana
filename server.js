@@ -872,26 +872,10 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
     if (existing.role !== "customer") {
       return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
     }
-    if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
-      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This customer account is already linked to a different Google account. Please contact support." });
-    }
-    const password = String(req.body?.password || "");
-    if (!password) {
-      return res.status(409).json({ code: "EXISTING_PHONE", error: "This mobile number already belongs to a Ghar ka Khana account. Enter the existing account password to securely link this Google sign-in." });
-    }
-    if (!existing.password_hash || !bcrypt.compareSync(password, existing.password_hash)) {
-      return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The mobile number or password does not match this existing account. Please try again." });
-    }
-    const linked = await pool.query(
-      "UPDATE users SET firebase_uid = $1 WHERE id = $2 AND (firebase_uid IS NULL OR firebase_uid = $1) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
-      [decoded.uid, existing.id]
-    );
-    if (!linked.rowCount) {
-      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
-    }
-    const user = linked.rows[0];
-    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
-    return res.json({ user, created: false, linked: true });
+    return res.status(409).json({
+      code: "EXISTING_PHONE",
+      error: "This mobile number already belongs to a Ghar ka Khana account. Verify it with an OTP to securely link your Google sign-in."
+    });
   }
   const name = String(decoded.name || "").trim() || email.split("@")[0];
   const randomPassword = crypto.randomBytes(48).toString("hex");
