@@ -20,6 +20,15 @@ assert.match(server, /LOWER\(BTRIM\(email\)\) = \$1/, "Existing email lookup mus
 assert.match(server, /code: "EXISTING_EMAIL"/, "Existing email conflicts must return a stable conflict code");
 assert.match(html, /\["EXISTING_EMAIL","EXISTING_PHONE"\]\.includes\(data\.code\)/, "Frontend must show secure account-linking UI for existing email and phone conflicts");
 assert.match(server, /code: "EXISTING_PHONE"/, "An existing phone entered during Google onboarding must trigger secure account linking");
+assert.match(server, /app\.post\("\/api\/auth\/google\/link-phone"/, "Google linking to an existing phone account must require the dedicated verified-phone endpoint");
+assert.match(server, /verifyIdToken\(googleToken, true\)/, "Google linking must verify the Google ID token on the backend");
+assert.match(server, /verifyIdToken\(phoneToken, true\)/, "Google linking must verify the phone OTP ID token on the backend");
+assert.match(server, /item\.providerId === "google\.com"/, "Linking must verify that the first identity is genuinely Google");
+assert.match(server, /item\.providerId === "phone"/, "Linking must verify that the second identity is genuinely phone OTP");
+assert.match(server, /google_email TEXT/, "Database must retain the Google email separately when an existing primary email is present");
+assert.match(server, /SET firebase_uid = \$1, google_email = \$2, email = COALESCE\(NULLIF\(BTRIM\(email\), ''\), \$2\)/, "Linking must preserve an existing email and store the Google email separately");
+assert.match(html, /googleLinkSendOtpButton/, "Existing phone account linking must offer OTP instead of requiring the old password");
+assert.match(html, /\/api\/auth\/google\/link-phone/, "Frontend must submit both verified identities to the secure linking endpoint");
 assert.match(server, /UPDATE users SET firebase_uid = \$1 WHERE id = \$2 AND \(firebase_uid IS NULL OR firebase_uid = \$1\)/, "Existing phone accounts must only link after password verification and must not overwrite another Google link");
 assert.match(html, /error\.status = response\.status/, "Frontend must retain backend HTTP status for account conflict handling");
 assert.match(html, /id="googleSignInButton"/, "Customer auth UI must include a Google sign-in button");
