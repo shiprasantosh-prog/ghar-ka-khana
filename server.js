@@ -915,11 +915,11 @@ app.post("/api/auth/phone-otp-login", phoneOtpLoginLimiter, asyncRoute(async (re
   }
 
   // A verified but previously unseen phone number can register without a password.
-  const name = String(req.body?.name || "").trim().replace(/\\s+/g, " ").slice(0, 100);
+  const name = String(req.body?.name || "").trim().replace(/\s+/g, " ").slice(0, 100);
   const email = String(req.body?.email || "").trim().toLowerCase();
   const referralCode = String(req.body?.referralCode || "").trim().toUpperCase();
   if (!name) return res.status(404).json({ code: "NEW_CUSTOMER_REQUIRED", error: "This mobile number is not registered yet. Enter your name to create your GKK account." });
-  if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: "Please enter a valid email address." });
   }
   let referrerId = null;
