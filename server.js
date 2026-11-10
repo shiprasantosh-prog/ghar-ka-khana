@@ -835,31 +835,12 @@ app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
     if (existing.role !== "customer") {
       return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
     }
-    if (existing.firebase_uid && existing.firebase_uid !== decoded.uid) {
-      return res.status(409).json({
-        code: "EXISTING_PHONE",
-        error: "This email belongs to an existing customer account. Verify the registered mobile number by OTP to access the same Ghar ka Khana profile."
-      });
-    }
-    const submittedPhone = phone.replace(/\D/g, "").slice(-10);
-    const existingPhone = String(existing.phone || "").replace(/\D/g, "").slice(-10);
-    const password = String(req.body?.password || "");
-    if (!phone || !password) {
-      return res.status(409).json({ code: "EXISTING_EMAIL", error: "This email belongs to an existing customer account. Enter your existing mobile number and password to securely link Google sign-in." });
-    }
-    if (!submittedPhone || submittedPhone !== existingPhone || !bcrypt.compareSync(password, existing.password_hash)) {
-      return res.status(401).json({ code: "LINK_CREDENTIALS_INVALID", error: "The mobile number or password does not match this existing account. Please try again." });
-    }
-    const linked = await pool.query(
-      "UPDATE users SET firebase_uid = $1 WHERE id = $2 AND (firebase_uid IS NULL OR firebase_uid = $1) RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
-      [decoded.uid, existing.id]
-    );
-    if (!linked.rowCount) {
-      return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This account could not be linked because its Google sign-in changed. Please try again or contact support." });
-    }
-    const user = linked.rows[0];
-    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
-    return res.json({ user, created: false, linked: true });
+    // The Firebase UID lookup above handles the currently linked Google account.
+    // Any other Google identity matching either stored email must prove phone ownership.
+    return res.status(409).json({
+      code: "EXISTING_PHONE",
+      error: "This email belongs to an existing customer account. Verify the registered mobile number by OTP to access the same Ghar ka Khana profile."
+    });
   }
   if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
   if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
@@ -948,7 +929,7 @@ app.post("/api/auth/google/link-phone", googlePhoneLinkLimiter, asyncRoute(async
   if (googleUidOwner.rowCount) return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This Google account is already linked to another GKK customer." });
 
   const email = String(google.email).trim().toLowerCase();
-  const emailOwner = await pool.query("SELECT id FROM users WHERE LOWER(BTRIM(email)) = $1 AND id <> $2 LIMIT 1", [email, customer.id]);
+  const emailOwner = await pool.query("SELECT id FROM users WHERE (LOWER(BTRIM(email)) = $1 OR LOWER(BTRIM(google_email)) = $1) AND id <> $2 LIMIT 1", [email, customer.id]);
   if (emailOwner.rowCount) return res.status(409).json({ code: "EMAIL_IN_USE", error: "This Google email is already registered to another GKK account. Please sign in to that account instead." });
 
   // A Firebase phone-only UID may be replaced by this verified Google UID.
