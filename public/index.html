@@ -4644,7 +4644,9 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.error||"Could not link Google sign-in to this account.");
       if(!data.user||!data.user.phone)throw new Error("Account details could not be loaded. Please try again.");
-      pendingGoogleToken=null;linkOtpConfirmation=null;currentUser=data.user;
+      pendingGoogleToken=null;linkOtpConfirmation=null;
+      try{await (await getFirebaseApp()).auth().signOut();}catch(_){}
+      currentUser=data.user;
       try{switchCartOwner(data.user.phone);}catch(_){}
       linkPanel.hidden=true;message.textContent="Mobile verified. Google sign-in is now linked to your existing Ghar ka Khana account.";
       showPage("account");await renderAccount();showPage("account");
@@ -4662,11 +4664,13 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
     pendingOtpIdToken = "";
     otpConfirmation = null;
     try { if (otpRecaptcha) { otpRecaptcha.clear(); otpRecaptcha = null; } } catch (_) {}
+    try { if (linkRecaptcha) { linkRecaptcha.clear(); linkRecaptcha = null; } } catch (_) {}
+    linkOtpConfirmation = null;
     if (firebaseApp) { try { await firebaseApp.auth().signOut(); } catch (_) {} }
     [phonePanel, linkPanel, otpPanel, otpCodePanel, document.getElementById("gkkOtpSignupFields")].forEach(panel=>{if(panel)panel.hidden=true});
-    [phoneInput, linkPhone, linkPassword, otpPhone, otpCode, document.getElementById("gkkOtpSignupName"), document.getElementById("gkkOtpSignupEmail"), document.getElementById("gkkOtpSignupReferral")].forEach(field=>{if(field)field.value=""});
+    [phoneInput, linkPhone, linkOtpCode, otpPhone, otpCode, document.getElementById("gkkOtpSignupName"), document.getElementById("gkkOtpSignupEmail"), document.getElementById("gkkOtpSignupReferral")].forEach(field=>{if(field)field.value=""});
     if(message)message.textContent="";
-    [button, completeButton, linkButton, otpShowButton, otpSendButton, otpVerifyButton, document.getElementById("gkkOtpCreateAccountButton")].forEach(control=>{if(control)control.disabled=false});
+    [button, completeButton, linkSendOtpButton, linkVerifyButton, otpShowButton, otpSendButton, otpVerifyButton, document.getElementById("gkkOtpCreateAccountButton")].forEach(control=>{if(control)control.disabled=false});
   };
 })();
 </script>
