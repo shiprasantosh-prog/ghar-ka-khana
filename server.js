@@ -754,7 +754,7 @@ app.use("/api", limiter);
 const otpQuotaLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 app.post("/api/auth/otp-quota/reserve", otpQuotaLimiter, asyncRoute(async (req, res) => {
   const phone = String(req.body?.phone || "").trim();
-  if (!/^\\+[1-9]\\d{7,14}$/.test(phone)) {
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
     return res.status(400).json({ error: "Enter a valid mobile number before requesting an OTP." });
   }
 
