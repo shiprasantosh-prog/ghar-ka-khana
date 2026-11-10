@@ -18,7 +18,9 @@ assert.match(server, /projectId \+ "\.firebaseapp\.com"/, "Firebase auth proxy m
 assert.match(server, /RIGHT\(REGEXP_REPLACE\(COALESCE\(phone, ''\), '\[\^0-9\]', '', 'g'\), 10\) = \$1/, "Phone duplicate checks must compare normalized last 10 digits");
 assert.match(server, /LOWER\(BTRIM\(email\)\) = \$1/, "Existing email lookup must be case-insensitive and trim surrounding whitespace");
 assert.match(server, /code: "EXISTING_EMAIL"/, "Existing email conflicts must return a stable conflict code");
-assert.match(html, /code === "EXISTING_EMAIL"/, "Frontend must show existing-account guidance for email conflicts");
+assert.match(html, /\["EXISTING_EMAIL","EXISTING_PHONE"\]\.includes\(data\.code\)/, "Frontend must show secure account-linking UI for existing email and phone conflicts");
+assert.match(server, /code: "EXISTING_PHONE"/, "An existing phone entered during Google onboarding must trigger secure account linking");
+assert.match(server, /UPDATE users SET firebase_uid = \$1 WHERE id = \$2 AND \(firebase_uid IS NULL OR firebase_uid = \$1\)/, "Existing phone accounts must only link after password verification and must not overwrite another Google link");
 assert.match(html, /error\.status = response\.status/, "Frontend must retain backend HTTP status for account conflict handling");
 assert.match(html, /id="googleSignInButton"/, "Customer auth UI must include a Google sign-in button");
 assert.match(html, /signInWithRedirect\(provider\)/, "Closed Google popup must explain how existing-account customers can sign in");
