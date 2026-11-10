@@ -4540,8 +4540,12 @@ function activatePasswordResetView(){if(!new URLSearchParams(window.location.sea
         throw new Error(quota.error || "OTP limit check failed. Please try again.");
       }
       const app = await getFirebaseApp();
-      if (!otpRecaptcha) otpRecaptcha = new firebase.auth.RecaptchaVerifier("gkkOtpRecaptcha", {size:"invisible"});
-      await otpRecaptcha.render();
+      if (!otpRecaptcha) {
+        otpRecaptcha = new firebase.auth.RecaptchaVerifier("gkkOtpRecaptcha", {size:"invisible"});
+        // render() is a one-time operation per verifier/container. Reuse the
+        // rendered verifier for subsequent OTP requests instead of rendering twice.
+        await otpRecaptcha.render();
+      }
       otpConfirmation = await app.auth().signInWithPhoneNumber(e164, otpRecaptcha);
       otpCodePanel.hidden = false; message.textContent = "OTP sent. Please check your mobile messages."; otpCode.focus();
     } catch(error) {
