@@ -917,18 +917,41 @@ app.post("/api/auth/google/link-phone", googlePhoneLinkLimiter, asyncRoute(async
   if (!phone.uid || !/^\+?[1-9]\d{7,14}$/.test(verifiedPhone) || normalizedPhone.length !== 10) {
     return res.status(403).json({ error: "Please verify the customer's mobile number by OTP." });
   }
+  const email = String(google.email).trim().toLowerCase();
   const customerResult = await pool.query(
     "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, firebase_uid FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
     [normalizedPhone]
   );
-  if (!customerResult.rowCount || customerResult.rows[0].role !== "customer") {
-    return res.status(404).json({ error: "This verified mobile number is not linked to an existing customer account." });
+  if (!customerResult.rowCount) {
+    const emailOwner = await pool.query(
+      "SELECT id FROM users WHERE LOWER(BTRIM(email)) = $1 OR LOWER(BTRIM(google_email)) = $1 LIMIT 1",
+      [email]
+    );
+    if (emailOwner.rowCount) return res.status(409).json({ code: "EMAIL_IN_USE", error: "This Google email is already registered to another GKK account. Please sign in to that account instead." });
+    const name = String(google.name || "").trim() || email.split("@")[0];
+    const randomPassword = crypto.randomBytes(48).toString("hex");
+    try {
+      const inserted = await pool.query(
+        `INSERT INTO users (name, phone, email, google_email, password_hash, role, referral_code, firebase_uid)
+         VALUES ($1, $2, $3, $3, $4, 'customer', $5, $6)
+         RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+        [name, verifiedPhone, email, bcrypt.hashSync(randomPassword, 12), "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), google.uid]
+      );
+      const user = inserted.rows[0];
+      res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+      return res.json({ user, created: true, linked: false });
+    } catch (error) {
+      if (error.code === "23505") return res.status(409).json({ code: "ACCOUNT_CONFLICT", error: "An account with this email or mobile number already exists. Please sign in with your existing account." });
+      throw error;
+    }
+  }
+  if (customerResult.rows[0].role !== "customer") {
+    return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
   }
   const customer = customerResult.rows[0];
   const googleUidOwner = await pool.query("SELECT id FROM users WHERE firebase_uid = $1 AND id <> $2 LIMIT 1", [google.uid, customer.id]);
   if (googleUidOwner.rowCount) return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This Google account is already linked to another GKK customer." });
 
-  const email = String(google.email).trim().toLowerCase();
   const emailOwner = await pool.query("SELECT id FROM users WHERE (LOWER(BTRIM(email)) = $1 OR LOWER(BTRIM(google_email)) = $1) AND id <> $2 LIMIT 1", [email, customer.id]);
   if (emailOwner.rowCount) return res.status(409).json({ code: "EMAIL_IN_USE", error: "This Google email is already registered to another GKK account. Please sign in to that account instead." });
 
