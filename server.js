@@ -11,6 +11,20 @@ const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const { Pool } = require("pg");
 const path = require("path");
+const https = require("https");
+const firebaseAdminSdk = require("firebase-admin");
+
+// Firebase Admin is configured only from a server-side Render secret.
+let firebaseAdminReady = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    firebaseAdminSdk.initializeApp({ credential: firebaseAdminSdk.credential.cert(serviceAccount) });
+    firebaseAdminReady = true;
+  }
+} catch (error) {
+  console.error("Firebase Admin configuration is invalid; Google sign-in is disabled.", error.message);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +63,44 @@ app.use(cookieParser());
 // Lightweight health check for uptime monitoring; never serves the homepage.
 app.get("/health", (req, res) => {
   res.status(200).type("text/plain").send("OK");
+});
+
+// Firebase Auth helper reverse proxy for redirect sign-in on browsers that block
+// third-party storage. Keep this route before static/API fallthrough and use a fixed
+// Firebase project host (never a request-controlled destination).
+app.use("/__/auth", (req, res) => {
+  const projectId = String(process.env.FIREBASE_PROJECT_ID || "").trim();
+  if (!/^[a-z0-9-]+$/.test(projectId)) {
+    return res.status(503).type("text/plain").send("Firebase Auth proxy is not configured.");
+  }
+  const targetHost = projectId + ".firebaseapp.com";
+  const proxyReq = https.request({
+    hostname: targetHost,
+    port: 443,
+    path: req.originalUrl,
+    method: req.method,
+    headers: {
+      ...req.headers,
+      host: targetHost,
+      "x-forwarded-host": req.headers.host || "",
+      "x-forwarded-proto": "https"
+    }
+  }, (proxyRes) => {
+    res.status(proxyRes.statusCode || 502);
+    for (const [name, value] of Object.entries(proxyRes.headers)) {
+      if (value !== undefined && !["connection", "transfer-encoding"].includes(name.toLowerCase())) {
+        res.setHeader(name, value);
+      }
+    }
+    proxyRes.pipe(res);
+  });
+  proxyReq.setTimeout(15000, () => proxyReq.destroy(new Error("Firebase Auth proxy timed out")));
+  proxyReq.on("error", (error) => {
+    console.error("Firebase Auth proxy request failed:", error.message);
+    if (!res.headersSent) res.status(502).type("text/plain").send("Firebase Auth helper is temporarily unavailable.");
+    else res.destroy(error);
+  });
+  req.pipe(proxyReq);
 });
 
 // Cache image/video assets briefly to reduce repeat transfers while allowing
@@ -632,6 +684,16 @@ async function initializeDatabase() {
     console.log("Starter menu created.");
   }
 
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT UNIQUE");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email TEXT");
+
+  // One shared limit per IST calendar day; failed send attempts remain reserved.
+  await pool.query(`CREATE TABLE IF NOT EXISTS firebase_otp_daily_quota (
+    quota_date DATE PRIMARY KEY,
+    sms_count INTEGER NOT NULL DEFAULT 0 CHECK (sms_count >= 0 AND sms_count <= 10),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   console.log("PostgreSQL database is ready.");
 }
 
@@ -685,6 +747,278 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
+
+// Reserve one SMS from the shared 10-per-IST-day daily app quota before calling Firebase.
+const otpQuotaLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/otp-quota/reserve", otpQuotaLimiter, asyncRoute(async (req, res) => {
+  const result = await pool.query(`
+    INSERT INTO firebase_otp_daily_quota (quota_date, sms_count)
+    VALUES ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date, 1)
+    ON CONFLICT (quota_date) DO UPDATE
+      SET sms_count = firebase_otp_daily_quota.sms_count + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE firebase_otp_daily_quota.sms_count < 10
+    RETURNING sms_count
+  `);
+  if (!result.rowCount) {
+    const count = await pool.query(`
+      SELECT sms_count FROM firebase_otp_daily_quota
+      WHERE quota_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+    `);
+    return res.status(429).json({
+      error: "Today's OTP limit has been reached. Please try again after midnight IST.",
+      limit: 10,
+      used: Number(count.rows[0]?.sms_count || 10),
+      remaining: 0
+    });
+  }
+  const used = Number(result.rows[0].sms_count);
+  res.set("Cache-Control", "no-store");
+  return res.json({ allowed: true, limit: 10, used, remaining: Math.max(0, 10 - used), reset: "midnight IST" });
+}));
+
+// Public Firebase web configuration. These values identify the web app and are not server secrets.
+app.get("/api/firebase-config", (req, res) => {
+  const config = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    appId: process.env.FIREBASE_APP_ID,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID
+  };
+  if (!config.apiKey || !config.authDomain || !config.projectId || !config.appId || !config.messagingSenderId) {
+    return res.status(503).json({ error: "Google sign-in is not configured yet." });
+  }
+  res.set("Cache-Control", "no-store");
+  res.json(config);
+});
+
+const googleAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/google", googleAuthLimiter, asyncRoute(async (req, res) => {
+  const diagnosticId = /^[a-zA-Z0-9-]{1,64}$/.test(String(req.get("X-GKK-Auth-Diagnostic-Id") || "")) ? String(req.get("X-GKK-Auth-Diagnostic-Id")) : crypto.randomBytes(8).toString("hex");
+  const diagnosticStarted = Date.now();
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED === "true") {
+    res.set("X-GKK-Auth-Diagnostic-Id", diagnosticId);
+    res.on("finish", () => console.info("[GKK auth diagnostic]", JSON.stringify({ event: "google_login_request", diagnosticId, status: res.statusCode, durationMs: Date.now() - diagnosticStarted, at: new Date().toISOString() })));
+  }
+  if (!firebaseAdminReady) return res.status(503).json({ error: "Google sign-in is not configured on this server yet." });
+  const idToken = String(req.body?.idToken || "");
+  const phone = String(req.body?.phone || "").trim();
+  if (!idToken) return res.status(400).json({ error: "Google sign-in token is missing." });
+
+  let decoded;
+  try {
+    decoded = await firebaseAdminSdk.auth().verifyIdToken(idToken, true);
+  } catch (error) {
+    return res.status(401).json({ error: "Google sign-in could not be verified. Please try again." });
+  }
+  if (!decoded.uid || !decoded.email || decoded.email_verified !== true) {
+    return res.status(403).json({ error: "Please use a Google account with a verified email address." });
+  }
+  const email = String(decoded.email).trim().toLowerCase();
+  const existingByUid = await pool.query("SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE firebase_uid = $1", [decoded.uid]);
+  if (existingByUid.rowCount) {
+    const user = existingByUid.rows[0];
+    if (user.role !== "customer") return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: false });
+  }
+
+  // Existing accounts may be linked only after the customer proves ownership with
+  // both their existing phone/password credentials and a verified Google identity.
+  const existingByEmail = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid, google_email FROM users WHERE LOWER(BTRIM(email)) = $1 OR LOWER(BTRIM(google_email)) = $1 LIMIT 1",
+    [email]
+  );
+  if (existingByEmail.rowCount) {
+    const existing = existingByEmail.rows[0];
+    if (existing.role !== "customer") {
+      return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    }
+    // The Firebase UID lookup above handles the currently linked Google account.
+    // Any other Google identity matching either stored email must prove phone ownership.
+    return res.status(409).json({
+      code: "EXISTING_PHONE",
+      error: "This email belongs to an existing customer account. Verify the registered mobile number by OTP to access the same Ghar ka Khana profile."
+    });
+  }
+  if (!phone) return res.status(428).json({ code: "PHONE_REQUIRED", name: String(decoded.name || "").trim(), email });
+  if (!/^[0-9+() .-]{8,20}$/.test(phone) || phone.replace(/\D/g, "").length < 10) {
+    return res.status(400).json({ error: "Enter a valid phone number with at least 10 digits." });
+  }
+  const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
+  const existingByPhone = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, password_hash, firebase_uid FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    [normalizedPhone]
+  );
+  if (existingByPhone.rowCount) {
+    const existing = existingByPhone.rows[0];
+    if (existing.role !== "customer") {
+      return res.status(403).json({ error: "Google sign-in is available for customer accounts only." });
+    }
+    return res.status(409).json({
+      code: "EXISTING_PHONE",
+      error: "This mobile number already belongs to a Ghar ka Khana account. Verify it with an OTP to securely link your Google sign-in."
+    });
+  }
+  const name = String(decoded.name || "").trim() || email.split("@")[0];
+  const randomPassword = crypto.randomBytes(48).toString("hex");
+  try {
+    const inserted = await pool.query(
+      `INSERT INTO users (name, phone, email, google_email, password_hash, role, referral_code, firebase_uid)
+       VALUES ($1, $2, $3, $3, $4, 'customer', $5, $6)
+       RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+      [name, phone, email, bcrypt.hashSync(randomPassword, 12), "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), decoded.uid]
+    );
+    const user = inserted.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, created: true });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "An account with this phone number or email already exists. Sign in with your existing account; automatic account linking is not enabled." });
+    throw error;
+  }
+}));
+
+// Link a verified Google identity to an existing customer only after OTP proves ownership of the stored phone.
+const googlePhoneLinkLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/google/link-phone", googlePhoneLinkLimiter, asyncRoute(async (req, res) => {
+  if (!firebaseAdminReady) return res.status(503).json({ error: "Google account linking is not configured on this server." });
+  const googleToken = String(req.body?.googleIdToken || "");
+  const phoneToken = String(req.body?.phoneIdToken || "");
+  if (!googleToken || !phoneToken) return res.status(400).json({ error: "Both Google sign-in and phone verification are required." });
+  let google, phone;
+  try {
+    [google, phone] = await Promise.all([
+      firebaseAdminSdk.auth().verifyIdToken(googleToken, true),
+      firebaseAdminSdk.auth().verifyIdToken(phoneToken, true)
+    ]);
+  } catch (_) {
+    return res.status(401).json({ error: "Google sign-in or phone verification expired. Please start again." });
+  }
+  if (!google.uid || !google.email || google.email_verified !== true) {
+    return res.status(403).json({ error: "Please use a Google account with a verified email address." });
+  }
+  try {
+    const [googleFirebaseUser, phoneFirebaseUser] = await Promise.all([
+      firebaseAdminSdk.auth().getUser(google.uid),
+      firebaseAdminSdk.auth().getUser(phone.uid)
+    ]);
+    if (!(googleFirebaseUser.providerData || []).some(item => item.providerId === "google.com")) {
+      return res.status(403).json({ error: "Please complete sign-in with Google before linking this account." });
+    }
+    if (!(phoneFirebaseUser.providerData || []).some(item => item.providerId === "phone")) {
+      return res.status(403).json({ error: "Please complete mobile OTP verification before linking this account." });
+    }
+  } catch (_) {
+    return res.status(401).json({ error: "We couldn't verify the Google or phone identity. Please try again." });
+  }
+  const verifiedPhone = String(phone.phone_number || "").trim();
+  const normalizedPhone = verifiedPhone.replace(/\D/g, "").slice(-10);
+  if (!phone.uid || !/^\+?[1-9]\d{7,14}$/.test(verifiedPhone) || normalizedPhone.length !== 10) {
+    return res.status(403).json({ error: "Please verify the customer's mobile number by OTP." });
+  }
+  const customerResult = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id, firebase_uid FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    [normalizedPhone]
+  );
+  if (!customerResult.rowCount || customerResult.rows[0].role !== "customer") {
+    return res.status(404).json({ error: "This verified mobile number is not linked to an existing customer account." });
+  }
+  const customer = customerResult.rows[0];
+  const googleUidOwner = await pool.query("SELECT id FROM users WHERE firebase_uid = $1 AND id <> $2 LIMIT 1", [google.uid, customer.id]);
+  if (googleUidOwner.rowCount) return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This Google account is already linked to another GKK customer." });
+
+  const email = String(google.email).trim().toLowerCase();
+  const emailOwner = await pool.query("SELECT id FROM users WHERE (LOWER(BTRIM(email)) = $1 OR LOWER(BTRIM(google_email)) = $1) AND id <> $2 LIMIT 1", [email, customer.id]);
+  if (emailOwner.rowCount) return res.status(409).json({ code: "EMAIL_IN_USE", error: "This Google email is already registered to another GKK account. Please sign in to that account instead." });
+
+  // A Firebase phone-only UID may be replaced by this verified Google UID.
+  // Never replace an existing Google-linked identity.
+  if (customer.firebase_uid && customer.firebase_uid !== google.uid) {
+    try {
+      const oldFirebaseUser = await firebaseAdminSdk.auth().getUser(customer.firebase_uid);
+      const oldProviders = (oldFirebaseUser.providerData || []).map(item => item.providerId);
+      if (oldProviders.includes("google.com")) {
+        return res.status(409).json({ code: "GOOGLE_ALREADY_LINKED", error: "This customer account is already linked to a different Google account. Please contact support." });
+      }
+      if (oldProviders.length && !oldProviders.includes("phone")) {
+        return res.status(409).json({ code: "IDENTITY_CONFLICT", error: "This account has another sign-in method linked. Please contact support before changing it." });
+      }
+    } catch (_) {
+      return res.status(409).json({ code: "IDENTITY_CONFLICT", error: "The existing sign-in identity could not be verified safely. Please contact support." });
+    }
+  }
+  const linked = await pool.query(
+    "UPDATE users SET firebase_uid = $1, google_email = $2, email = COALESCE(NULLIF(BTRIM(email), ''), $2) WHERE id = $3 RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id",
+    [google.uid, email, customer.id]
+  );
+  if (!linked.rowCount) return res.status(409).json({ error: "We couldn't link the Google account. Please try again." });
+  const user = linked.rows[0];
+  res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+  return res.json({ user, created: false, linked: true });
+}));
+
+// Sign in existing customer accounts using a Firebase-verified mobile OTP.
+const phoneOtpLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: true, legacyHeaders: false });
+app.post("/api/auth/phone-otp-login", phoneOtpLoginLimiter, asyncRoute(async (req, res) => {
+  if (!firebaseAdminReady) return res.status(503).json({ error: "Mobile OTP sign-in is not configured on this server yet." });
+  const idToken = String(req.body?.idToken || "");
+  if (!idToken) return res.status(400).json({ error: "Mobile verification token is missing." });
+  let decoded;
+  try { decoded = await firebaseAdminSdk.auth().verifyIdToken(idToken, true); }
+  catch (_) { return res.status(401).json({ error: "Your mobile verification has expired. Please request a new OTP." }); }
+  const verifiedPhone = String(decoded.phone_number || "").trim();
+  const normalizedPhone = verifiedPhone.replace(/\D/g, "").slice(-10);
+  if (!decoded.uid || !/^\+?[1-9]\d{7,14}$/.test(verifiedPhone) || normalizedPhone.length !== 10) {
+    return res.status(403).json({ error: "Please verify a valid mobile number to continue." });
+  }
+  const result = await pool.query(
+    "SELECT id, name, phone, email, address, role, referral_code, referred_by_user_id FROM users WHERE RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g'), 10) = $1 LIMIT 1",
+    [normalizedPhone]
+  );
+  if (result.rowCount && result.rows[0].role === "customer") {
+    const user = result.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.json({ user, method: "phone_otp", created: false });
+  }
+  if (result.rowCount && result.rows[0].role !== "customer") {
+    return res.status(403).json({ error: "This mobile number is not registered to a customer account." });
+  }
+
+  // A verified but previously unseen phone number can register without a password.
+  const name = String(req.body?.name || "").trim().replace(/\s+/g, " ").slice(0, 100);
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const referralCode = String(req.body?.referralCode || "").trim().toUpperCase();
+  if (!name) return res.status(404).json({ code: "NEW_CUSTOMER_REQUIRED", error: "This mobile number is not registered yet. Enter your name to create your GKK account." });
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Please enter a valid email address." });
+  }
+  let referrerId = null;
+  if (referralCode) {
+    const referrer = await pool.query("SELECT id FROM users WHERE UPPER(referral_code)=UPPER($1) AND role='customer'", [referralCode]);
+    if (!referrer.rowCount) return res.status(400).json({ error: "That referral code is not valid." });
+    referrerId = Number(referrer.rows[0].id);
+  }
+  if (email) {
+    const emailExists = await pool.query("SELECT id FROM users WHERE LOWER(BTRIM(email))=$1 LIMIT 1", [email]);
+    if (emailExists.rowCount) return res.status(409).json({ error: "This email address is already linked to another GKK account. Please sign in to that account or use another email." });
+  }
+  try {
+    const randomPassword = crypto.randomBytes(48).toString("hex");
+    const inserted = await pool.query(
+      `INSERT INTO users (name, phone, email, password_hash, role, referred_by_user_id, referral_code, firebase_uid)
+       VALUES ($1,$2,$3,$4,'customer',$5,$6,$7)
+       RETURNING id, name, phone, email, address, role, referral_code, referred_by_user_id`,
+      [name, verifiedPhone, email || null, bcrypt.hashSync(randomPassword, 12), referrerId, "GKK" + crypto.randomBytes(5).toString("hex").toUpperCase(), decoded.uid]
+    );
+    const user = inserted.rows[0];
+    res.cookie("gkk_token", tokenFor(user), { ...sessionCookieOptions(), maxAge: 7 * 864e5 });
+    return res.status(201).json({ user, method: "phone_otp", created: true });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "This mobile number or email is already registered. Please sign in with your existing account." });
+    throw error;
+  }
+}));
 
 // Customer registration
 app.post("/api/auth/register", asyncRoute(async (req, res) => {

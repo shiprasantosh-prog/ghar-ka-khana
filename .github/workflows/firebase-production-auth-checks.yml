@@ -1,0 +1,34 @@
+name: Firebase Production Auth Checks
+
+on:
+  push:
+    branches:
+      - integration/firebase-google-otp-production
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server.js"
+      - "public/index.html"
+      - "package.json"
+      - "scripts/check-google-auth.js"
+      - ".github/workflows/firebase-production-auth-checks.yml"
+
+jobs:
+  validate-firebase-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install
+      - name: Check server syntax
+        run: node --check server.js
+      - name: Check Google sign-in and phone OTP
+        run: npm run check:google-auth
+      - name: Run regression tests
+        run: npm test
